@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"net/http"
 	"net/url"
 	"slices"
@@ -221,6 +222,7 @@ func (s *Server) guardAccess(rt route) http.Handler {
 			writeErr(w, http.StatusUnauthorized, "sign in first, or send a valid API token")
 			return
 		}
+		metrics.TokenUses.Inc(tokenKind(id.Via))
 		var entry *engine.AuditEntry
 		if rt.audit != "" {
 			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), RequestID: reqID(r),
@@ -559,6 +561,7 @@ const (
 func (s *Server) record(e *engine.AuditEntry) {
 	e.Detail = clip(e.Detail, maxDetail)
 	e.Target = clip(e.Target, maxTarget)
+	countAudit(e)
 	if err := s.Engine.Audit(*e); err != nil {
 		s.Log.Error("writing the audit trail", "action", e.Action, "user", e.User, "err", err)
 	}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 )
 
 // DefaultStallBudget is how long a request waits for a database that is
@@ -265,6 +266,7 @@ func (d *dbx) clock() time.Time {
 // middle may have been applied, and is reported as unavailable instead.
 func (d *dbx) Exec(q string, a ...any) (sql.Result, error) {
 	q = rebind(d.pg, q)
+	defer timeStatement(q, time.Now())
 	rt := d.retrier(0, false)
 	for {
 		res, err := d.DB.Exec(q, a...) //nolint:noctx // the store layer has no context yet (doc 45, change 4)
@@ -280,6 +282,7 @@ func (d *dbx) Exec(q string, a ...any) (sql.Result, error) {
 // Query runs a read; a passing failure is retried within the stall budget.
 func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) {
 	q = rebind(d.pg, q)
+	defer timeStatement(q, time.Now())
 	rt := d.retrier(0, true)
 	for {
 		rows, err := d.DB.Query(q, a...) //nolint:noctx // as above
@@ -294,7 +297,7 @@ func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) {
 
 func (d *dbx) QueryRow(q string, a ...any) *rowx {
 	q = rebind(d.pg, q)
-	run := func() *sql.Row { return d.DB.QueryRow(q, a...) } //nolint:noctx // as above
+	run := func() *sql.Row { defer timeStatement(q, time.Now()); return d.DB.QueryRow(q, a...) } //nolint:noctx // as above
 	return &rowx{row: run(), run: run, d: d}
 }
 
@@ -344,3 +347,10 @@ func (t *txx) Commit() error {
 // SetStallBudget sets how long a request waits for a database that is
 // briefly gone (default DefaultStallBudget); zero restores the default.
 func (e *Engine) SetStallBudget(d time.Duration) { e.db.stall = d }
+
+// timeStatement records how long a statement took, by its family (select,
+// insert, ...) and never by its text. Time spent in retries is included: it is
+// what the caller waited.
+func timeStatement(q string, start time.Time) {
+	metrics.DBQueries.Observe(time.Since(start).Seconds(), metrics.Family(q))
+}

@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -339,6 +340,8 @@ func (m *Manager) watch(ctx context.Context, p *project) {
 	for {
 		if err := m.poll(ctx, p); err != nil && ctx.Err() == nil {
 			m.log.Warn("polling a project", "project", p.Name, "err", err)
+		} else if err == nil {
+			metrics.Worker("source_poll")
 		}
 		select {
 		case <-ctx.Done():

@@ -504,9 +504,64 @@ runnerToken:
 # Servers: the API, the web UI and the Sortie engine. They keep nothing that matters on disk;
 # any number can run against the same database.
 # ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
+# Metrics. The servers, the Stations and the launch Station each serve their metrics on a port of
+# their own (never the port of the web UI and the API, and never through the Ingress or HTTPRoute).
+# Nothing outside the cluster can reach it: only pods the networkPolicy.metrics value admits can.
+# See docs/reference/metrics.md and docs/howto/metrics-and-traces.md.
+# ---------------------------------------------------------------------------------------------
+metrics:
+  # -- Serve metrics. They hold no secret and no name of a repository, a branch or a person.
+  enabled: true
+  # -- The metrics port of every pod.
+  port: 9102
+  # -- Also write the names of Flights as a label of one extra metric (limited to 300 series).
+  nameLabels: false
+  # -- Annotate the pods with prometheus.io/scrape, /port and /path, for scrapers that find pods by annotation.
+  scrapeAnnotations: false
+  token:
+    # -- A Secret in this namespace with a bearer token the scraper must send. Empty: no token
+    # (the network policy is then the only gate).
+    existingSecret: ""
+    existingSecretKey: token
+  serviceMonitor:
+    # -- Create a ServiceMonitor for the servers (needs the monitoring.coreos.com/v1 API).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Scrape timeout.
+    scrapeTimeout: 10s
+    # -- Labels your monitoring system selects ServiceMonitors by.
+    labels: {}
+    # -- The namespace to create it in. Default: the release namespace.
+    namespace: ""
+  podMonitor:
+    # -- Create a PodMonitor for the Stations and the launch Station (needs the monitoring.coreos.com/v1 API).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Scrape timeout.
+    scrapeTimeout: 10s
+    # -- Labels your monitoring system selects PodMonitors by.
+    labels: {}
+    # -- The namespace to create it in. Default: the release namespace.
+    namespace: ""
+
 server:
   # -- Number of servers. Two or more for high availability.
   replicas: 2
+  autoscaling:
+    # -- Scale the servers with a HorizontalPodAutoscaler (replicas is then ignored). Resource metrics
+    # need the metrics API (metrics-server); any other metric needs an adapter.
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage:
+    # -- More metrics, as HPA v2 metric specs (External or Pods). See docs/howto/metrics-and-traces.md for one on the queue depth.
+    extraMetrics: []
+    # -- The HPA's behavior (scale-down stabilisation and the like).
+    behavior: {}
   # -- The address ranges (CIDR) of the proxies in front of the servers, such as the Ingress
   # controller or the Gateway. Their X-Forwarded-For and X-Forwarded-Proto are believed; those of any
   # other peer are ignored. Written as server.trusted_proxies. Behind an Ingress or a Gateway route
@@ -622,6 +677,18 @@ runner:
   enabled: true
   # -- Number of Station pods. A Sortie whose Station is lost has its step run again by another.
   replicas: 2
+  autoscaling:
+    # -- Scale the Stations with a HorizontalPodAutoscaler (replicas is then ignored). A Station that
+    # scales in finishes or hands back its steps first: set terminationGracePeriodSeconds to cover them.
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage:
+    # -- More metrics, as HPA v2 metric specs. The queue depth is the best signal for Stations: see docs/howto/metrics-and-traces.md.
+    extraMetrics: []
+    # -- The HPA behavior.
+    behavior: {}
   # -- Steps each Station executes at once.
   concurrency: 2
   # -- The server URL Stations connect to. Default: the chart's Service.
@@ -883,6 +950,10 @@ networkPolicy:
     namespace: kube-system
     podLabels:
       k8s-app: kube-dns
+  metrics:
+    # -- Who may reach the metrics port of the servers, Stations and launch Station: a list of
+    # NetworkPolicyPeer objects (your monitoring namespace's pods). Empty: nobody can.
+    from: []
   server:
     # -- Who may reach the server port: a list of NetworkPolicyPeer objects (the namespace of
     # your ingress controller or Gateway, for example). Empty: with an Ingress or HTTPRoute

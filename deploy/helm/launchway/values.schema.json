@@ -10,6 +10,18 @@
     "probe": { "type": ["object", "null"] },
     "envList": { "type": "array", "items": { "type": "object", "required": ["name"] } },
     "objectList": { "type": "array", "items": { "type": "object" } },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "targetMemoryUtilizationPercentage": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "extraMetrics": { "$ref": "#/definitions/objectList" },
+        "behavior": { "type": "object" }
+      }
+    },
     "stringMap": { "type": "object", "additionalProperties": { "type": "string" } },
     "secretRef": {
       "type": "object",
@@ -366,9 +378,46 @@
         "existingSecretKey": { "type": "string", "minLength": 1 }
       }
     },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "nameLabels": { "type": "boolean" },
+        "scrapeAnnotations": { "type": "boolean" },
+        "token": {
+          "type": "object",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "properties": {
+        "enabled": { "type": "boolean" },
+        "interval": { "type": "string" },
+        "scrapeTimeout": { "type": "string" },
+        "labels": { "$ref": "#/definitions/stringMap" },
+        "namespace": { "type": "string" }
+          }
+        },
+        "podMonitor": {
+          "type": "object",
+          "properties": {
+        "enabled": { "type": "boolean" },
+        "interval": { "type": "string" },
+        "scrapeTimeout": { "type": "string" },
+        "labels": { "$ref": "#/definitions/stringMap" },
+        "namespace": { "type": "string" }
+          }
+        }
+      }
+    },
     "server": {
       "type": "object",
       "properties": {
+        "autoscaling": { "$ref": "#/definitions/autoscaling" },
         "replicas": { "type": "integer", "minimum": 0 },
         "trustedProxies": { "type": "array", "items": { "type": "string" } },
         "clientAddressHeader": { "type": ["string", "null"] },
@@ -460,6 +509,7 @@
     "runner": {
       "type": "object",
       "properties": {
+        "autoscaling": { "$ref": "#/definitions/autoscaling" },
         "enabled": { "type": "boolean" },
         "replicas": { "type": "integer", "minimum": 0 },
         "concurrency": { "type": "integer", "minimum": 1 },
@@ -635,6 +685,12 @@
             "enabled": { "type": "boolean" },
             "namespace": { "type": "string", "minLength": 1 },
             "podLabels": { "$ref": "#/definitions/stringMap" }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "from": { "$ref": "#/definitions/objectList" }
           }
         },
         "server": {

@@ -11,6 +11,7 @@ package engine
 
 import (
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"slices"
 	"strings"
 	"time"
@@ -80,6 +81,11 @@ func (c *cmd) waitForRoom(l leaseRef, s *StepState, res Result) {
 			WaitCode: code})
 		return
 	}
+	reasonLabel := "other" // a Station chose the code: only the known two become labels
+	if code == WaitQuotaFull || code == WaitClusterFull {
+		reasonLabel = code
+	}
+	metrics.StepRoomWaits.Inc(reasonLabel)
 	pause := capacityPause(s.WaitTries + 1)
 	c.emit(StepQueued, Payload{Step: stepID, Attempt: s.Attempt, Reason: reason, WaitCode: code,
 		NotBefore: c.now + pause.Milliseconds(), Requires: schemaQueues})

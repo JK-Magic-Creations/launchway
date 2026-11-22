@@ -198,7 +198,9 @@ metadata:
   labels:
     {{- include "launchway.componentLabels" (list $root .component) | nindent 4 }}
 spec:
+  {{- if not (($r.autoscaling | default dict).enabled) }}
   replicas: {{ $r.replicas }}
+  {{- end }}
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -212,6 +214,7 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ .config | sha256sum }}
+        {{- include "launchway.shared.scrapeAnnotations" $root | nindent 8 }}
         {{- with $r.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -252,11 +255,15 @@ spec:
             - runner
             - --config=/etc/launchway-runner/runner.yaml
             - --health-listen=:{{ $r.healthPort }}
+            {{- if (($root.Values.metrics | default dict).enabled) }}
+            - --metrics-listen=:{{ $root.Values.metrics.port }}
+            {{- end }}
             {{- range $r.extraArgs }}
             - {{ . | quote }}
             {{- end }}
           # The runner's name (and its identity on the server) defaults to the pod name.
           env:
+            {{- include "launchway.shared.metricsEnv" $root | nindent 12 }}
             {{- if and $r.join $r.join.existingSecret }}
             # Each pod enrols with the join token at start (schema 20) and gets an identity of
             # its own, kept in its data volume.
@@ -282,6 +289,11 @@ spec:
             - name: health
               containerPort: {{ $r.healthPort }}
               protocol: TCP
+            {{- if (($root.Values.metrics | default dict).enabled) }}
+            - name: metrics
+              containerPort: {{ $root.Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
           {{- with $r.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
@@ -687,7 +699,9 @@ metadata:
   labels:
     {{- include "launchway.componentLabels" (list $root $component) | nindent 4 }}
 spec:
+  {{- if not (($r.autoscaling | default dict).enabled) }}
   replicas: {{ $r.replicas }}
+  {{- end }}
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -698,6 +712,7 @@ spec:
         {{- include "launchway.componentLabels" (list $root $component) | nindent 8 }}
       annotations:
         checksum/config: {{ $config | sha256sum }}
+        {{- include "launchway.shared.scrapeAnnotations" $root | nindent 8 }}
         {{- with $r.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -730,7 +745,11 @@ spec:
             - runner
             - --config=/etc/launchway-runner/runner.yaml
             - --health-listen=:{{ $r.healthPort }}
+            {{- if (($root.Values.metrics | default dict).enabled) }}
+            - --metrics-listen=:{{ $root.Values.metrics.port }}
+            {{- end }}
           env:
+            {{- include "launchway.shared.metricsEnv" $root | nindent 12 }}
             - name: LAUNCHWAY_RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -746,6 +765,11 @@ spec:
             - name: health
               containerPort: {{ $r.healthPort }}
               protocol: TCP
+            {{- if (($root.Values.metrics | default dict).enabled) }}
+            - name: metrics
+              containerPort: {{ $root.Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet: { path: /healthz, port: health }
             periodSeconds: 10
@@ -862,3 +886,66 @@ CRD): everything but pauseConditions (promote), promoteFull and abort (abort, re
 {{- define "launchway.shared.rolloutStatusFixed" -}}
 HPAReplicas abortedAt alb albs availableReplicas blueGreen canary collisionCount conditions controllerPause currentPodHash currentStepHash currentStepIndex message observedGeneration phase readyReplicas replicas restartedAt selector stableRS updatedReplicas workloadObservedGeneration
 {{- end -}}
+
+{{/* The metrics token and settings a pod gets: the bearer token from a Secret when one is named. */}}
+{{- define "launchway.shared.metricsEnv" -}}
+{{- $m := .Values.metrics | default dict -}}
+{{- if and $m.enabled $m.token $m.token.existingSecret }}
+- name: LAUNCHWAY_METRICS_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ $m.token.existingSecret }}
+      key: {{ $m.token.existingSecretKey | default "token" }}
+{{- end }}
+{{- end }}
+
+{{/* Annotations for scrapers that find pods by annotation, when metrics.scrapeAnnotations is on. */}}
+{{- define "launchway.shared.scrapeAnnotations" -}}
+{{- $m := .Values.metrics | default dict -}}
+{{- if and $m.enabled $m.scrapeAnnotations }}
+prometheus.io/scrape: "true"
+prometheus.io/port: {{ $m.port | quote }}
+prometheus.io/path: /metrics
+{{- end }}
+{{- end }}
+
+{{/* A HorizontalPodAutoscaler for the Stations or the deploy runner: resource metrics by default, and any
+     other metric (an external or custom one, such as the queue depth) through autoscaling.extraMetrics. */}}
+{{- define "launchway.shared.hpa" -}}
+{{- $root := .root -}}
+{{- $a := .a -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .name }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list $root .component) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: {{ .kind | default "Deployment" }}
+    name: {{ .name }}
+  minReplicas: {{ $a.minReplicas }}
+  maxReplicas: {{ $a.maxReplicas }}
+  metrics:
+    {{- with $a.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: {{ . }} }
+    {{- end }}
+    {{- with $a.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: {{ . }} }
+    {{- end }}
+    {{- with $a.extraMetrics }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $a.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

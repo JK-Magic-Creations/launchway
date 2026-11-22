@@ -223,6 +223,30 @@
     "hosts": true,
     "tls": true
   },
+  "metrics": {
+    "enabled": true,
+    "nameLabels": true,
+    "podMonitor": {
+      "enabled": true,
+      "interval": true,
+      "labels": true,
+      "namespace": true,
+      "scrapeTimeout": true
+    },
+    "port": true,
+    "scrapeAnnotations": true,
+    "serviceMonitor": {
+      "enabled": true,
+      "interval": true,
+      "labels": true,
+      "namespace": true,
+      "scrapeTimeout": true
+    },
+    "token": {
+      "existingSecret": true,
+      "existingSecretKey": true
+    }
+  },
   "nameOverride": true,
   "networkPolicy": {
     "database": {
@@ -238,6 +262,9 @@
       "podLabels": true
     },
     "enabled": true,
+    "metrics": {
+      "from": true
+    },
     "runner": {
       "extraEgress": true,
       "kubernetesAPI": {
@@ -289,6 +316,15 @@
     "accept": true,
     "affinity": true,
     "ai": true,
+    "autoscaling": {
+      "behavior": true,
+      "enabled": true,
+      "extraMetrics": true,
+      "maxReplicas": true,
+      "minReplicas": true,
+      "targetCPUUtilizationPercentage": true,
+      "targetMemoryUtilizationPercentage": true
+    },
     "concurrency": true,
     "dataVolume": {
       "sizeLimit": true
@@ -322,17 +358,17 @@
       "helperImage": true,
       "imagePullSecrets": true,
       "keepFailed": true,
-      "pod": true,
-      "maxWorkspace": true,
-      "maxWorkspaces": true,
       "maxCpu": true,
       "maxMemory": true,
       "maxPodAge": true,
+      "maxWorkspace": true,
+      "maxWorkspaces": true,
       "memory": true,
       "memoryLimit": true,
       "namespace": true,
       "namespaceLabels": true,
       "nodeSelector": true,
+      "pod": true,
       "priorityClassName": true,
       "restricted": true,
       "runAsGroup": true,
@@ -382,9 +418,17 @@
   },
   "securityContext": true,
   "server": {
-    "trustedProxies": true,
-    "clientAddressHeader": true,
     "affinity": true,
+    "autoscaling": {
+      "behavior": true,
+      "enabled": true,
+      "extraMetrics": true,
+      "maxReplicas": true,
+      "minReplicas": true,
+      "targetCPUUtilizationPercentage": true,
+      "targetMemoryUtilizationPercentage": true
+    },
+    "clientAddressHeader": true,
     "dataVolume": {
       "sizeLimit": true
     },
@@ -422,7 +466,8 @@
     },
     "terminationGracePeriodSeconds": true,
     "tolerations": true,
-    "topologySpreadConstraints": true
+    "topologySpreadConstraints": true,
+    "trustedProxies": true
   },
   "service": {
     "annotations": true,

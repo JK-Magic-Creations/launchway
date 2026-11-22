@@ -493,6 +493,8 @@ type runnerOptions struct {
 	Token        string
 	Join         string // a join token, to enrol with
 	HealthListen string
+	// MetricsListen is where the Station serves metrics (--metrics-listen); empty: nowhere.
+	MetricsListen string
 }
 
 // runnerArgs reads the runner's settings: a flag given on the command line
@@ -512,13 +514,14 @@ func runnerArgs(args []string) (*runnerOptions, error) {
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
 	health := fs.String("health-listen", "", "address to serve /healthz and /readyz on, such as :8081 (default: none)")
+	metricsListen := fs.String("metrics-listen", "", "address to serve metrics on, such as :9102 (default: none); a bearer token is read from LAUNCHWAY_METRICS_TOKEN if set")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil, exitErr(0)
 		}
 		return nil, exitErr(2) // the flag package has explained
 	}
-	o := &runnerOptions{HealthListen: *health}
+	o := &runnerOptions{HealthListen: *health, MetricsListen: *metricsListen}
 	if *cfgPath != "" {
 		f, err := config.LoadRunner(*cfgPath)
 		if err != nil {
@@ -615,6 +618,7 @@ func cmdRunner(args []string) error {
 		go hs.Serve(ln)
 		defer hs.Close()
 	}
+	startRunnerMetrics(ctx, o)
 	err = r.Run(ctx)
 	if ident != nil && ident.Ephemeral {
 		// The server revoked it as it left; the next start enrols anew.

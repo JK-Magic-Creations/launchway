@@ -147,6 +147,28 @@ runner_pools:
 | `audit.stdout` | boolean | `true` | Also write every audit entry as one JSON line to standard output ([the audit stream](events.md#audit-stream-on-standard-output)). The database record is kept either way. Set `false` to turn the stream off |
 | `user` | text | the operating system user, else `local` | Who every action is recorded as when sign-in is off (`auth.mode: none`) |
 
+## Observability {#observability}
+
+Metrics and trace export. Both are bootstrap settings, read before the database. See
+[Metrics and traces](../howto/metrics-and-traces.md) and the [metrics reference](metrics.md). The Helm chart sets
+the metrics listener, token and name labels with the environment variables `LAUNCHWAY_METRICS_LISTEN`,
+`LAUNCHWAY_METRICS_TOKEN`, `LAUNCHWAY_METRICS_ENABLED` and `LAUNCHWAY_METRICS_NAME_LABELS` instead of this file, so that
+servers of the version before an upgrade can still read it; a key written here wins over its variable.
+
+<!-- keys: server -->
+
+| Setting | Type | Default | Meaning |
+|---|---|---|---|
+| `observability.metrics.enabled` | boolean | `true` | Serve metrics in the text exposition format on a listener of their own. Never the address of the web UI and the API |
+| `observability.metrics.listen` | address | `127.0.0.1:9102` | Where the metrics listener binds. The chart binds the pod's address and lets only the pods its network policy names reach it |
+| `observability.metrics.token_env` | text | `LAUNCHWAY_METRICS_TOKEN` | The environment variable that holds a bearer token the scraper must send. Empty token: none required. The token is never kept in this file |
+| `observability.metrics.name_labels` | boolean | `false` | Record Flight names as a label of one extra metric, `launchway_flight_runs_finished_total`, limited to 300 series. Off by default so no name leaves the Insights pages |
+| `observability.tracing.enabled` | boolean | `false` | Send traces over OTLP/HTTP (JSON encoding) to a collector. Off by default |
+| `observability.tracing.endpoint` | address | none | The collector's traces address, such as `https://collector.example.com:4318/v1/traces`. The request goes through `egress.allow` like every outbound request. Required when tracing is on |
+| `observability.tracing.headers_env` | text | none | The environment variable that holds extra request headers as `Name=value,Name2=value2` (an API key). The values are never kept in this file |
+| `observability.tracing.sample_ratio` | number | `1` | The share of traces kept, from 0 to 1 |
+| `observability.tracing.viewer_url_template` | text | none | An address with `{trace_id}` in it, such as `https://traces.example.com/trace/{trace_id}`. When set, the run page links to the trace. Unset: the page shows the id with a copy button |
+
 ## Encryption
 
 See [Encryption at rest](../guide/encryption-at-rest.md). The root key is held outside the database; these settings say where. With none set, a new installation generates a key file in its data directory, and an existing one starts "not encrypted at rest" with a warning until one is configured. At most one holder may be configured; set `encryption.holder` to say which when settings for several are present. Environment variables override the file: `LAUNCHWAY_ROOT_KEY_FILE`, `LAUNCHWAY_ROOT_KEY` (the key itself, base64), `LAUNCHWAY_ROOT_KEY_PREVIOUS_FILE`, `LAUNCHWAY_ROOT_KEY_PREVIOUS`, `LAUNCHWAY_KEYSTORE_PASSPHRASE_FILE`.

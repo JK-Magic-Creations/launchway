@@ -607,3 +607,44 @@ Nothing is sent to any model unless `ai.models` lists one. See [AI models](../gu
 - [Install on Kubernetes](../howto/install-kubernetes.md) walks through an installation.
 - [Server configuration](server-config.md) and [runner configuration](runner-config.md) explain
   the settings these values become.
+
+## Metrics and autoscaling {#metrics}
+
+Metrics are served on a port of their own on every pod, never through the Ingress or HTTPRoute. See
+[Metrics and traces](../howto/metrics-and-traces.md).
+
+<!-- keys: helm -->
+
+| Value | Type | Default | Meaning |
+|---|---|---|---|
+| `metrics.enabled` | boolean | `true` | Serve metrics on the servers, Stations and launch Station |
+| `metrics.port` | integer | `9102` | The metrics port of every pod |
+| `metrics.nameLabels` | boolean | `false` | Record Flight names as a label of one extra metric (limited to 300 series) |
+| `metrics.scrapeAnnotations` | boolean | `false` | Annotate the pods with `prometheus.io/scrape`, `/port` and `/path` |
+| `metrics.token.existingSecret` | text | none | A Secret with a bearer token the scraper must send. Empty: none |
+| `metrics.token.existingSecretKey` | text | `token` | The key of that Secret |
+| `metrics.serviceMonitor.enabled` | boolean | `false` | Create a ServiceMonitor for the servers. Needs the `monitoring.coreos.com/v1` API; rendering fails without it |
+| `metrics.serviceMonitor.interval` | duration | `30s` | Scrape interval |
+| `metrics.serviceMonitor.scrapeTimeout` | duration | `10s` | Scrape timeout |
+| `metrics.serviceMonitor.labels` | map | `{}` | Labels your monitoring system selects ServiceMonitors by |
+| `metrics.serviceMonitor.namespace` | text | release namespace | The namespace to create it in |
+| `metrics.podMonitor.enabled` | boolean | `false` | Create a PodMonitor for the Stations and the launch Station |
+| `metrics.podMonitor.interval` | duration | `30s` | Scrape interval |
+| `metrics.podMonitor.scrapeTimeout` | duration | `10s` | Scrape timeout |
+| `metrics.podMonitor.labels` | map | `{}` | Labels your monitoring system selects PodMonitors by |
+| `metrics.podMonitor.namespace` | text | release namespace | The namespace to create it in |
+| `networkPolicy.metrics.from` | list | `[]` | Who may reach the metrics port: NetworkPolicyPeer objects, such as your monitoring namespace's pods. Empty: nobody |
+| `server.autoscaling.enabled` | boolean | `false` | Scale the servers with a HorizontalPodAutoscaler. `server.replicas` is then ignored |
+| `server.autoscaling.minReplicas` | integer | `2` | Fewest servers |
+| `server.autoscaling.maxReplicas` | integer | `6` | Most servers |
+| `server.autoscaling.targetCPUUtilizationPercentage` | integer | `70` | Target CPU use of the requests. Needs the metrics API (metrics-server) |
+| `server.autoscaling.targetMemoryUtilizationPercentage` | integer | none | Target memory use of the requests |
+| `server.autoscaling.extraMetrics` | list | `[]` | More HPA v2 metric specs (external or pods metrics) |
+| `server.autoscaling.behavior` | map | `{}` | The HPA behavior |
+| `runner.autoscaling.enabled` | boolean | `false` | Scale the Stations with a HorizontalPodAutoscaler. `runner.replicas` is then ignored |
+| `runner.autoscaling.minReplicas` | integer | `2` | Fewest Stations |
+| `runner.autoscaling.maxReplicas` | integer | `10` | Most Stations |
+| `runner.autoscaling.targetCPUUtilizationPercentage` | integer | `70` | Target CPU use of the requests |
+| `runner.autoscaling.targetMemoryUtilizationPercentage` | integer | none | Target memory use of the requests |
+| `runner.autoscaling.extraMetrics` | list | `[]` | More HPA v2 metric specs; the queue depth is the best signal for Stations |
+| `runner.autoscaling.behavior` | map | `{}` | The HPA behavior |

@@ -418,3 +418,20 @@ does not know the setting. */}}
 {{- if $p.policies }}{{ $_ := set $out "policies" $p.policies }}{{ end -}}
 {{- if $out }}{{ toYaml $out }}{{ end -}}
 {{- end -}}
+
+{{/* The environment that tells a server where to serve metrics: the pod's own address, on the metrics port.
+     It is the environment, not the configuration file, so that servers of the version before an upgrade can still read the file. */}}
+{{- define "launchway.metricsEnv" -}}
+{{- if .Values.metrics.enabled }}
+- name: LAUNCHWAY_METRICS_LISTEN
+  value: {{ printf "0.0.0.0:%d" (int .Values.metrics.port) | quote }}
+{{- if .Values.metrics.nameLabels }}
+- name: LAUNCHWAY_METRICS_NAME_LABELS
+  value: "true"
+{{- end }}
+{{- include "launchway.shared.metricsEnv" . | nindent 0 }}
+{{- else }}
+- name: LAUNCHWAY_METRICS_ENABLED
+  value: "false"
+{{- end }}
+{{- end }}

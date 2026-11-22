@@ -66,6 +66,17 @@ runner:
   enabled: true
   # -- Number of Station pods. A Sortie whose Station is lost has its step run again by another.
   replicas: 2
+  autoscaling:
+    # -- Scale the Stations with a HorizontalPodAutoscaler (replicas is then ignored).
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage:
+    # -- More metrics, as HPA v2 metric specs (the queue depth, from an adapter).
+    extraMetrics: []
+    # -- The HPA behavior.
+    behavior: {}
   # -- Steps each Station executes at once.
   concurrency: 2
   # -- Enrol each Station pod with a join token instead of using the shared Station token: a Secret
@@ -275,6 +286,19 @@ runner:
     create: true
 
 # Security settings of the Station pods. The image runs as user 65532.
+# Metrics: each Station pod serves them on its own port; nothing is exposed outside the cluster.
+metrics:
+  # -- Serve metrics.
+  enabled: true
+  # -- The metrics port.
+  port: 9102
+  # -- Annotate the pods with prometheus.io/scrape, /port and /path.
+  scrapeAnnotations: false
+  token:
+    # -- A Secret holding a bearer token the scraper must send. Empty: none.
+    existingSecret: ""
+    existingSecretKey: token
+
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 65532

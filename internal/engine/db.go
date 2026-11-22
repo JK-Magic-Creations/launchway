@@ -1453,7 +1453,7 @@ func migrate(d *dbx, known int, log *slog.Logger) (SchemaInfo, error) {
 		return SchemaInfo{}, err
 	}
 	for {
-		applied, err := migrateOne(d, known)
+		applied, err := migrateCounted(d, known)
 		if err != nil {
 			return SchemaInfo{}, err
 		}

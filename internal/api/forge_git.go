@@ -5,16 +5,19 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 	"github.com/jk-magic-creations/launchway/internal/work"
 )
 
@@ -129,7 +132,24 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: s.pushNotice(c, repo, r)})
+	start := time.Now()
+	cw, cr := &countingWriter{ResponseWriter: w}, &countingBody{ReadCloser: r.Body}
+	r.Body = cr
+	res := s.Forge.Git.Serve(cw, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo), Notice: s.pushNotice(c, repo, r)})
+	if !q.advertise {
+		op := "fetch"
+		if q.svc == githttp.ReceivePack {
+			op = "push"
+		}
+		outcome := "ok"
+		if res.Err != nil || res.Status >= 400 {
+			outcome = "error"
+		}
+		metrics.GitOps.Inc(op, outcome)
+		metrics.GitDuration.Observe(time.Since(start).Seconds(), op)
+		metrics.GitBytes.Add(float64(cr.n), op, "in")
+		metrics.GitBytes.Add(float64(cw.n), op, "out")
+	}
 	if q.svc == githttp.ReceivePack && !q.advertise {
 		s.gitPushed(r.Context(), s.clientAddr(r), c, repo, res)
 	}
@@ -436,6 +456,7 @@ func (s *Server) gitAlias(next http.Handler) http.Handler {
 		}
 		r.SetPathValue("owner", segs[0])
 		r.SetPathValue("name", segs[1])
+		noteRoute(r, "/{owner}/{name}/git")
 		s.gitHTTP(w, r)
 	})
 }
@@ -459,4 +480,35 @@ func (s *Server) redirectToRepository(w http.ResponseWriter, r *http.Request, ow
 	}
 	http.Redirect(w, r, "/repositories/"+url.PathEscape(owner)+"/"+url.PathEscape(name), http.StatusFound)
 	return true
+}
+
+// countingWriter and countingBody count the bytes of a Git transfer, for its metrics.
+type countingWriter struct {
+	http.ResponseWriter
+	n int64
+}
+
+func (c *countingWriter) Write(b []byte) (int, error) {
+	n, err := c.ResponseWriter.Write(b)
+	c.n += int64(n)
+	return n, err
+}
+
+func (c *countingWriter) Flush() {
+	if f, ok := c.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (c *countingWriter) Unwrap() http.ResponseWriter { return c.ResponseWriter }
+
+type countingBody struct {
+	io.ReadCloser
+	n int64
+}
+
+func (c *countingBody) Read(p []byte) (int, error) {
+	n, err := c.ReadCloser.Read(p)
+	c.n += int64(n)
+	return n, err
 }
