@@ -93,7 +93,7 @@ done before this design is reviewed.
 Measurement and enforcement are in the container and its cgroup. No code
 knows about Go, Python, .NET, JVM, Node, Rust, C, C++ or shell. The Station
 reads kernel counters and the kernel enforces limits. Anything language-aware
-(requirement 3) is an optimisation on top and may be absent without harm.
+(requirement 3) is an optimization on top and may be absent without harm.
 
 ### 3. Tools told the truth about their limits
 
@@ -207,7 +207,7 @@ Recommendation on the three: (i) one pod per step. It is the only one that
 gives exact quota, complete isolation and no overcommit. Its cost is start-up
 and workspace hand-over, which a per-run volume or the existing checkout copy
 answers, and which the stage grouping below reduces. (ii) is a later
-optimisation for long steps, once quota behavior is tested. (iii) is rejected.
+optimization for long steps, once quota behavior is tested. (iii) is rejected.
 
 A middle form for short steps: one pod per stage when all of its steps share an
 image and run one after another, so the cost of start-up is not paid for a

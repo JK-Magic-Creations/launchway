@@ -17,7 +17,7 @@
     "/\\b[a-z]{3}_[0-9a-z]{16,}\\b/g"
   ],
   "words": [
-    "Unfiled",
+    "Unfiled", "overcommitted", "kubelet", "goroutines", "heartbeating", "preemptible", "Burstable", "rollups",
     "unfiled",
     "overwatch",
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
