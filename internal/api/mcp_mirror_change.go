@@ -16,8 +16,8 @@ import (
 
 func addMirrorChangeTools(srv *mcp.Server, c *mcpCall) {
 	if c.mayOperate {
-		addTool(srv, c, &mcp.Tool{Name: "change_mirror", Annotations: changes("Pause, resume or remove a mirror", true, true),
-			Description: "Repository admins only. pause or resume a mirror's schedule, or remove it (a push mirror is simply deleted; to end a pull mirror and make the repository the primary use stop_mirroring). The mirror's ID is in list_mirrors. Audited."},
+		addTool(srv, c, &mcp.Tool{Name: "change_mirror", Annotations: changes("Pause, resume, change or remove a mirror", true, true),
+			Description: "Repository admins only. pause or resume a mirror's schedule, update a push mirror's outside-release settings (publish_releases on or off, outside_api), or remove it (a push mirror is simply deleted; to end a pull mirror and make the repository the primary use stop_mirroring). The mirror's ID is in list_mirrors. Audited."},
 			mcpCallTimeout, changeMirror)
 	}
 	if c.mayAdminister {
@@ -30,7 +30,10 @@ func addMirrorChangeTools(srv *mcp.Server, c *mcpCall) {
 type changeMirrorIn struct {
 	Repository string `json:"repository" jsonschema:"the repository, owner/name"`
 	MirrorID   string `json:"mirror_id" jsonschema:"the mirror's ID (mir_...), from list_mirrors"`
-	Action     string `json:"action" jsonschema:"pause, resume or remove"`
+	Action     string `json:"action" jsonschema:"pause, resume, update or remove"`
+	// For update: a nil field is left as it is.
+	PublishReleases *bool   `json:"publish_releases,omitempty" jsonschema:"update: make (true) or stop making (false) the release on the outside Git host after a release is published"`
+	OutsideAPI      *string `json:"outside_api,omitempty" jsonschema:"update: the address of the outside host's API; empty derives it from the mirror's address"`
 }
 
 type changeMirrorOut struct {
@@ -57,8 +60,24 @@ func changeMirror(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in ch
 			return out, err
 		}
 		out.Mirror = &v
+	case "update":
+		body := map[string]any{}
+		if in.PublishReleases != nil {
+			body["publish_releases"] = *in.PublishReleases
+		}
+		if in.OutsideAPI != nil {
+			body["outside_api"] = *in.OutsideAPI
+		}
+		if len(body) == 0 {
+			return out, errors.New("say what to update: publish_releases or outside_api")
+		}
+		var v mirror.View
+		if err := c.apiJSON(ctx, "change_mirror", http.MethodPatch, path, body, &v); err != nil {
+			return out, err
+		}
+		out.Mirror = &v
 	default:
-		return out, errors.New("action is pause, resume or remove")
+		return out, errors.New("action is pause, resume, update or remove")
 	}
 	return out, nil
 }

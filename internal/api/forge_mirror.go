@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -69,7 +71,15 @@ func (s *Server) listAllMirrors(w http.ResponseWriter, r *http.Request) {
 			out = append(out, v)
 		}
 	}
+	s.outsideStates(out)
 	writeJSON(w, http.StatusOK, forge.Page[mirror.View]{Items: out})
+}
+
+// mirrorView is a mirror as shown, with how its releases stand on the outside host.
+func (s *Server) mirrorView(ctx context.Context, ms *mirror.Service, m mirror.Mirror) mirror.View {
+	vs := []mirror.View{ms.View(ctx, m)}
+	s.outsideStates(vs)
+	return vs[0]
 }
 
 func (s *Server) listMirrors(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +92,7 @@ func (s *Server) listMirrors(w http.ResponseWriter, r *http.Request) {
 		s.failMirror(w, err)
 		return
 	}
+	s.outsideStates(vs)
 	writeJSON(w, http.StatusOK, forge.Page[mirror.View]{Items: vs})
 }
 
@@ -105,6 +116,12 @@ func (s *Server) createMirror(w http.ResponseWriter, r *http.Request) {
 	setAudit(r, path, "")
 	var m mirror.Mirror
 	var err error
+	if in.OutsideAPI != "" {
+		if err := ms.Guard().Check(r.Context(), in.OutsideAPI); err != nil {
+			writeErr(w, http.StatusBadRequest, "outside_api: "+err.Error())
+			return
+		}
+	}
 	switch in.Direction {
 	case "", mirror.Pull:
 		m, err = ms.SetPull(r.Context(), path, in.Spec, identityFrom(r).User)
@@ -118,8 +135,12 @@ func (s *Server) createMirror(w http.ResponseWriter, r *http.Request) {
 		s.failMirror(w, err)
 		return
 	}
-	v := ms.View(r.Context(), m)
-	setAudit(r, path, v.Direction+" mirror of "+v.URL+auditCredential(v.Credential))
+	v := s.mirrorView(r.Context(), ms, m)
+	detail := v.Direction + " mirror of " + v.URL + auditCredential(v.Credential)
+	if v.PublishReleases {
+		detail += ", publishes releases"
+	}
+	setAudit(r, path, detail)
 	writeJSON(w, http.StatusCreated, v)
 }
 
@@ -161,6 +182,9 @@ func (s *Server) updateMirror(w http.ResponseWriter, r *http.Request) {
 		Enabled         *bool  `json:"enabled"`
 		IntervalSeconds *int64 `json:"interval_seconds"`
 		Prune           *bool  `json:"prune"`
+		// PublishReleases and OutsideAPI are the outside-release settings of a push mirror.
+		PublishReleases *bool   `json:"publish_releases"`
+		OutsideAPI      *string `json:"outside_api"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -171,12 +195,25 @@ func (s *Server) updateMirror(w http.ResponseWriter, r *http.Request) {
 	}
 	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
 	setAudit(r, path, m.Direction+" mirror of "+m.URL)
-	got, err := ms.Update(r.Context(), m.ID, in.Enabled, in.IntervalSeconds, in.Prune)
+	var out *mirror.OutsideChange
+	if in.PublishReleases != nil || in.OutsideAPI != nil {
+		out = &mirror.OutsideChange{PublishReleases: in.PublishReleases, OutsideAPI: in.OutsideAPI}
+		if in.OutsideAPI != nil && *in.OutsideAPI != "" {
+			if err := ms.Guard().Check(r.Context(), *in.OutsideAPI); err != nil {
+				writeErr(w, http.StatusBadRequest, "outside_api: "+err.Error())
+				return
+			}
+		}
+		if in.PublishReleases != nil {
+			setAudit(r, path, fmt.Sprintf("%s mirror of %s: publish_releases %t", m.Direction, m.URL, *in.PublishReleases))
+		}
+	}
+	got, err := ms.Update(r.Context(), m.ID, in.Enabled, in.IntervalSeconds, in.Prune, out)
 	if err != nil {
 		s.failMirror(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, ms.View(r.Context(), got))
+	writeJSON(w, http.StatusOK, s.mirrorView(r.Context(), ms, got))
 }
 
 func (s *Server) deleteMirror(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +250,7 @@ func (s *Server) syncMirror(w http.ResponseWriter, r *http.Request) {
 		s.failMirror(w, err)
 		return
 	}
-	v := ms.View(r.Context(), got)
+	v := s.mirrorView(r.Context(), ms, got)
 	if err != nil {
 		// The run failed: the mirror's status says why, redacted.
 		writeJSON(w, http.StatusBadGateway, map[string]any{"error": v.LastError, "mirror": v})

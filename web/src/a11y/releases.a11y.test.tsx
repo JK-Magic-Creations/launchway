@@ -37,6 +37,12 @@ describe.each(["light", "dark"])("releases, %s theme", (theme) => {
     await clean(what);
   }, 20000);
 
+  it("the sheet of the outside Git hosts, with a failure and its Retry button", async () => {
+    await open("/deployments/releases/shop-api/1.4.0");
+    await screen.findByRole("heading", { name: "On an outside Git host" }, { timeout: 8000 });
+    await clean("outside Git host sheet");
+  }, 20000);
+
   it("the page says what it is", async () => {
     await open("/deployments/releases/matrix");
     expect(await screen.findByText("Where each release is", { selector: "h1" }, { timeout: 8000 })).toBeTruthy();

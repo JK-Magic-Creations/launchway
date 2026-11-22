@@ -33,6 +33,21 @@ describe("releases", () => {
     expect(screen.getByRole("button", { name: /^Withdraw$/ })).toBeTruthy();
   }, 20000);
 
+  it("shows how a published release stands on each outside Git host, with the reason and a way to try again", async () => {
+    await open("/deployments/releases/shop-api/1.4.0");
+    const sheet = (await screen.findByRole("heading", { name: "On an outside Git host" }, { timeout: 8000 })).closest("section") as HTMLElement;
+    expect(within(sheet).getByText("Published")).toBeTruthy();
+    expect(within(sheet).getByRole("link", { name: /releases\/tag\/v1\.4\.0/ })).toBeTruthy();
+    expect(within(sheet).getByText(/may not be allowed to make releases/)).toBeTruthy();
+    expect(within(sheet).getAllByRole("button", { name: /Retry/ }).length).toBe(1); // only the failed one
+  }, 20000);
+
+  it("draws no outside sheet for a draft", async () => {
+    await open("/deployments/releases/shop-api/1.5.0");
+    await screen.findByRole("button", { name: /Edit the notes/ }, { timeout: 8000 });
+    expect(screen.queryByText("On an outside Git host")).toBeNull();
+  }, 20000);
+
   it("lets a draft be edited and published", async () => {
     await open("/deployments/releases/shop-api/1.5.0");
     expect(await screen.findByRole("button", { name: /Edit the notes/ }, { timeout: 8000 })).toBeTruthy();

@@ -33,7 +33,7 @@ func addMirrorTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_mirror", Annotations: changes("Set up a mirror", false, true),
-		Description: "Repository admins only. Make a hosted repository a pull mirror of an https address (direction pull, the default: an exact copy of every branch, tag and note, kept current on a schedule, and the repository takes no pushes meanwhile) or add a push mirror (direction push: every accepted update is copied to the address). The credential is a reference to a secret on the server, credential_env (the name of an environment variable) or credential_file (an absolute path), never the secret itself; username goes with it. A pull mirror needs a repository with no branches or tags of its own. Internal addresses are refused unless the server allows them. Audited."},
+		Description: "Repository admins only. Make a hosted repository a pull mirror of an https address (direction pull, the default: an exact copy of every branch, tag and note, kept current on a schedule, and the repository takes no pushes meanwhile) or add a push mirror (direction push: every accepted update is copied to the address). The credential is a reference to a secret on the server, credential_env (the name of an environment variable) or credential_file (an absolute path), never the secret itself; username goes with it. A push mirror may also publish releases (publish_releases, off by default): once a Launchway release is published, the matching release is made on the outside Git host, and its state shows in list_mirrors and get_release; to change it on an existing mirror use change_mirror with action update. A pull mirror needs a repository with no branches or tags of its own. Internal addresses are refused unless the server allows them. Audited."},
 		mcpCallTimeout, setMirror)
 	addTool(srv, c, &mcp.Tool{Name: "sync_mirror", Annotations: changes("Run a mirror now", false, true),
 		Description: "Run a mirror now (needs the operator role on the repository) and return its status. A failed Sortie returns the redacted error. Audited."},
@@ -66,6 +66,8 @@ type setMirrorIn struct {
 	CredentialFile  string `json:"credential_file,omitempty" jsonschema:"the absolute path of a file on the server that holds the token"`
 	IntervalSeconds int64  `json:"interval_seconds,omitempty" jsonschema:"how often it runs, at least 60; default 3600 for pull"`
 	Prune           *bool  `json:"prune,omitempty" jsonschema:"delete refs the other side no longer has; default true"`
+	PublishReleases bool   `json:"publish_releases,omitempty" jsonschema:"push mirrors only: also create each published release on the outside Git host (same tag, title, notes and files), with this mirror's credential; default off"`
+	OutsideAPI      string `json:"outside_api,omitempty" jsonschema:"push mirrors only: the address of the outside host's API, for a self-hosted host (default: derived from url)"`
 }
 
 func splitRepo(repo string) (owner, name string, err error) {
@@ -89,6 +91,12 @@ func setMirror(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setMi
 	body := map[string]any{"direction": in.Direction, "url": in.URL, "username": in.Username, "prune": in.Prune}
 	if in.IntervalSeconds != 0 {
 		body["interval_seconds"] = in.IntervalSeconds
+	}
+	if in.PublishReleases {
+		body["publish_releases"] = true
+	}
+	if in.OutsideAPI != "" {
+		body["outside_api"] = in.OutsideAPI
 	}
 	switch {
 	case in.CredentialEnv != "":

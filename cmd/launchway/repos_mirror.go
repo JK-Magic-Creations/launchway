@@ -29,8 +29,15 @@ const reposMirrorUsage = `Usage:
                                     the pull and push mirrors, their last sync, last error and lag
   launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
                      [--credential-env NAME | --credential-file PATH] [--interval 1h] [--no-prune]
+                     [--publish-releases [--outside-api URL]]
                                     keep OWNER/NAME an exact copy of URL (pull, the default), or copy
-                                    every accepted update of it to URL (push)
+                                    every accepted update of it to URL (push). --publish-releases (push
+                                    only, off by default) also makes each published release on the
+                                    outside Git host: same tag, title, notes and files, with the
+                                    mirror's own credential. --outside-api names that host's API
+                                    address when it cannot be derived from URL (a self-hosted host)
+  launchway repos mirror set OWNER/NAME --id mir_... [--publish-releases=true|false] [--outside-api URL]
+                                    change a push mirror's outside-release settings
   launchway repos mirror sync OWNER/NAME [--id mir_...]     run the pull mirror (or the one given) now
   launchway repos mirror pause|resume OWNER/NAME --id mir_...
   launchway repos mirror remove OWNER/NAME --id mir_...     remove a push mirror
@@ -60,6 +67,15 @@ type mirrorView struct {
 	Refs            int    `json:"refs"`
 	LagSeconds      int64  `json:"lag_seconds"`
 	Behind          bool   `json:"behind"`
+	PublishReleases bool   `json:"publish_releases"`
+	OutsideAPI      string `json:"outside_api"`
+	Outside         []struct {
+		Version  string `json:"version"`
+		State    string `json:"state"`
+		URL      string `json:"url"`
+		Reason   string `json:"reason"`
+		Attempts int    `json:"attempts"`
+	} `json:"outside"`
 }
 
 type mirrorPage struct {
@@ -78,6 +94,8 @@ func (cl *client) reposMirror(args []string) error {
 		return cl.mirrorAdd(args[1:])
 	case "sync":
 		return cl.mirrorSync(args[1:])
+	case "set":
+		return cl.mirrorSet(args[1:])
 	case "pause", "resume", "remove":
 		return cl.mirrorChange(args[0], args[1:])
 	case "stop":
@@ -146,6 +164,25 @@ func (cl *client) mirrorStatus(args []string) error {
 				fmt.Fprintf(cl.out, "\n%s %s: %s (failed %d times in a row)\n", m.Repository, m.ID, m.LastError, m.Failures)
 			}
 		}
+		for _, m := range page.Items {
+			if !m.PublishReleases {
+				continue
+			}
+			fmt.Fprintf(cl.out, "\n%s %s publishes releases on its outside Git host:\n", m.Repository, m.ID)
+			if len(m.Outside) == 0 {
+				fmt.Fprintln(cl.out, "  no release has been published there yet")
+			}
+			for _, o := range m.Outside {
+				line := fmt.Sprintf("  %s: %s", o.Version, o.State)
+				if o.URL != "" {
+					line += " " + o.URL
+				}
+				if o.Reason != "" {
+					line += " (" + o.Reason + ")"
+				}
+				fmt.Fprintln(cl.out, line)
+			}
+		}
 	})
 }
 
@@ -158,10 +195,15 @@ func (cl *client) mirrorAdd(args []string) error {
 	cfile := fs.String("credential-file", "", "the path of a file on the server that holds the token")
 	every := fs.Duration("interval", 0, "how often it runs, at least 1m (default 1h for pull)")
 	noPrune := fs.Bool("no-prune", false, "keep refs the other side no longer has")
+	publish := fs.Bool("publish-releases", false, "push mirrors: also make each published release on the outside Git host")
+	api := fs.String("outside-api", "", "push mirrors: the address of the outside host's API, when it cannot be derived from the url")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
+	}
+	if (*publish || *api != "") && *dir != "push" {
+		return usageErr("--publish-releases and --outside-api belong to a push mirror: add --direction push")
 	}
 	if len(pos) != 1 || *u == "" || (*cenv != "" && *cfile != "") {
 		return usageErr("launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--credential-env NAME | --credential-file PATH]")
@@ -176,6 +218,12 @@ func (cl *client) mirrorAdd(args []string) error {
 	}
 	if *noPrune {
 		body["prune"] = false
+	}
+	if *publish {
+		body["publish_releases"] = true
+	}
+	if *api != "" {
+		body["outside_api"] = *api
 	}
 	switch {
 	case *cenv != "":
@@ -233,6 +281,45 @@ func (cl *client) mirrorSync(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		fmt.Fprintf(cl.out, "%s synced: %d refs, state %s, last success %s.\n", out.Repository, out.Refs, out.State, out.LastSuccess)
+	})
+}
+
+func (cl *client) mirrorSet(args []string) error {
+	fs := flag.NewFlagSet("repos mirror set", flag.ContinueOnError)
+	id := fs.String("id", "", "the push mirror")
+	publish := fs.Bool("publish-releases", false, "make (true) or stop making (false) each published release on the outside Git host")
+	api := fs.String("outside-api", "", "the address of the outside host's API (empty with --outside-api= derives it from the mirror's address)")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	given := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { given[f.Name] = true })
+	if len(pos) != 1 || *id == "" || (!given["publish-releases"] && !given["outside-api"]) {
+		return usageErr("launchway repos mirror set OWNER/NAME --id mir_... [--publish-releases=true|false] [--outside-api URL]")
+	}
+	p, err := repoPath(pos[0])
+	if err != nil {
+		return err
+	}
+	body := map[string]any{}
+	if given["publish-releases"] {
+		body["publish_releases"] = *publish
+	}
+	if given["outside-api"] {
+		body["outside_api"] = *api
+	}
+	var out mirrorView
+	if err := cl.call("PATCH", p+"/mirrors/"+url.PathEscape(*id), body, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *asJSON, func() {
+		if out.PublishReleases {
+			fmt.Fprintf(cl.out, "%s now publishes releases on its outside Git host.\n", out.ID)
+		} else {
+			fmt.Fprintf(cl.out, "%s does not publish releases on its outside Git host.\n", out.ID)
+		}
 	})
 }
 

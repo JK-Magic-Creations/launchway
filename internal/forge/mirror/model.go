@@ -54,6 +54,11 @@ type Mirror struct {
 	LeaseUntil time.Time
 	CreatedAt  time.Time
 	CreatedBy  string
+	// PublishReleases (push mirrors only) says a Launchway release, once
+	// published, is also created on the outside Git host; OutsideAPI is the
+	// address of that host's API when it cannot be derived from URL.
+	PublishReleases bool
+	OutsideAPI      string
 }
 
 // Spec is what a person gives to set a mirror up.
@@ -71,6 +76,30 @@ type Spec struct {
 	Prune *bool `json:"prune,omitempty"`
 	// Enabled defaults to true.
 	Enabled *bool `json:"enabled,omitempty"`
+	// PublishReleases (push mirrors only, default false) makes the release
+	// of a published Launchway release on the outside Git host too, with
+	// this mirror's own credential. OutsideAPI is the address of that
+	// host's API for a self-hosted host (empty: derived from the address).
+	PublishReleases bool   `json:"publish_releases,omitempty"`
+	OutsideAPI      string `json:"outside_api,omitempty"`
+}
+
+// OutsideChange changes a mirror's outside-release settings; a nil field is
+// left as it is.
+type OutsideChange struct {
+	PublishReleases *bool
+	OutsideAPI      *string
+}
+
+// OutsideState is how one release stands on a mirror's outside host.
+type OutsideState struct {
+	Release   string    `json:"release"`
+	Version   string    `json:"version,omitempty"`
+	State     string    `json:"state"`
+	URL       string    `json:"url,omitempty"`
+	Reason    string    `json:"reason,omitempty"`
+	Attempts  int       `json:"attempts"`
+	UpdatedAt time.Time `json:"updated_at,omitzero"`
 }
 
 // View is a mirror as the API shows it. It never holds a credential, only
@@ -100,6 +129,11 @@ type View struct {
 	Behind     bool      `json:"behind"`
 	CreatedAt  time.Time `json:"created_at"`
 	CreatedBy  string    `json:"created_by,omitempty"`
+	// PublishReleases and OutsideAPI are the outside-release settings of a
+	// push mirror; Outside is how its latest releases stand there.
+	PublishReleases bool           `json:"publish_releases"`
+	OutsideAPI      string         `json:"outside_api,omitempty"`
+	Outside         []OutsideState `json:"outside,omitempty"`
 }
 
 const (
@@ -149,13 +183,35 @@ func (s Spec) mirror(direction string, allowFiles bool) (Mirror, error) {
 	if s.Enabled != nil {
 		m.Enabled = *s.Enabled
 	}
+	if s.PublishReleases || s.OutsideAPI != "" {
+		if direction != Push {
+			return m, bad("publish_releases and outside_api belong to a push mirror: a release is published on the host a mirror copies to")
+		}
+		if err := checkOutsideAPI(s.OutsideAPI); err != nil {
+			return m, bad("%v", err)
+		}
+		m.PublishReleases, m.OutsideAPI = s.PublishReleases, strings.TrimSpace(s.OutsideAPI)
+	}
 	return m, nil
+}
+
+// checkOutsideAPI validates the address of an outside host's API.
+func checkOutsideAPI(a string) error {
+	a = strings.TrimSpace(a)
+	if a == "" {
+		return nil
+	}
+	u, err := url.Parse(a)
+	if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return errors.New("outside_api must be an https or http address with no user name, password, query or fragment")
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------- tables
 
 const cols = `id, repo_id, direction, url, username, cred_env, cred_file, interval_secs, enabled, prune, state, last_try_at, last_ok_at,
-	last_error, failures, next_at, synced_gen, dirty_since, ref_count, lease_until, created_at, created_by`
+	last_error, failures, next_at, synced_gen, dirty_since, ref_count, lease_until, created_at, created_by, publish_releases, outside_api`
 
 func ms(t time.Time) int64 {
 	if t.IsZero() {
@@ -174,11 +230,11 @@ func fromMS(v int64) time.Time {
 func scan(sc interface{ Scan(...any) error }) (Mirror, error) {
 	var m Mirror
 	var interval, tried, ok, next, dirty, lease, created int64
-	var enabled, prune int
+	var enabled, prune, publish int
 	err := sc.Scan(&m.ID, &m.RepoID, &m.Direction, &m.URL, &m.Username, &m.Credential.Env, &m.Credential.File, &interval, &enabled, &prune, &m.State,
-		&tried, &ok, &m.LastError, &m.Failures, &next, &m.SyncedGen, &dirty, &m.Refs, &lease, &created, &m.CreatedBy)
+		&tried, &ok, &m.LastError, &m.Failures, &next, &m.SyncedGen, &dirty, &m.Refs, &lease, &created, &m.CreatedBy, &publish, &m.OutsideAPI)
 	m.Interval = time.Duration(interval) * time.Second
-	m.Enabled, m.Prune = enabled != 0, prune != 0
+	m.Enabled, m.Prune, m.PublishReleases = enabled != 0, prune != 0, publish != 0
 	m.LastTry, m.LastOK, m.NextAt, m.DirtySince = fromMS(tried), fromMS(ok), fromMS(next), fromMS(dirty)
 	m.LeaseUntil, m.CreatedAt = fromMS(lease), fromMS(created)
 	return m, err
@@ -197,9 +253,9 @@ func (s *Service) insert(ctx context.Context, m Mirror) (Mirror, error) {
 	m.CreatedAt = s.now().UTC()
 	m.NextAt = m.CreatedAt
 	_, err := s.db.Exec(ctx, `INSERT INTO repo_mirrors(id, repo_id, direction, url, username, cred_env, cred_file, interval_secs, enabled, prune, state,
-		next_at, created_at, created_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		next_at, created_at, created_by, publish_releases, outside_api) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		m.ID, m.RepoID, m.Direction, m.URL, m.Username, m.Credential.Env, m.Credential.File, int64(m.Interval/time.Second), b2i(m.Enabled), b2i(m.Prune),
-		m.State, ms(m.NextAt), ms(m.CreatedAt), m.CreatedBy)
+		m.State, ms(m.NextAt), ms(m.CreatedAt), m.CreatedBy, b2i(m.PublishReleases), m.OutsideAPI)
 	if err != nil {
 		if store.IsUnique(err) {
 			return m, fmt.Errorf("%w: this repository already has that mirror", forge.ErrExists)
@@ -284,7 +340,7 @@ func (s *Service) view(m Mirror, path string) View {
 	v := View{ID: m.ID, Repository: path, Direction: m.Direction, URL: m.URL, Username: m.Username, Credential: m.Credential.String(),
 		IntervalSeconds: int64(m.Interval / time.Second), Enabled: m.Enabled, Prune: m.Prune, State: m.State, Running: m.LeaseUntil.After(now),
 		LastAttempt: m.LastTry, LastSuccess: m.LastOK, LastError: m.LastError, Failures: m.Failures, Refs: m.Refs,
-		CreatedAt: m.CreatedAt, CreatedBy: m.CreatedBy}
+		CreatedAt: m.CreatedAt, CreatedBy: m.CreatedBy, PublishReleases: m.PublishReleases, OutsideAPI: m.OutsideAPI}
 	if m.Enabled {
 		v.NextRun = m.NextAt
 	}

@@ -51,4 +51,14 @@ Downloads are streamed, never held in memory, and answer `Range`, so a phone res
 
 ## Publishing to an outside Git host
 
-Launchway does not yet create a release on the outside host a push mirror copies to; the tag arrives with the mirror and the release is made there by hand. The design for doing it from Launchway is in [Publishing a release to an outside Git host](../development/release-publish-outside.md).
+A push mirror copies a hosted repository to an outside Git host, and the tag of a published release goes with it. To have the release itself made there too (the same tag, title and notes, and every file), turn it on for that mirror. It is off until you do:
+
+```text
+launchway repos mirror add acme/shop --direction push --url https://git.example.com/acme/shop.git \
+    --credential-env OUTSIDE_TOKEN --publish-releases
+launchway repos mirror set acme/shop --id mir_... --publish-releases=true     # on a mirror that exists
+```
+
+The mirror's own credential is used, read from the server at the moment of the call and never stored, shown or logged. A token that may push may not be allowed to write releases there; if it is not, the failure says so. The API address is derived from the mirror's address; for a self-hosted host give it with `--outside-api`.
+
+After a release is published here, the server waits until the mirror has copied the tag (it looks again with a growing delay, for about an hour), then creates the release there and uploads each file straight from the release store. The Launchway release is never affected: if the outside publish fails, the release page and `launchway release show` say `failed` with the reason (credentials removed) and offer **Retry** (also `launchway release outside retry`, the HTTP API and the MCP tool `retry_outside_release`). Each attempt is in the Logbook as `release.outside_publish`. A release published before the setting was turned on can be made there with the same retry. Withdrawing a release here does not change the outside one yet. The design is in [Publishing a release to an outside Git host](../development/release-publish-outside.md).
