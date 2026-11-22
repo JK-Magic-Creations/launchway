@@ -29,8 +29,19 @@ echo "== trivy config (HIGH and CRITICAL fail)"
 cache="${TRIVY_CACHE_DIR:-$HOME/.cache/launchway-trivy}"; mkdir -p "$cache"
 cp deploy/buildkit/buildkitd.yaml "$out/rendered/buildkitd.yaml"
 cp Dockerfile "$out/rendered/Dockerfile"
+# The scanner uses the checks built into this version (--skip-check-update): the newest checks it would download may need a
+# newer scanner, and it then prints "[rego] Error occurred while parsing" for each of them and still exits 0. Any error line
+# of the scanner's own fails the scan here: a scan that errored is not a scan that passed.
+trivy_log="$out/trivy.log"
+trivy_rc=0
 $CONTAINER run --rm --security-opt label=disable -v "$out/rendered:/work:ro" -v "$ROOT/quality/trivy-ignore.yaml:/ignore.yaml:ro" -v "$cache:/root/.cache" \
-  "$TRIVY_IMAGE" config --skip-version-check /work --severity HIGH,CRITICAL --exit-code 1 --ignorefile /ignore.yaml --quiet
+  "$TRIVY_IMAGE" config --skip-version-check --skip-check-update /work --severity HIGH,CRITICAL --exit-code 1 --ignorefile /ignore.yaml --quiet > "$trivy_log" 2>&1 || trivy_rc=$?
+cat "$trivy_log"
+[ "$trivy_rc" -eq 0 ] || exit "$trivy_rc"
+if grep -Eq '[[:space:]](ERROR|FATAL)[[:space:]]' "$trivy_log"; then
+  echo "iac: trivy reported errors of its own (above), so the scan is not trusted" >&2
+  exit 1
+fi
 echo "== hadolint"
 $CONTAINER run --rm --security-opt label=disable -i -v "$ROOT/.hadolint.yaml:/.config/hadolint.yaml:ro" "$HADOLINT_IMAGE" hadolint --failure-threshold warning - < Dockerfile
 echo "iac: all scans passed"
