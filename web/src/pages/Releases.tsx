@@ -443,7 +443,7 @@ export function ReleaseGetPage({ project, version, asset }: { project: string; v
   }, [a, url, asset]);
   return (
     <div className="page">
-      <PageHead eyebrow={<><a href="/deployments/releases" onClick={onLink}>Releases</a> · {project}</>} title={asset} sentence={`From ${project} ${version}.`} />
+      <PageHead eyebrow={`Releases · ${project}`} title={asset} sentence={`From ${project} ${version}.`} />
       <ErrorBox error={data.error} />
       {a ? (
         <Sheet title="Your download">
@@ -452,7 +452,7 @@ export function ReleaseGetPage({ project, version, asset }: { project: string; v
             <a className="btn btn-primary" href={url} download>Download {asset} ({size(a.size)})</a>
             <a className="btn" href={href({ project, version })} onClick={onLink}>Back to the release</a>
           </div>
-          <p className="rel-hint" style={{ padding: "0 16px 12px" }}>SHA-256 <span className="rel-sha">{a.sha256}</span></p>
+          <p className="rel-hint" style={{ padding: "0 16px 12px", overflowWrap: "anywhere", wordBreak: "break-all" }}>SHA-256 <span className="rel-sha">{a.sha256}</span></p>
         </Sheet>
       ) : !data.loading && !data.error ? <Sheet><EmptyState title="There is no such file in this release">Open <a href={href({ project, version })} onClick={onLink}>the release</a> to see its files.</EmptyState></Sheet> : <div className="loading">Loading…</div>}
     </div>

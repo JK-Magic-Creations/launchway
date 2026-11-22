@@ -75,7 +75,7 @@ forge: { hosting: true, allow_insecure_http: true }
 projects:
   - { name: shop-api, repo: repos/shop-api, branch: main, poll: 5s }
   - { name: shop-web, repo: repos/shop-web, branch: main, poll: 5s }
-  - { name: shop-docs, repo: repos/shop-docs, branch: main, poll: 5s }
+  - { name: shop-docs, repo: repos/shop-docs, branch: main, poll: 5s, push: { branch_prefix: launchway/ } }
 runner: { concurrency: 3, executor: host }
 YAML
 url=http://127.0.0.1:$port
@@ -105,6 +105,12 @@ api() { curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application
 api /api/v1/units '{"name":"shop","description":"Everything the shop sells with"}'
 api /api/v1/units '{"name":"archive"}'
 api /api/v1/unit-moves '{"flights":["shop-api"],"to":"shop"}'
+
+# A published release with one file (an Android package), for the release page and the page a phone's QR code opens.
+rel() { curl -fsS -X "$1" -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' ${3:+-d "$3"} "$url/api/v1/projects/shop-docs/releases$2" >/dev/null; }
+rel POST "" '{"version":"1.0.0","notes":"## 1.0.0\n\n### Features\n\n- the shop opens on a phone"}'
+curl -fsS -X PUT -H 'X-Launchway-CSRF: 1' --data-binary 'package' "$url/api/v1/projects/shop-docs/releases/1.0.0/assets/shop-docs.apk" >/dev/null
+rel POST "/1.0.0/publish" '{}'
 
 start() { curl -fsS -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' -d '{"ref":"main"}' "$url/api/v1/projects/$1/runs" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])'; }
 ok=$(start shop-docs); failed=$(start shop-api); waiting=$(start shop-web)
