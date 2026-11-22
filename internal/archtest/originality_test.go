@@ -72,7 +72,7 @@ var allowedForIntegration = []string{
 	// its strict fake, the registry entries, the pages' labels and setup steps, and the guide name it
 	// (the API calls are the host's own documented ones, cited in comments).
 	"internal/forge/providers/gitlab/", "internal/forge/providers/gitea/", "internal/forge/providers/bitbucket/", "internal/forge/providers/bitbucketdc/", "internal/forge/providers/azuredevops/", "internal/forge/hosts/kind_bitbucket.go", "internal/forge/hosts/kind_bitbucketdc.go", "internal/forge/hosts/kind_azuredevops.go", "internal/forge/hosts/kind_gitlab.go", "internal/forge/hosts/kind_gitea.go", "internal/forge/hosts/kinds_test.go", "internal/forge/hosts/norelease_test.go",
-	"internal/archtest/arch_test.go", "cmd/launchway/repos_host.go", "internal/api/mcp_outside_hosts.go", "web/src/hostKinds.ts", "web/src/pages/HostKinds.test.tsx", "docs/guide/outside-host.md", "docs/guide/outside-host-matrix.md",
+	"internal/archtest/arch_test.go", "cmd/launchway/repos_host.go", "internal/api/mcp_outside_hosts.go", "web/src/hostKinds.ts", "web/src/pages/HostKinds.test.tsx", "docs/guide/outside-host.md", "docs/guide/outside-host-matrix.md", "docs/guide/release-notes-candidate-6.md",
 	// The project's own release and docs workflows run on a hosted CI service.
 	".github/", "packaging/", "docs/contributing/docs.md",
 	// The Argo CD test bed uses a throwaway Git server image.
