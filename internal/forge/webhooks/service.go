@@ -428,9 +428,10 @@ func (s *Service) attempt(ctx context.Context, id string, once bool) (Delivery, 
 			d.NextAttempt = s.o.Now().Add(s.o.Backoff[min(d.Attempts-1, len(s.o.Backoff)-1)])
 		}
 	}
-	if d.State == Delivered {
+	switch d.State {
+	case Delivered:
 		metrics.WebhookDeliveries.Inc("out", "accepted")
-	} else if d.State == Failed {
+	case Failed:
 		metrics.WebhookDeliveries.Inc("out", "failed")
 	}
 	if err := s.st.recordAttempt(ctx, d); err != nil {

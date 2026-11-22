@@ -26,7 +26,7 @@ type exporter struct {
 	kick chan chan struct{}
 }
 
-func newExporter(c Config) *exporter {
+func newExporter(base context.Context, c Config) *exporter {
 	if c.Client == nil {
 		c.Client = &http.Client{Timeout: 10 * time.Second}
 	}
@@ -35,7 +35,7 @@ func newExporter(c Config) *exporter {
 	}
 	e := &exporter{cfg: c, ch: make(chan Span, queueSize), done: make(chan struct{}), kick: make(chan chan struct{})}
 	e.wg.Add(1)
-	go e.loop()
+	go e.loop(base)
 	return e
 }
 
@@ -47,14 +47,14 @@ func (e *exporter) add(s Span) {
 	}
 }
 
-func (e *exporter) loop() {
+func (e *exporter) loop(ctx context.Context) {
 	defer e.wg.Done()
 	t := time.NewTicker(flushEvery)
 	defer t.Stop()
 	var batch []Span
 	send := func() {
 		if len(batch) > 0 {
-			e.send(batch)
+			e.send(ctx, batch)
 			batch = nil
 		}
 	}
@@ -106,13 +106,13 @@ func (e *exporter) stop() {
 	e.wg.Wait()
 }
 
-func (e *exporter) send(spans []Span) {
+func (e *exporter) send(ctx context.Context, spans []Span) {
 	body, err := Encode(spans, e.cfg.Service, e.cfg.Version)
 	if err != nil {
 		metrics.Spans.Add(float64(len(spans)), "dropped")
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.cfg.Endpoint, bytes.NewReader(body))
 	if err != nil {

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,8 +28,8 @@ func TestASecretOfAStepIsNeverInSpansOrMetrics(t *testing.T) {
 		mu.Unlock()
 	}))
 	defer srv.Close()
-	trace.Configure(&trace.Config{Endpoint: srv.URL, Ratio: 1})
-	defer trace.Configure(nil)
+	trace.Configure(context.Background(), &trace.Config{Endpoint: srv.URL, Ratio: 1})
+	defer trace.Configure(context.Background(), nil)
 
 	e, _ := newEngine(t)
 	id := create(t, e, `

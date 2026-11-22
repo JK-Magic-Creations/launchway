@@ -34,14 +34,14 @@ func (e *Engine) RegisterMetrics(reg *metrics.Registry) {
 
 func (e *Engine) collectMetrics() {
 	now := time.Now().UnixMilli()
-	st := e.db.DB.Stats()
+	st := e.db.Stats()
 	metrics.DBConnections.Set(float64(st.OpenConnections), "open")
 	metrics.DBConnections.Set(float64(st.InUse), "in_use")
 	metrics.DBConnections.Set(float64(st.Idle), "idle")
 	setTotal(metrics.DBWaits, float64(st.WaitCount))
 	setTotal(metrics.DBWaitSeconds, st.WaitDuration.Seconds())
 
-	if info, err := e.Schema(context.Background()); err == nil {
+	if info, err := e.Schema(context.Background()); err == nil { //nolint:contextcheck // a scrape has no request context
 		metrics.SchemaVersion.Set(float64(info.Database))
 	}
 	if e.knows(schemaPools) {

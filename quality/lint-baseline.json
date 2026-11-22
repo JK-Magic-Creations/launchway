@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 454,
+  "total": 453,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -588,12 +588,6 @@
       "file": "internal/engine/deployments.go",
       "linter": "sqlclosecheck",
       "text": "Close should use defer",
-      "count": 1
-    },
-    {
-      "file": "internal/engine/deployments.go",
-      "linter": "staticcheck",
-      "text": "QF1001: could apply De Morgan's law",
       "count": 1
     },
     {

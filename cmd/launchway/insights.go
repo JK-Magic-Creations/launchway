@@ -34,6 +34,7 @@ func cmdInsights(args []string) error {
 
 func (cl *client) insights(args []string) error {
 	fs := flag.NewFlagSet("insights", flag.ContinueOnError)
+	fs.Usage = func() { fmt.Fprint(os.Stderr, insightsUsage) }
 	flight := fs.String("flight", "", "one Flight")
 	squadron := fs.String("squadron", "", "one Squadron")
 	from := fs.String("from", "", "start of the period (default 30 days before the end)")

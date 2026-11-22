@@ -28,7 +28,7 @@ func startMetrics(ctx context.Context, cfg *config.Config, eng *engine.Engine, v
 		return
 	}
 	if eng != nil {
-		eng.RegisterMetrics(metrics.Default)
+		eng.RegisterMetrics(metrics.Default) //nolint:contextcheck // scrapes have no request context
 	}
 	metrics.WatchDisk(cfg.Data)
 	addr, err := metrics.Serve(ctx, metrics.Default, m.Address(), m.Token())
@@ -42,7 +42,7 @@ func startMetrics(ctx context.Context, cfg *config.Config, eng *engine.Engine, v
 // startRunnerMetrics serves a Station's (or the deploy runner's) metrics on
 // --metrics-listen. The bearer token, if any, comes from LAUNCHWAY_METRICS_TOKEN.
 func startRunnerMetrics(ctx context.Context, o *runnerOptions) {
-	startRunnerTracing()
+	startRunnerTracing(ctx)
 	if o.MetricsListen == "" {
 		return
 	}
@@ -59,12 +59,12 @@ func startRunnerMetrics(ctx context.Context, o *runnerOptions) {
 // startTracing turns trace export on when observability.tracing.enabled is set. The collector is reached
 // through the same egress guard as every other outbound request of the server, so egress.allow decides
 // whether an address inside the network may be used.
-func startTracing(cfg *config.Config, log *slog.Logger) {
+func startTracing(ctx context.Context, cfg *config.Config, log *slog.Logger) {
 	t := cfg.Observability.Tracing
 	if !t.Enabled {
 		return
 	}
-	trace.Configure(&trace.Config{Endpoint: t.Endpoint, Headers: t.Headers(), Ratio: t.Ratio(), Client: egress.Default.HTTPClient(10 * time.Second),
+	trace.Configure(ctx, &trace.Config{Endpoint: t.Endpoint, Headers: t.Headers(), Ratio: t.Ratio(), Client: egress.Default.HTTPClient(10 * time.Second),
 		Service: "launchway-server", Version: version})
 	api.SetTraceViewer(t.ViewerURLTemplate)
 	log.Info("traces are sent to the collector", "endpoint", redactAddress(t.Endpoint), "sample_ratio", t.Ratio())
@@ -73,7 +73,7 @@ func startTracing(cfg *config.Config, log *slog.Logger) {
 // startRunnerTracing turns trace export on for a Station from its environment: LAUNCHWAY_TRACING_ENDPOINT,
 // LAUNCHWAY_TRACING_HEADERS (Name=value,...) and LAUNCHWAY_TRACING_SAMPLE_RATIO. A Station is not behind the
 // server's egress guard: the collector is whatever its network allows.
-func startRunnerTracing() {
+func startRunnerTracing(ctx context.Context) {
 	ep := os.Getenv("LAUNCHWAY_TRACING_ENDPOINT")
 	if ep == "" {
 		return
@@ -82,7 +82,7 @@ func startRunnerTracing() {
 	if r, err := strconv.ParseFloat(os.Getenv("LAUNCHWAY_TRACING_SAMPLE_RATIO"), 64); err == nil && r >= 0 && r <= 1 {
 		t.SampleRatio = &r
 	}
-	trace.Configure(&trace.Config{Endpoint: t.Endpoint, Headers: t.Headers(), Ratio: t.Ratio(), Service: "launchway-station", Version: version})
+	trace.Configure(ctx, &trace.Config{Endpoint: t.Endpoint, Headers: t.Headers(), Ratio: t.Ratio(), Service: "launchway-station", Version: version})
 }
 
 // redactAddress is an address without its user, password and query, for the log.

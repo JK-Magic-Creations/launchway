@@ -165,12 +165,12 @@ var (
 )
 
 // Configure turns export on (a non-empty endpoint) or off (nil or an empty endpoint). It stops the previous exporter after sending what it holds.
-func Configure(c *Config) {
+func Configure(ctx context.Context, c *Config) {
 	mu.Lock()
 	old := current
 	current = nil
 	if c != nil && c.Endpoint != "" {
-		current = newExporter(*c)
+		current = newExporter(context.WithoutCancel(ctx), *c)
 		ratio.Store(c.Ratio)
 	}
 	mu.Unlock()

@@ -59,9 +59,11 @@ func ApprovalsWaiting(q Queryer) (n, oldestMS int64, err error) {
 	}
 	defer rows.Close()
 	if rows.Next() {
-		err = rows.Scan(&n, &oldestMS)
+		if err = rows.Scan(&n, &oldestMS); err != nil {
+			return 0, 0, err
+		}
 	}
-	return n, oldestMS, err
+	return n, oldestMS, rows.Err()
 }
 
 // MirrorLagMS is the longest time (milliseconds) an enabled mirror has gone since its last success; 0 when none has succeeded yet.
@@ -73,7 +75,9 @@ func MirrorLagMS(q Queryer, nowMS int64) (int64, error) {
 	defer rows.Close()
 	var n int64
 	if rows.Next() {
-		err = rows.Scan(&n)
+		if err = rows.Scan(&n); err != nil {
+			return 0, err
+		}
 	}
-	return n, err
+	return n, rows.Err()
 }

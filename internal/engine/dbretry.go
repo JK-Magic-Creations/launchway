@@ -282,7 +282,13 @@ func (d *dbx) Exec(q string, a ...any) (sql.Result, error) {
 // Query runs a read; a passing failure is retried within the stall budget.
 func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) {
 	q = rebind(d.pg, q)
-	defer timeStatement(q, time.Now())
+	start := time.Now()
+	rows, err := d.query(q, a...)
+	timeStatement(q, start)
+	return rows, err
+}
+
+func (d *dbx) query(q string, a ...any) (*sql.Rows, error) {
 	rt := d.retrier(0, true)
 	for {
 		rows, err := d.DB.Query(q, a...) //nolint:noctx // as above

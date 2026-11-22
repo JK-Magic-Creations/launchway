@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -39,7 +40,8 @@ func TestSampling(t *testing.T) {
 		t.Errorf("kept %d of 2000 at 0.25", kept)
 	}
 	id := RunTraceID("r")
-	if Sampled(id, 0.5) != Sampled(id, 0.5) || !Sampled(id, 1) || Sampled(id, 0) {
+	first, second := Sampled(id, 0.5), Sampled(id, 0.5)
+	if first != second || !Sampled(id, 1) || Sampled(id, 0) {
 		t.Error("sampling must be decided by the id alone")
 	}
 }
@@ -76,8 +78,8 @@ func TestExportOverOTLPJSON(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	Configure(&Config{Endpoint: srv.URL + "/v1/traces", Headers: map[string]string{"X-Api-Key": "k"}, Ratio: 1, Version: "t"})
-	defer Configure(nil)
+	Configure(context.Background(), &Config{Endpoint: srv.URL + "/v1/traces", Headers: map[string]string{"X-Api-Key": "k"}, Ratio: 1, Version: "t"})
+	defer Configure(context.Background(), nil)
 	s := Span{TraceID: RunTraceID("run_9"), SpanID: SpanIDOf("a"), ParentID: SpanIDOf("b"), Name: "step build", Start: time.Unix(10, 5), End: time.Unix(12, 0), Failed: true}
 	s.Set("launchway.step", "build")
 	Record(s)
@@ -115,8 +117,8 @@ func TestOffByDefaultAndRatioZeroSendsNothing(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hit <- struct{}{} }))
 	defer srv.Close()
 	Record(Span{TraceID: NewTraceID(), SpanID: NewSpanID(), Name: "x", Start: time.Now(), End: time.Now()}) // off: a no-op
-	Configure(&Config{Endpoint: srv.URL, Ratio: 0})
-	defer Configure(nil)
+	Configure(context.Background(), &Config{Endpoint: srv.URL, Ratio: 0})
+	defer Configure(context.Background(), nil)
 	Record(Span{TraceID: NewTraceID(), SpanID: NewSpanID(), Name: "x", Start: time.Now(), End: time.Now()})
 	Flush()
 	select {

@@ -38,14 +38,14 @@ func Handler(r *Registry, token string) http.Handler {
 // Serve listens on addr and serves the registry until ctx ends. It returns
 // the bound address (useful when addr names port 0) as soon as it listens.
 func Serve(ctx context.Context, r *Registry, addr, token string) (string, error) {
-	ln, err := net.Listen("tcp", addr)
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	if err != nil {
 		return "", err
 	}
 	srv := &http.Server{Handler: Handler(r, token), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 20 * time.Second}
 	go func() {
 		<-ctx.Done()
-		c, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(c)
 	}()

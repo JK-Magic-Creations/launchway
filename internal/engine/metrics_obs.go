@@ -75,6 +75,11 @@ func observeTransitions(before *runSnapshot, st *RunState, now int64) {
 	if before == nil {
 		return
 	}
+	observeSteps(before, st, now)
+}
+
+// observeSteps counts what changed in each step.
+func observeSteps(before *runSnapshot, st *RunState, now int64) {
 	for id, s := range st.Steps {
 		b, known := before.steps[id]
 		if !known {
