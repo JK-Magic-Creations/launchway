@@ -22,7 +22,7 @@ for (const f of walk(dir)) { const k = kind(f); if (k) total[k] += statSync(f).s
 // The initial load: index.html's scripts, preloads and stylesheets, then static imports of each script. A dynamic
 // import("./X.js") is lazy and is not followed; a static `from"./X.js"` or `import"./X.js"` is.
 const html = readFileSync(join(dir, "index.html"), "utf8");
-const queue = [...html.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css))"/g)].map((m) => join(dir, m[1]));
+const queue = [...html.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css))"/g)].map((m) => resolve(join(dir, m[1])));
 const initialFiles = new Set();
 while (queue.length) {
   const f = queue.pop();
