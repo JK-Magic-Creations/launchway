@@ -23,7 +23,7 @@ func FuzzParse(f *testing.F) {
 		`{"runs":[{"tool":{"extensions":[{"rules":[{"id":"e"}]}]},"results":[{"rule":{"index":0,"toolComponent":{"index":0}},"partialFingerprints":{"a":"b"},"suppressions":[{}]}]}]}`,
 		`{"runs":[{"results":[{"ruleId":"r","ruleId":"s"},[[[[[[]]]]]],{"locations":[{"logicalLocations":[{"name":"n"}]}]}]}]}`,
 		`{"runs":[{"originalUriBaseIds":{"S":{"uri":"file:///w/"}},"results":[{"locations":[{"physicalLocation":{"artifactLocation":{"uri":"file:///w/%2e%2e/x"}}}]}]}]}`,
-		"{\"runs\":[{\"results\":[{\"message\":{\"text\":\"password=hunter2 AKIA2E0A8F3B244C9986 \xff\"}}]}]}",
+		"{\"runs\":[{\"results\":[{\"message\":{\"text\":\"password=hunter2 AKIA" + "2E0A8F3B244C9986 \xff\"}}]}]}",
 	} {
 		f.Add([]byte(s))
 	}

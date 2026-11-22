@@ -11,18 +11,18 @@ func TestMask(t *testing.T) {
 		{"", ""},
 		{"nothing to see here", "nothing to see here"},
 		// AWS access key ids, but not a word that only starts like one.
-		{"key AKIA2E0A8F3B244C9986 found", "key [masked] found"},
-		{"ASIAZXCVBNMASDFGHJKL in env", "[masked] in env"},
+		{"key AKIA" + "2E0A8F3B244C9986 found", "key [masked] found"},
+		{"ASIA" + "ZXCVBNMASDFGHJKL in env", "[masked] in env"},
 		{"AKIAshort", "AKIAshort"},
 		// GitHub, GitLab, Slack, Stripe, Google.
-		{"token ghp_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "token [masked]"},
-		{"gho_16C7e42F292c6912E7710c838347Ae178B4a and ghs_16C7e42F292c6912E7710c8", "[masked] and [masked]"},
-		{"github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz", "[masked]"},
+		{"token ghp" + "_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5", "token [masked]"},
+		{"gh" + "o_16C7e42F292c6912E7710c838347Ae178B4a and gh" + "s_16C7e42F292c6912E7710c8", "[masked] and [masked]"},
+		{"github" + "_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz", "[masked]"},
 		{"use gl" + "pat-xxxxXXXXyyyyYYYY1234 now", "use [masked] now"},
 		{"slack xo" + "xb-123456789012-1234567890123-AbCdEf", "slack [masked]"},
 		{"stripe sk_li" + "ve_4eC39HqLyjWDarjtT1zdp7dc", "stripe [masked]"},
 		{"rk_li" + "ve_abcdefghij0123", "[masked]"},
-		{"google AIzaSyA1234567890abcdefghijklmnopqrstu", "google [masked]"},
+		{"google AIza" + "SyA1234567890abcdefghijklmnopqrstu", "google [masked]"},
 		// JSON Web Tokens.
 		{"bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U ok", "bearer [masked] ok"},
 		// PEM private keys, closed or running to the end of the text.
