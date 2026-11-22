@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 3 in progress · 42 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 2 in progress · 42 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -49,7 +49,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
-| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 1 | 4 |
+| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 1 | 0 | 4 |
 | [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
 | [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 2 | 1 | 3 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
@@ -164,9 +164,9 @@ A few plain questions (what is it, how do users reach it, how do we know it is h
 
 #### The rollout panel {#the-rollout-panel}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. Built and tested on its own branch; it comes in the next release and is not on the main branch yet. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
+One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
 
 **Depends on:** Every rollout strategy.
 

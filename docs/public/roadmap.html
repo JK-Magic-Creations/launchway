@@ -242,9 +242,9 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <ul>
       <li>Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.</li>
       <li>Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.</li>
+      <li>The rollout page: watch a delivery object by object, read its logs, and steer it, with each right off until an administrator turns it on, and warnings when real traffic could reach a version nothing proved.</li>
       <li>Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.</li>
       <li>Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.</li>
-      <li>Next release: the rollout page for watching and steering a delivery.</li>
       <li>New planned items: tokens for one repository with source-address limits, signing in from the command line through the browser, mirroring a release branch behind required checks, personal settings in one place, the real client address behind a web edge, a public and internal split of paths, and Git over SSH for the hosted modes.</li>
     </ul>
   </section>
@@ -263,7 +263,6 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <p class="wc-date">What is not there yet</p>
     <ul>
       <li>The first self-upgrade exposed upgrade-ordering problems that are now fixed and guarded by tests, and the upgrade gate is still being finished.</li>
-      <li>The rollout page (watching and steering a delivery object by object) is built and comes in the next release.</li>
       <li>The wall between Bases and sign-up, so people outside a team can use the hosted service: not built yet.</li>
       <li>Works alongside a hosted code host without moving repositories: planned.</li>
       <li>Windows and macOS Stations, and the mobile and games needs that follow them.</li>
@@ -287,11 +286,9 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <h2 id="h-queue">The order we are building in</h2>
     <p class="wc-date">After what is already in flight, in this order.</p>
     <ol>
-      <li><b><a href="./roadmap/delivery.html">The rollout page</a>.</b> Watch and steer every object a delivery created, and test before real traffic.</li>
       <li><b><a href="./roadmap/hosted-service.html">The wall between Bases, then sign-up</a>.</b> Several Bases on one installation, isolated and proven by tests, then sign-up with the least setup.</li>
       <li><b><a href="./roadmap/installing.html">The upgrade gate and network detection</a>.</b> Upgrades that cannot half-apply, chart values that stay compatible, and detection of network problems before they bite.</li>
       <li><b><a href="./roadmap/git-hosting.html">Works alongside a hosted code host</a>.</b> Connect repositories without moving them, run pipelines on your own machines and report back to the pull request there.</li>
-      <li><b><a href="./roadmap/delivery.html">Rollout drill-down and control</a>.</b> See and control every object a delivery created.</li>
       <li><b><a href="./roadmap/delivery.html">Delivery by choice</a>.</b> GitOps controller, direct chart installs or plain manifests, and previews for every pull request.</li>
       <li><b><a href="./roadmap/registry.html">The Depot as one area</a>.</b> Everything stored in one place, with scans and a proxy cache.</li>
       <li><b><a href="./roadmap/developer-experience.html">Editor plug-ins and one-step setup for agent tools</a>.</b> Launchway where developers already work.</li>
@@ -301,23 +298,23 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </section>
 
   <div class="stats" aria-label="Where things stand">
-    <div class="stat st-available"><b>187</b><span><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span></span></div>
-    <div class="stat st-in-progress"><b>34</b><span><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></span></div>
+    <div class="stat st-available"><b>190</b><span><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span></span></div>
+    <div class="stat st-in-progress"><b>32</b><span><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></span></div>
     <div class="stat st-planned"><b>465</b><span><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span></span></div>
-    <div class="stat"><b>686</b><span class="stat-l">capabilities in all</span></div>
+    <div class="stat"><b>687</b><span class="stat-l">capabilities in all</span></div>
   </div>
 
   <nav aria-label="Milestones">
 <ol class="journey" aria-label="The milestones, in order">
-  <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">70 things</span></a></li>
+  <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">71 things</span></a></li>
   <li class="when-now"><a href="#milestone-1"><span class="node" aria-hidden="true">1</span><span class="jname">Host and run</span><span class="jwhen">Now</span><span class="bar" role="img" aria-label="57 available, 15 in progress, 56 planned of 128"><span class="seg st-available" style="flex:57"></span><span class="seg st-in-progress" style="flex:15"></span><span class="seg st-planned" style="flex:56"></span></span></a></li>
   <li class="when-next"><a href="#milestone-2"><span class="node" aria-hidden="true">2</span><span class="jname">Pipeline power</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="11 available, 4 in progress, 54 planned of 69"><span class="seg st-available" style="flex:11"></span><span class="seg st-in-progress" style="flex:4"></span><span class="seg st-planned" style="flex:54"></span></span></a></li>
-  <li class="when-next"><a href="#milestone-3"><span class="node" aria-hidden="true">3</span><span class="jname">Delivery depth</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="19 available, 2 in progress, 82 planned of 103"><span class="seg st-available" style="flex:19"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:82"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-3"><span class="node" aria-hidden="true">3</span><span class="jname">Delivery depth</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="20 available, 1 in progress, 82 planned of 103"><span class="seg st-available" style="flex:20"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:82"></span></span></a></li>
   <li class="when-later"><a href="#milestone-4"><span class="node" aria-hidden="true">4</span><span class="jname">Registry</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="7 available, 1 in progress, 9 planned of 17"><span class="seg st-available" style="flex:7"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:9"></span></span></a></li>
   <li class="when-later"><a href="#milestone-5"><span class="node" aria-hidden="true">5</span><span class="jname">Software graph</span><span class="jwhen">Later</span><span class="bar" role="img" aria-label="5 available, 1 in progress, 22 planned of 28"><span class="seg st-available" style="flex:5"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:22"></span></span></a></li>
   <li class="when-next"><a href="#milestone-6"><span class="node" aria-hidden="true">6</span><span class="jname">AI helper</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="3 available, 2 in progress, 15 planned of 20"><span class="seg st-available" style="flex:3"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:15"></span></span></a></li>
   <li class="when-next"><a href="#milestone-7"><span class="node" aria-hidden="true">7</span><span class="jname">Hosted service</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="1 available, 3 in progress, 68 planned of 72"><span class="seg st-available" style="flex:1"></span><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:68"></span></span></a></li>
-  <li class="when-next"><a href="#milestone-8"><span class="node" aria-hidden="true">8</span><span class="jname">Zero downtime</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="3 available, 3 in progress, 42 planned of 48"><span class="seg st-available" style="flex:3"></span><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:42"></span></span></a></li>
+  <li class="when-next"><a href="#milestone-8"><span class="node" aria-hidden="true">8</span><span class="jname">Zero downtime</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="4 available, 2 in progress, 42 planned of 48"><span class="seg st-available" style="flex:4"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:42"></span></span></a></li>
   <li class="when-next"><a href="#milestone-9"><span class="node" aria-hidden="true">9</span><span class="jname">Network and traffic</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 0 in progress, 31 planned of 31"><span class="seg st-planned" style="flex:31"></span></span></a></li>
   <li class="when-next"><a href="#milestone-10"><span class="node" aria-hidden="true">10</span><span class="jname">Databases</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 1 in progress, 21 planned of 22"><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:21"></span></span></a></li>
   <li class="when-next"><a href="#milestone-11"><span class="node" aria-hidden="true">11</span><span class="jname">Kubernetes and VMs</span><span class="jwhen">Next</span><span class="bar" role="img" aria-label="0 available, 0 in progress, 18 planned of 18"><span class="seg st-planned" style="flex:18"></span></span></a></li>
@@ -443,7 +440,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
   </div>
 
 <section class="group st-section" id="available" aria-labelledby="h-available">
-  <div class="sec-head"><h2 id="h-available">Available today</h2><span class="sec-note">On the main branch, tested and documented. 70 things.</span></div>
+  <div class="sec-head"><h2 id="h-available">Available today</h2><span class="sec-note">On the main branch, tested and documented. 71 things.</span></div>
   <h3 class="theme-h">Pipelines</h3>
   <ul class="grid">
     <li class="card st-available" data-status="available"><h4><a href="./guide/pipelines.html">Pipelines as code</a></h4><p>Typed YAML with steps, dependencies, run inputs, outputs passed between steps and loops, kept in Git next to the code they build.</p></li>
@@ -490,6 +487,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     <li class="card st-available" data-status="available"><h4><a href="./guide/verification.html">Verification after a deploy</a></h4><p>Checks on Prometheus, Loki, ClickHouse and OpenSearch with automatic abort or Return to base; an optional model explains the verdict and never turns a failure into a pass.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/images.html">Container images</a></h4><p>Rootless builds, scans, signatures, provenance and SBOMs, pushed to any OCI registry.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/approvals-and-reruns.html">Approvals and protected environments</a></h4><p>Approval steps; the person who started a Sortie cannot approve its production deploy.</p></li>
+    <li class="card st-available" data-status="available"><h4><a href="./guide/watching-and-steering-a-launch.html">Watch and steer a delivery</a></h4><p>A Launch page shows every object a delivery made, live, with the logs of any pod (stable and Pathfinder side by side), the rollout's steps and weights, what was measured against what, and pause, restart, scale and an emergency return, each checked, audited and shown only where it works.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/rollback-after-success.html">Rollback after a successful deployment</a></h4><p>Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/gitops-write-back.html">GitOps write-back and a built-in health proof</a></h4><p>A deployment writes the new image into Git safely and checks the health of what it deployed without extra tools.</p></li>
     <li class="card st-available" data-status="available"><h4><a href="./guide/registry.html">The Depot</a></h4><p>Container images, charts and other Cargo in Launchway itself, with permissions, retention and signatures stored beside them.</p></li>
@@ -901,10 +899,10 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-3.html">Open the detail page<span class="visually-hidden"> for Delivery depth</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="19 available, 2 in progress, 82 planned of 103"><span class="seg st-available" style="flex:19"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:82"></span></span><span class="m-count">19 available · 2 in progress · 82 planned</span><span class="m-count">103 capabilities in 11 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="20 available, 1 in progress, 82 planned of 103"><span class="seg st-available" style="flex:20"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:82"></span></span><span class="m-count">20 available · 1 in progress · 82 planned</span><span class="m-count">103 capabilities in 11 groups</span></div>
   </header>
   <details class="subgroup">
-    <summary><span class="g-name">Applications and rollouts</span><span class="g-count">19 · <span class="bar" role="img" aria-label="6 available, 1 in progress, 12 planned of 19"><span class="seg st-available" style="flex:6"></span><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:12"></span></span></span></summary>
+    <summary><span class="g-name">Applications and rollouts</span><span class="g-count">19 · <span class="bar" role="img" aria-label="7 available, 0 in progress, 12 planned of 19"><span class="seg st-available" style="flex:7"></span><span class="seg st-planned" style="flex:12"></span></span></span></summary>
     <p class="g-blurb">See and control everything you run, then deliver to it safely.</p>
     <ul class="grid">
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#argo-cd-in-depth">Argo CD in depth</a></h4><p>Application hierarchy views (app-of-apps and ApplicationSet trees) with status, sync, health, history and actions, ready health checks, and a hosted or your own Argo CD. <a class="more" href="./guide/deployments.html">Read more<span class="visually-hidden"> about Argo CD in depth</span> →</a></p></li>
@@ -925,7 +923,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#delivery-by-choice">Delivery by choice</a></h4><p>A pipeline chooses how to deliver per Airfield: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-3.html#progressive-delivery-without-the-gitops-controller">Progressive delivery without the GitOps controller</a></h4><p>Use the rollout controller alone, or plain chart installs, when the GitOps controller is not wanted.</p></li>
       <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-3.html#ordered-gitops-sync-parent-then-child">Ordered GitOps sync, parent then child</a></h4><p>An application and its values are written as two ordered commits, the values only once the cluster shows the new pin, and parents sync before children.</p></li>
-      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-3.html#drill-down-into-everything-a-delivery-created">Drill down into everything a delivery created</a></h4><p>From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back.</p></li>
+      <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-3.html#drill-down-into-everything-a-delivery-created">Drill down into everything a delivery created</a></h4><p>From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back.</p></li>
     </ul>
   </details>
   <details class="subgroup">
@@ -1380,7 +1378,7 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
       <p class="promise">Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.</p>
       <p class="m-detail"><a class="btn" href="./roadmap/milestone-8.html">Open the detail page<span class="visually-hidden"> for Zero downtime</span> →</a></p>
     </div>
-    <div class="m-progress"><span class="bar" role="img" aria-label="3 available, 3 in progress, 42 planned of 48"><span class="seg st-available" style="flex:3"></span><span class="seg st-in-progress" style="flex:3"></span><span class="seg st-planned" style="flex:42"></span></span><span class="m-count">3 available · 3 in progress · 42 planned</span><span class="m-count">48 capabilities in 7 groups</span></div>
+    <div class="m-progress"><span class="bar" role="img" aria-label="4 available, 2 in progress, 42 planned of 48"><span class="seg st-available" style="flex:4"></span><span class="seg st-in-progress" style="flex:2"></span><span class="seg st-planned" style="flex:42"></span></span><span class="m-count">4 available · 2 in progress · 42 planned</span><span class="m-count">48 capabilities in 7 groups</span></div>
   </header>
   <details class="subgroup">
     <summary><span class="g-name">One model for every deployment</span><span class="g-count">8 · <span class="bar" role="img" aria-label="0 available, 1 in progress, 7 planned of 8"><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:7"></span></span></span></summary>
@@ -1397,12 +1395,12 @@ details.subgroup > .grid { padding: 4px 14px 16px; }
     </ul>
   </details>
   <details class="subgroup">
-    <summary><span class="g-name">Rollouts: every strategy, with an assistant</span><span class="g-count">5 · <span class="bar" role="img" aria-label="0 available, 1 in progress, 4 planned of 5"><span class="seg st-in-progress" style="flex:1"></span><span class="seg st-planned" style="flex:4"></span></span></span></summary>
+    <summary><span class="g-name">Rollouts: every strategy, with an assistant</span><span class="g-count">5 · <span class="bar" role="img" aria-label="1 available, 0 in progress, 4 planned of 5"><span class="seg st-available" style="flex:1"></span><span class="seg st-planned" style="flex:4"></span></span></span></summary>
     <p class="g-blurb">First phase. Complete coverage of Argo Rollouts, created, seen and controlled from one panel.</p>
     <ul class="grid">
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-8.html#every-rollout-strategy">Every rollout strategy</a></h4><p>Pathfinder and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-8.html#an-assistant-for-creating-a-rollout">An assistant for creating a rollout</a></h4><p>A few plain questions (what is it, how do users reach it, how do we know it is healthy, how careful, who must clear it) produce a plan, a picture and files in Git.</p></li>
-      <li class="card st-in-progress" data-status="in-progress"><span class="chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span><h4><a href="./roadmap/milestone-8.html#the-rollout-panel">The rollout panel</a></h4><p>One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order.</p></li>
+      <li class="card st-available" data-status="available"><span class="chip st-available"><span aria-hidden="true">✓</span> Available</span><h4><a href="./roadmap/milestone-8.html#the-rollout-panel">The rollout panel</a></h4><p>One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-8.html#rehearsal-environments">Rehearsal environments</a></h4><p>Try a rollout in a short-lived Airfield with a traffic generator and injected faults before it reaches production.</p></li>
       <li class="card st-planned" data-status="planned"><span class="chip st-planned"><span aria-hidden="true">○</span> Planned</span><h4><a href="./roadmap/milestone-8.html#return-to-any-earlier-version">Return to any earlier version</a></h4><p>Choose an earlier version and return to it, with what that will change spelled out first.</p></li>
     </ul>

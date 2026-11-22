@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 19 available · 2 in progress · 82 planned · 103 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 20 available · 1 in progress · 82 planned · 103 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -50,7 +50,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 19 | 6 | 1 | 12 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 19 | 7 | 0 | 12 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 1 | 1 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 14 | 3 | 0 | 11 |
 | [Infrastructure as code](#g-infrastructure-as-code) | 8 | 4 | 0 | 4 |
@@ -242,9 +242,9 @@ An application and its values are written as two ordered commits, the values onl
 
 #### Drill down into everything a delivery created {#drill-down-into-everything-a-delivery-created}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back. Built and tested on its own branch; it comes in the next release and is not on the main branch yet. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.
+From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.
 
 [Area page](delivery.md)
 

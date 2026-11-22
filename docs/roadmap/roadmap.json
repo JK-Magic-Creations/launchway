@@ -2338,10 +2338,10 @@
               "area": "delivery"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Drill down into everything a delivery created",
               "value": "From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back.",
-              "detail": "Built and tested on its own branch; it comes in the next release and is not on the main branch yet. New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.",
+              "detail": "New pods take no real traffic until they pass tests through a preview path; pause, resume, promote, abort, restart and return to base are always at hand, checked against permissions and audited.",
               "area": "delivery"
             }
           ]
@@ -4474,10 +4474,10 @@
               "area": "zero-downtime"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "The rollout panel",
               "value": "One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order.",
-              "detail": "Built and tested on its own branch; it comes in the next release and is not on the main branch yet. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.",
+              "detail": "You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.",
               "needs": "Every rollout strategy.",
               "area": "zero-downtime"
             },
@@ -6279,9 +6279,9 @@
     "items": [
       "Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.",
       "Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.",
+      "The rollout page: watch a delivery object by object, read its logs, and steer it, with each right off until an administrator turns it on, and warnings when real traffic could reach a version nothing proved.",
       "Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.",
       "Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.",
-      "Next release: the rollout page for watching and steering a delivery.",
       "New planned items: tokens for one repository with source-address limits, signing in from the command line through the browser, mirroring a release branch behind required checks, personal settings in one place, the real client address behind a web edge, a public and internal split of paths, and Git over SSH for the hosted modes."
     ]
   },
@@ -6296,7 +6296,6 @@
     ],
     "missing": [
       "The first self-upgrade exposed upgrade-ordering problems that are now fixed and guarded by tests, and the upgrade gate is still being finished.",
-      "The rollout page (watching and steering a delivery object by object) is built and comes in the next release.",
       "The wall between Bases and sign-up, so people outside a team can use the hosted service: not built yet.",
       "Works alongside a hosted code host without moving repositories: planned.",
       "Windows and macOS Stations, and the mobile and games needs that follow them.",
@@ -6305,11 +6304,6 @@
     "note": "The rounds built on separate branches are now on the main branch. What is still on a branch is marked as such."
   },
   "buildQueue": [
-    {
-      "title": "The rollout page",
-      "value": "Watch and steer every object a delivery created, and test before real traffic.",
-      "area": "delivery"
-    },
     {
       "title": "The wall between Bases, then sign-up",
       "value": "Several Bases on one installation, isolated and proven by tests, then sign-up with the least setup.",
@@ -6324,11 +6318,6 @@
       "title": "Works alongside a hosted code host",
       "value": "Connect repositories without moving them, run pipelines on your own machines and report back to the pull request there.",
       "area": "git-hosting"
-    },
-    {
-      "title": "Rollout drill-down and control",
-      "value": "See and control every object a delivery created.",
-      "area": "delivery"
     },
     {
       "title": "Delivery by choice",

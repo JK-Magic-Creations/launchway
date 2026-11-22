@@ -21,7 +21,6 @@ Launchway is one place to host your code, build it, test it, scan it and deliver
 **Not there yet.**
 
 - The first self-upgrade exposed upgrade-ordering problems that are now fixed and guarded by tests, and the upgrade gate is still being finished.
-- The rollout page (watching and steering a delivery object by object) is built and comes in the next release.
 - The wall between Bases and sign-up, so people outside a team can use the hosted service: not built yet.
 - Works alongside a hosted code host without moving repositories: planned.
 - Windows and macOS Stations, and the mobile and games needs that follow them.
@@ -44,25 +43,23 @@ These four come first. After them the aim is a product that larger companies wou
 
 After what is already in flight, in this order.
 
-1. **The rollout page.** Watch and steer every object a delivery created, and test before real traffic. ([area page](roadmap/delivery.md))
-2. **The wall between Bases, then sign-up.** Several Bases on one installation, isolated and proven by tests, then sign-up with the least setup. ([area page](roadmap/hosted-service.md))
-3. **The upgrade gate and network detection.** Upgrades that cannot half-apply, chart values that stay compatible, and detection of network problems before they bite. ([area page](roadmap/installing.md))
-4. **Works alongside a hosted code host.** Connect repositories without moving them, run pipelines on your own machines and report back to the pull request there. ([area page](roadmap/git-hosting.md))
-5. **Rollout drill-down and control.** See and control every object a delivery created. ([area page](roadmap/delivery.md))
-6. **Delivery by choice.** GitOps controller, direct chart installs or plain manifests, and previews for every pull request. ([area page](roadmap/delivery.md))
-7. **The Depot as one area.** Everything stored in one place, with scans and a proxy cache. ([area page](roadmap/registry.md))
-8. **Editor plug-ins and one-step setup for agent tools.** Launchway where developers already work. ([area page](roadmap/developer-experience.md))
-9. **Agents that deliver, natively.** A sandboxed agent machine and the model gateway. ([area page](roadmap/ai.md))
-10. **Windows and macOS runners.** A first basic version, then signing and store upload. ([area page](roadmap/pipelines.md))
+1. **The wall between Bases, then sign-up.** Several Bases on one installation, isolated and proven by tests, then sign-up with the least setup. ([area page](roadmap/hosted-service.md))
+2. **The upgrade gate and network detection.** Upgrades that cannot half-apply, chart values that stay compatible, and detection of network problems before they bite. ([area page](roadmap/installing.md))
+3. **Works alongside a hosted code host.** Connect repositories without moving them, run pipelines on your own machines and report back to the pull request there. ([area page](roadmap/git-hosting.md))
+4. **Delivery by choice.** GitOps controller, direct chart installs or plain manifests, and previews for every pull request. ([area page](roadmap/delivery.md))
+5. **The Depot as one area.** Everything stored in one place, with scans and a proxy cache. ([area page](roadmap/registry.md))
+6. **Editor plug-ins and one-step setup for agent tools.** Launchway where developers already work. ([area page](roadmap/developer-experience.md))
+7. **Agents that deliver, natively.** A sandboxed agent machine and the model gateway. ([area page](roadmap/ai.md))
+8. **Windows and macOS runners.** A first basic version, then signing and store upload. ([area page](roadmap/pipelines.md))
 
 
 **What changed in the roadmap, 22 November 2026.**
 
 - Everything built on separate branches in the last rounds is now on the main branch and counts as Available: the Depot, Switches, the event log, review in depth, the Debrief, Standing orders, releases, the software graph, configuration as code, delivery to machines, work tracking with agents, and organizing.
 - Hosted repositories are listed on the Code page even when no project reads a pipeline from them, and the Tower says how many there are.
+- The rollout page: watch a delivery object by object, read its logs, and steer it, with each right off until an administrator turns it on, and warnings when real traffic could reach a version nothing proved.
 - Git over SSH and mirrors in and out are Available. The first stage of the wall between Bases is on the main branch; a second Base cannot be turned on yet.
 - Still in progress, with what is missing said in each: signing and verifying, automatic toggle-back, starters proven end to end on a real cluster, autonomy levels 3 and 4, and the rest of the wall between Bases.
-- Next release: the rollout page for watching and steering a delivery.
 - New planned items: tokens for one repository with source-address limits, signing in from the command line through the browser, mirroring a release branch behind required checks, personal settings in one place, the real client address behind a web edge, a public and internal split of paths, and Git over SSH for the hosted modes.
 
 
@@ -115,6 +112,7 @@ compliance items provide controls and evidence.
 | Security scans as gates | Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model. ([more](security/how-launchway-is-scanned.md)) |
 | Pull requests and code review | Open, review, comment on lines, suggest changes and merge inside Launchway, with merge rules that block until required checks pass. ([more](guide/pull-requests.md)) |
 | Pipelines drawn the way they run | Steps that run together appear side by side on the Sortie page, drawn from their dependencies. |
+| Watch and steer a delivery | A Launch page shows every object a delivery made, live, with the logs of any pod (stable and Pathfinder side by side), the rollout's steps and weights, what was measured against what, and pause, restart, scale and an emergency return, each checked, audited and shown only where it works. ([more](guide/watching-and-steering-a-launch.md)) |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
 | A guided installer | `launchway install` asks plain questions, shows what it will do, and sets up a laptop, a server or a Kubernetes cluster; a first-run guide follows in the browser. ([more](howto/install-in-ten-minutes.md)) |
@@ -481,7 +479,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Delivery by choice](roadmap/milestone-3.md#delivery-by-choice) | Planned | A pipeline chooses how to deliver per Airfield: through a GitOps controller (single application or parent with children), direct chart installs, or plain manifests; progressive delivery with or without the GitOps controller. |
 | [Progressive delivery without the GitOps controller](roadmap/milestone-3.md#progressive-delivery-without-the-gitops-controller) | Planned | Use the rollout controller alone, or plain chart installs, when the GitOps controller is not wanted. |
 | [Ordered GitOps sync, parent then child](roadmap/milestone-3.md#ordered-gitops-sync-parent-then-child) | Available | An application and its values are written as two ordered commits, the values only once the cluster shows the new pin, and parents sync before children. |
-| [Drill down into everything a delivery created](roadmap/milestone-3.md#drill-down-into-everything-a-delivery-created) | In progress | From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back. |
+| [Drill down into everything a delivery created](roadmap/milestone-3.md#drill-down-into-everything-a-delivery-created) | Available | From a pipeline's deploy step, see the live object tree: workloads, replica sets with their role, pods, services, routes with weights, configuration and test pods; open any object for status, events, manifest and logs; watch each proof and what test traffic sent and got back. |
 
 ### Debug a deployment, then see everything
 
@@ -883,7 +881,7 @@ Every deployment, whatever it is made of, brings the new version up beside the o
 |---|---|---|
 | [Every rollout strategy](roadmap/milestone-8.md#every-rollout-strategy) | Planned | Pathfinder and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway. |
 | [An assistant for creating a rollout](roadmap/milestone-8.md#an-assistant-for-creating-a-rollout) | Planned | A few plain questions (what is it, how do users reach it, how do we know it is healthy, how careful, who must clear it) produce a plan, a picture and files in Git. |
-| [The rollout panel](roadmap/milestone-8.md#the-rollout-panel) | In progress | One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. |
+| [The rollout panel](roadmap/milestone-8.md#the-rollout-panel) | Available | One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. |
 | [Rehearsal environments](roadmap/milestone-8.md#rehearsal-environments) | Planned | Try a rollout in a short-lived Airfield with a traffic generator and injected faults before it reaches production. |
 | [Return to any earlier version](roadmap/milestone-8.md#return-to-any-earlier-version) | Planned | Choose an earlier version and return to it, with what that will change spelled out first. |
 
