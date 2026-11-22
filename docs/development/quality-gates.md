@@ -147,8 +147,17 @@ was stale because only part of the suite had been run, and a step user with no a
 
 ```sh
 make test-like-ci   # the pipeline's own test step, in its image, as the pipeline runs it
-make prepush        # make check, then make docs, then make test-like-ci, in that order
+make prepush        # make check, the secret scan of this commit's history, make docs, make test-like-ci
 ```
+
+The secret scan (`make secrets-head`, the hosted Security workflow's scan limited to the commits you
+are about to publish) is part of `prepush` because it looks at history: a test canary or a long table
+line that trips a scanner rule is in every later scan once it is committed. It needs Podman or Docker
+and the scanner image; without them it prints `SKIPPED` and the hosted workflow is the only check. A
+fake value in a test should start with `CANARY-` (the scanner config allows that shape); a finding
+that is a false positive in an already-published commit is added to the baseline only by a reviewer
+(`BASELINE_INIT=1 scripts/security/gitleaks.sh --update`), or covered by a path or pattern in
+`quality/gitleaks.toml` with its reason in a comment.
 
 `test-like-ci` reads the image and the `run:` block of the `test` step from `.launchway/pipeline.yaml`,
 so the two cannot drift, and runs them in a container (Podman or Docker; `CONTAINER=docker` to choose)

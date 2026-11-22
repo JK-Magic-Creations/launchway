@@ -61,6 +61,7 @@ test-like-ci:
 # Everything to run before a push, in order: the fast gates, the docs build, the pipeline's test step.
 prepush:
 	$(MAKE) check
+	$(MAKE) secrets-head
 	$(MAKE) docs
 	$(MAKE) test-like-ci
 
@@ -428,7 +429,7 @@ check-all: check web-size coverage-check
 # the machine and nothing is bundled into Launchway. `make security` runs them one at a time; the
 # product's own pipeline and .github/workflows/security.yml run the same targets.
 # ---------------------------------------------------------------------------
-.PHONY: security govulncheck osv secrets iac chart-pss fuzz image-scan scorecard dast
+.PHONY: security govulncheck osv secrets secrets-head iac chart-pss fuzz image-scan scorecard dast
 
 security: govulncheck osv secrets iac chart-pss fuzz
 	@echo "make security: all security gates passed (image-scan and dast are separate: they need an image or a running server)"
@@ -440,6 +441,12 @@ govulncheck:
 # Every locked dependency (Go, web UI, docs tools) against OSV.dev, plus npm audit.
 osv:
 	scripts/security/osv.sh
+
+# The same scan, limited to the history of the checked-out commit (what a push publishes; the hosted
+# checkout holds main alone). In make prepush. Skips with a notice when the container tool is missing.
+secrets-head:
+	@if command -v $${CONTAINER:-podman} >/dev/null 2>&1; then GITLEAKS_SCOPE=head scripts/security/gitleaks.sh; \
+	else echo "secrets-head: SKIPPED: no $${CONTAINER:-podman}; the hosted Security workflow runs this scan"; fi
 
 # Secrets in the whole Git history, against the shrink-only baseline quality/gitleaks-baseline.json.
 secrets:

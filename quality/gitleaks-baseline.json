@@ -1,19 +1,5 @@
 [
   {
-    "Fingerprint": "f6df21870525882b38cce253a2f8aa70cacb48d9:internal/archtest/arch_test.go:generic-api-key:40",
-    "RuleID": "generic-api-key",
-    "File": "internal/archtest/arch_test.go",
-    "StartLine": 40,
-    "Commit": "f6df21870525882b38cce253a2f8aa70cacb48d9"
-  },
-  {
-    "Fingerprint": "bc400d53298563c836c7533d34882b7abf5b2597:internal/archtest/arch_test.go:generic-api-key:40",
-    "RuleID": "generic-api-key",
-    "File": "internal/archtest/arch_test.go",
-    "StartLine": 40,
-    "Commit": "bc400d53298563c836c7533d34882b7abf5b2597"
-  },
-  {
     "Fingerprint": "3bff57af1e78307b0064afd817a059556e31d881:docs/tutorials/security-scans.md:slack-webhook-url:25",
     "RuleID": "slack-webhook-url",
     "File": "docs/tutorials/security-scans.md",

@@ -10,6 +10,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # A hard bound for the whole job: a package that hangs fails its own -timeout below, and the job
+    # can never run longer than this (one run burned 75 minutes before it was stopped).
+    timeout-minutes: 100
     services:
       postgres:
         image: postgres:17-alpine
@@ -39,15 +42,19 @@ jobs:
       - name: Vet and test (SQLite)
         run: |
           go vet ./...
-          go test -race -count=1 -timeout 60m ./...
+          # Every package under the race detector except the storage spike, which starts the test
+          # binary again as each git hook (seconds per start when race-instrumented) and is raced
+          # for no benefit; it runs on its own below. A package gets 45 minutes, not the job's hour.
+          go test -race -count=1 -timeout 45m $(go list ./... | grep -v '/internal/forge/storagespike$')
+          go test -count=1 -timeout 10m ./internal/forge/storagespike
       - name: Test with several servers (PostgreSQL)
         env:
           LAUNCHWAY_TEST_POSTGRES: postgres://launchway:launchway@127.0.0.1:5432/launchway?sslmode=disable
-        run: go test -race -count=1 -timeout 60m ./internal/engine/ ./internal/source/ ./internal/api/
+        run: go test -race -count=1 -timeout 45m ./internal/engine/ ./internal/source/ ./internal/api/
       - name: Test with real containers
         env:
           LAUNCHWAY_TEST_CONTAINERS: "1"
-        run: go test -count=1 -timeout 60m ./internal/executor/
+        run: go test -count=1 -timeout 30m ./internal/executor/
       - name: Build the binary
         run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
 
