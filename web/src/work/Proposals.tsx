@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Chip, type Tone } from "../kit/Status";
 import { Dialog } from "../kit/Dialog";
 import { Button } from "../kit/layout";
@@ -29,7 +29,10 @@ export default function Proposals({ scope }: { scope: string }) {
   const [check, setCheck] = useState<ProposeResult | null>(null);
   const groups = list.data ?? [];
   const pending = groups.filter((g) => g.state === "pending");
-  const say = (t: string) => { setMessage(""); window.setTimeout(() => setMessage(t), 20); announce(t); };
+  // The message is cleared and set again so that a screen reader reads a repeated text; the timer ends with the page.
+  const sayTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(sayTimer.current), []);
+  const say = (t: string) => { setMessage(""); window.clearTimeout(sayTimer.current); sayTimer.current = window.setTimeout(() => setMessage(t), 20); announce(t); };
   const done = (t: string) => { setAct(null); setPicked(new Set()); setError(null); say(t); list.reload(); };
   const chosen = groups.filter((g) => picked.has(key(g)) && g.state === "pending");
   const toggle = (g: ProposalGroup) => { const n = new Set(picked); if (n.has(key(g))) n.delete(key(g)); else n.add(key(g)); setPicked(n); };
