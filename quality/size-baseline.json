@@ -7,8 +7,8 @@
     "internal/api/mcp_tools.go": 1346,
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1028,
-    "internal/engine/db.go": 1560,
-    "internal/engine/engine.go": 2117,
+    "internal/engine/db.go": 1517,
+    "internal/engine/engine.go": 2114,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1408,
     "web/src/api.ts": 1564

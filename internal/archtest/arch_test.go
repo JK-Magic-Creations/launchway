@@ -24,7 +24,7 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                      {"internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/service", "internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/installer", "internal/installer/kube", "internal/keyring", "internal/keyring/transit", "internal/localauth", "internal/pipeline", "internal/runner", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                      {"internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/service", "internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/installer", "internal/installer/kube", "internal/keyring", "internal/keyring/transit", "internal/localauth", "internal/pipeline", "internal/runner", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/store", "internal/verify/source"},
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},
@@ -54,7 +54,7 @@ var allowedImports = map[string][]string{
 	"internal/deploy/edit":               {},
 	"internal/deploy/gitops":             {"internal/gitexec", "internal/redact"},
 	"internal/egress":                    {},
-	"internal/engine":                    {"internal/accept", "internal/ai", "internal/blobstore", "internal/coverage", "internal/deploy", "internal/deploy/edit", "internal/findings", "internal/hub", "internal/ids", "internal/keyring", "internal/notify", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sbom", "internal/testreport", "internal/verify", "internal/verify/source"},
+	"internal/engine":                    {"internal/accept", "internal/ai", "internal/blobstore", "internal/coverage", "internal/deploy", "internal/deploy/edit", "internal/findings", "internal/hub", "internal/ids", "internal/keyring", "internal/notify", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sbom", "internal/store", "internal/testreport", "internal/verify", "internal/verify/source"},
 	"internal/executor":                  {"internal/resources"},
 	"internal/fakeidp":                   {},
 	"internal/localauth":                 {},
@@ -94,6 +94,7 @@ var allowedImports = map[string][]string{
 	"internal/redact":                    {},
 	"internal/resources":                 {},
 	"internal/securitycheck":             {},
+	"internal/store":                     {},
 	"internal/runner":                    {"internal/accept", "internal/ai", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/redact", "internal/runnerauth", "internal/secrets", "internal/verify", "internal/verify/source"},
 	"internal/runnerauth":                {},
 	"internal/sealing":                   {"internal/auth", "internal/keyring"},
@@ -147,7 +148,7 @@ var leaves = []string{
 	"internal/redact", "internal/ids", "internal/resources", "internal/hub",
 	"internal/policy", "internal/auth", "internal/verify", "internal/testreport",
 	"internal/blobstore", "internal/coverage", "internal/runnerauth", "internal/accept", "internal/forge",
-	"internal/keyring",
+	"internal/keyring", "internal/store",
 }
 
 // runnerSide packages run on the runner or are linked into it. They must not

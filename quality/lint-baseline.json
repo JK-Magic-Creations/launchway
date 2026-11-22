@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 460,
+  "total": 458,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -693,12 +693,6 @@
       "count": 1
     },
     {
-      "file": "internal/engine/identity.go",
-      "linter": "errcheck",
-      "text": "Error return value of `tx.Rollback` is not checked",
-      "count": 1
-    },
-    {
       "file": "internal/engine/notify.go",
       "linter": "contextcheck",
       "text": "Non-inherited new context, use function like `context.WithXXX` instead",
@@ -895,12 +889,6 @@
       "linter": "sqlclosecheck",
       "text": "Close should use defer",
       "count": 2
-    },
-    {
-      "file": "internal/engine/tokens.go",
-      "linter": "gosec",
-      "text": "G101: Potential hardcoded credentials",
-      "count": 1
     },
     {
       "file": "internal/engine/triggers.go",
