@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/klauspost/compress v1.20.2
 	github.com/moby/buildkit v0.35.1
+	github.com/moby/patternmatcher v0.6.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/sigstore/sigstore v1.11.3
 	github.com/tonistiigi/fsutil v0.0.0-20261103125000-e075fd9305eb
@@ -91,7 +92,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

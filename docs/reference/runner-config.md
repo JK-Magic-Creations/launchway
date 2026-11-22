@@ -321,11 +321,39 @@ builds to and the Depots (registries) it pushes to. Unset, the Station takes no 
 | `images.builders[].insecure` | boolean | `false` | A `tcp://` daemon without TLS. For tests on one machine only |
 | `images.builders[].platforms` | list | every platform the daemon builds | The only platforms built here, such as `[linux/arm64]` |
 | `images.builders[].projects` | list of patterns | every project | The projects that may build here |
-| `images.max_context_mib` | whole number | `2048` | The largest build context a step may send, after `.dockerignore` |
+| `images.max_context_mib` | whole number | `2048` | The largest build context a step may send. It is measured on what the ignore file keeps, not on the directory: see [What is sent as the build context](#image-build-context) |
 | `images.max_image_mib` | whole number | `20480` | The largest image (all platforms, compressed) accepted back from a builder |
 
 An image step uses the first builder that serves its project and every platform it asks for, or
 one builder per platform when no single one does.
+
+### What is sent as the build context {#image-build-context}
+
+The ignore file is read first, the way the builder reads it: `<Dockerfile>.dockerignore` (for
+`Dockerfile`, `Dockerfile.dockerignore`) beside the Dockerfile if there is one, else `.dockerignore`
+in the root of the context. Its patterns work as the builder's do, so an allow-list that starts with
+`*` and brings files back with `!` works. The Dockerfile and the ignore files themselves are always
+kept, because the builder reads them from the context and applies the same rules again.
+
+`images.max_context_mib` and the limit of 1,000,000 files apply to **what the ignore file keeps**, never to what it
+leaves out. On Kubernetes the workspace is in the Sortie's pod, so the Station lists the context's
+files there with their sizes, applies the rules itself, and reads out of the pod only the files that are
+kept (a directory the rules leave out, such as `node_modules` or a build cache, is not even walked, unless a `!`
+rule could bring something in it back). The context is copied out of the pod as files, directories
+and symbolic links; a link is copied as a link and never followed, a context that is itself a link
+leading outside the workspace is refused, and nothing outside the context is read. A Station on
+a machine with the workspace on its own disk checks the same limits on the same files, though it copies
+nothing: the builder is sent what the rules keep. Empty directories are not copied on Kubernetes. The
+helper image needs `find`, `stat` and `tar` (the default does).
+
+When a context is over a limit, the step fails with a message that says how much was kept and in how
+many files, which ignore file was used (or that there is none), how much the ignore file left out, and
+the three largest directories kept, so that you can see what to ignore:
+
+> the build context . keeps 3.1 GiB in 120431 files after .dockerignore, more than the 2 GiB that
+> images.max_context_mib allows; the ignore file left out at least 4.2 GiB; the largest directories kept
+> are cache/go-build (2.8 GiB), docs (300 MiB), assets (20 MiB). Add what the build does not read to
+> .dockerignore, or raise images.max_context_mib
 
 ### Depots {#registries}
 

@@ -45,7 +45,7 @@ steps:
 
 | Key | Meaning |
 |---|---|
-| `context`, `file`, `target` | What to build: a directory and a Dockerfile in the workspace, as earlier steps left it, and a stage. Neither may lead outside the workspace, through a symbolic link or otherwise |
+| `context`, `file`, `target` | What to build: a directory and a Dockerfile in the workspace, as earlier steps left it, and a stage. Neither may lead outside the workspace, through a symbolic link or otherwise. Only what the context's ignore file keeps is sent, and the Station's size limit (`images.max_context_mib`) applies to that: see *What is sent as the build context* below |
 | `platforms` | `os/arch` values; default the builder's own. See *Several platforms* |
 | `build_args` | Values as for deploy steps: written in place, `{ output: step.key }`, `{ run: sha \| short_sha \| branch \| tag \| number \| commit_time }` or `{ input: name }`. They are recorded in the provenance: never put a secret in one |
 | `secrets` | Build secrets by ID, read from the Station's secret stores like any step's secrets. They reach the build only as `RUN --mount=type=secret` mounts: never in a layer, the image's history, the provenance, the log (masked like any secret), an event or the database |
@@ -56,6 +56,15 @@ steps:
 | `provenance` | Record where the image came from (see *Provenance*); kept as the step's `provenance` Cargo |
 | `sign` | Sign the image, its platforms' images, the provenance and the SBOMs, in the form cosign verifies |
 | `scan` | Look for known vulnerabilities in each platform's image. `mode: report` (the default) records them; `mode: enforce` fails the step, before anything is pushed, when one is at `fail_on` or worse. They are findings like any scanner's: the Sortie's Security tab, the project's Security page |
+
+**What is sent as the build context.** The ignore file is `<Dockerfile>.dockerignore` beside the
+Dockerfile if there is one, else `.dockerignore` in the context, with the builder's own pattern
+rules: an allow-list that starts with `*` and re-includes with `!` works. On Kubernetes the
+Station reads only the files the ignore file keeps out of the Sortie's pod, so caches and
+`node_modules` that the file leaves out are neither copied nor counted against the limit; the Dockerfile and the ignore
+files are always kept. A context that is still over the limit fails with a message that says how much was kept, how much the
+ignore file left out, and the three largest directories kept. See
+[the Station's configuration](../reference/runner-config.md#image-build-context).
 
 Its outputs are `digest` (the image index's, or the one image's), `image` (`host/repository@sha256:…`,
 empty when nothing was pushed), `tags` (comma-separated `host/repository:tag`) and `pushed` (`true`
@@ -74,7 +83,7 @@ Station's operator runs apart from the steps, rootless (see
 [deploy/buildkit/README.md](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/buildkit/README.md): nothing that builds a Dockerfile runs under
 Pod Security "restricted", so the daemon has a namespace of its own with exactly two relaxations,
 and step pods stay restricted). The Station is the daemon's client, over mutual TLS: it sends the
-build context (copied out of the Sortie's pod on Kubernetes), answers the daemon's requests for build
+build context (on Kubernetes, the files its `.dockerignore` keeps, copied out of the Sortie's pod), answers the daemon's requests for build
 secrets and Depot credentials over the build's session, and receives the image. For Depots
 that use tokens, an honest daemon asks the Station for a token, which the Station fetches itself, and
 never sees the password; for Depots that take a user name and password directly (basic
