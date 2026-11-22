@@ -141,6 +141,7 @@
         "guide/secrets",
         "guide/encryption-at-rest",
         "guide/upgrading",
+        "guide/release-notes-candidate-6",
         "guide/configuration",
         "guide/access",
         "guide/runner-identity",

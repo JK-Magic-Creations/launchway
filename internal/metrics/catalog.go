@@ -124,7 +124,7 @@ var (
 		Help: "Messages in the mail outbox by state: pending or failed."})
 
 	RunnerPollAge = Default.New(Desc{Name: "launchway_station_last_poll_age_seconds", Kind: Gauge, Labels: []string{"loop"},
-		Help: "Seconds since each loop of a Station or launch Station that takes work from the server last asked or got an answer; loop is a fixed name of the loop (lease for a Station; the launch Station has its own, such as observe and commands). A value that keeps growing is a stuck loop; /livez fails at five minutes."})
+		Help: "Seconds since each loop of a Station or launch Station that takes work from the server last asked or got an answer; loop is a fixed name of the loop (lease for a Station; the launch Station has its own, such as observe and commands). A value that keeps growing is a stuck loop; the liveness check fails at five minutes."})
 	RunnerActionsRunning = Default.New(Desc{Name: "launchway_station_actions_running", Kind: Gauge,
 		Help: "Actions a Station or launch Station is carrying out now."})
 	RunnerActionsAbandoned = Default.New(Desc{Name: "launchway_station_actions_abandoned_total", Kind: Counter,

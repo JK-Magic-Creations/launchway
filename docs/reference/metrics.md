@@ -52,7 +52,7 @@ Labels come from small closed sets. A repository, a branch, a person or a Sortie
 | `launchway_station_actions_abandoned_total` | counter | none | Actions a launch Station stopped waiting for after their time; the work may still be running somewhere. |
 | `launchway_station_actions_running` | gauge | none | Actions a Station or launch Station is carrying out now. |
 | `launchway_station_heartbeats_missed_total` | counter | none | Leases that expired because their Station stopped reporting. |
-| `launchway_station_last_poll_age_seconds` | gauge | `loop` | Seconds since each loop of a Station or launch Station that takes work from the server last asked or got an answer; loop is a fixed name of the loop (lease for a Station; the launch Station has its own, such as observe and commands). A value that keeps growing is a stuck loop; /livez fails at five minutes. |
+| `launchway_station_last_poll_age_seconds` | gauge | `loop` | Seconds since each loop of a Station or launch Station that takes work from the server last asked or got an answer; loop is a fixed name of the loop (lease for a Station; the launch Station has its own, such as observe and commands). A value that keeps growing is a stuck loop; the liveness check fails at five minutes. |
 | `launchway_stations_online` | gauge | `pool` | Stations that reported in recently, by pool. |
 | `launchway_step_duration_seconds` | histogram | `outcome` | Time a step ran, by outcome. |
 | `launchway_step_room_waits_total` | counter | `reason` | Times a Station could not start a step pod for lack of room and the step was put back in the holding pattern to try again; reason is quota_full or cluster_full. |

@@ -269,6 +269,7 @@ export default defineConfig({
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Encryption at rest', link: '/guide/encryption-at-rest' },
           { text: 'Upgrading', link: '/guide/upgrading' },
+          { text: 'Release notes: candidate 6', link: '/guide/release-notes-candidate-6' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
           { text: 'Squadrons and Flights', link: '/guide/squadrons-and-flights' },
           { text: 'The words Launchway uses', link: '/guide/words' },
