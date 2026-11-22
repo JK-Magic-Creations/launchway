@@ -41,7 +41,7 @@ describe("the Explorer", () => {
     expect(location.search).toBe("?q=ledger");
     const tree = screen.getByRole("tree");
     expect(within(tree).queryByRole("treeitem", { name: /Storefront/ })).not.toBeInTheDocument();
-    expect(within(tree).getByRole("treeitem", { name: /Payments, 1 item/ })).toBeInTheDocument();
+    expect(within(tree).getByRole("treeitem", { name: /Payments 1 item/ })).toBeInTheDocument();
   });
   it("forgives a typo and says helpfully when nothing matches", async () => {
     render(<Explorer {...props()} />);
@@ -99,7 +99,7 @@ describe("the Explorer", () => {
   });
   it("shows a status roll-up in words on a folder that holds a failure", () => {
     render(<Explorer {...props()} />);
-    expect(within(screen.getByRole("tree")).getByRole("treeitem", { name: /Payments, 2 items, 1 failed/ })).toBeInTheDocument();
+    expect(within(screen.getByRole("tree")).getByRole("treeitem", { name: /Payments 2 items, 1 failed/ })).toBeInTheDocument();
   });
   it("pins the view to the person's own Home as a saved-view panel", async () => {
     const calls: { method: string; path: string; body?: unknown }[] = [];
@@ -200,9 +200,9 @@ describe("my collections: arranging for me", () => {
     await waitFor(() => expect(onCollections).toHaveBeenCalledWith([{ id: "c1", name: "Watching", items: ["web-shop"] }]));
     rerender(<Explorer {...props()} onCollections={onCollections} collections={[{ id: "c1", name: "Watching", items: ["web-shop"] }]} />);
     const tree = screen.getByRole("tree");
-    expect(within(tree).getByRole("treeitem", { name: /My collections, 1 item/ })).toBeInTheDocument();
+    expect(within(tree).getByRole("treeitem", { name: /My collections 1 item/ })).toBeInTheDocument();
     // It also still lives where it was.
-    expect(within(tree).getByRole("treeitem", { name: /Storefront, 1 item/ })).toBeInTheDocument();
+    expect(within(tree).getByRole("treeitem", { name: /Storefront 1 item/ })).toBeInTheDocument();
   });
   it("dropping a card on a collection adds it, and Remove takes it out of the collection only", async () => {
     const onCollections = vi.fn().mockResolvedValue(undefined);

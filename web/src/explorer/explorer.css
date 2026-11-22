@@ -22,6 +22,7 @@
 .xp-node:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
 .xp-tw { width: 18px; flex: none; border: 0; background: none; color: var(--ink-3); padding: 0; font-size: 12px; cursor: pointer; }
 .xp-nl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-cnt::after { content: attr(data-count); } /* drawn, not text: the name of the node already says the count */
 .xp-cnt { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
 .xp-dot .st { width: 16px; height: 16px; }
 .xp-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -47,7 +48,7 @@ mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inhe
 .xp-tname a { text-decoration: none; }
 .xp-tname a:hover { text-decoration: underline; }
 .xp-card p { margin: 0; }
-.xp-desc { color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.xp-desc { color: var(--ink-2); overflow-wrap: anywhere; } /* in full: a clamp would cut it off under the text spacing of WCAG 1.4.12 */
 .xp-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .xp-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
 .xp-labels { display: inline-flex; gap: 4px; }

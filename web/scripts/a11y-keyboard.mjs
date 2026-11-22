@@ -66,7 +66,7 @@ await journey("search: open with the slash key, find a failed run, read why it f
   assert.equal((await active(page)).role, "combobox");
   await page.keyboard.type("failed");
   await page.getByRole("option", { name: /See why shop-api failed/ }).waitFor();
-  has(await dialog.ariaSnapshot(), /combobox/, /listbox "Results"/, /option "See why shop-api failed/);
+  has(await dialog.ariaSnapshot(), /combobox/, /listbox "Results"/, /option "(?:Do )?See why shop-api failed/);
   await page.waitForFunction(() => /\d+ results?/.test(document.querySelector('.modal [role="status"]')?.textContent ?? ""));
   await page.keyboard.press("Enter");
   await page.waitForURL(new RegExp("/runs/" + runs.RUN_FAILED));

@@ -347,7 +347,7 @@ function Tree({ nodes, open, selected, rootLabel, onSelect, onToggle, q, onDrop 
         {/* The keys are handled by the tree that holds it (arrows, Enter, type-ahead). */}
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
         <div role="treeitem" aria-level={n.depth + 1} aria-selected={selected === n.key} aria-expanded={kids.length > 0 ? isOpen : undefined}
-          aria-label={`${label(n)}, ${n.count} ${n.count === 1 ? "item" : "items"}${worst(n.tones) !== "none" && worst(n.tones) !== "ok" ? `, ${n.tones[worst(n.tones)]} ${TONE_WORD[worst(n.tones)]}` : ""}`}
+          aria-label={`${label(n)} ${n.count} ${n.count === 1 ? "item" : "items"}${worst(n.tones) !== "none" && worst(n.tones) !== "ok" ? `, ${n.tones[worst(n.tones)]} ${TONE_WORD[worst(n.tones)]}` : ""}`}
           data-key={n.key} tabIndex={activeKey === n.key ? 0 : -1} className={"xp-node" + (selected === n.key ? " sel" : "")} style={{ paddingLeft: 8 + n.depth * 14 }}
           onClick={() => { setActive(n.key); onSelect(n.key); }} onFocus={() => setActive(n.key)}
           onDragOver={onDrop && (n.folderId || n.key.startsWith("mine/c:")) ? (e) => e.preventDefault() : undefined} onDrop={onDrop && (n.folderId || n.key.startsWith("mine/c:")) ? onDrop(n) : undefined}>
@@ -355,8 +355,8 @@ function Tree({ nodes, open, selected, rootLabel, onSelect, onToggle, q, onDrop 
             <button type="button" tabIndex={-1} className="xp-tw" aria-hidden="true" onClick={(e) => { e.stopPropagation(); onToggle(n.key); }}>{isOpen ? "▾" : "▸"}</button>
           ) : <span className="xp-tw" aria-hidden="true" />}
           <span className="xp-nl"><Hl text={label(n)} q={q} /></span>
-          <Dot tones={n.tones} />
-          <span className="xp-cnt" aria-hidden="true">{n.count}</span>
+          <span aria-hidden="true"><Dot tones={n.tones} /></span>
+          <span className="xp-cnt" aria-hidden="true" data-count={n.count} />
         </div>
         {kids.length > 0 && isOpen && <ul role="group">{kids.map(renderNode)}</ul>}
       </li>

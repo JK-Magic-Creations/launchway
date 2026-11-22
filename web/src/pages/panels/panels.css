@@ -8,6 +8,7 @@
 .pn-b p { margin: 0 0 8px; }
 .pn-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .pn-list li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pn-list a { display: inline-block; min-height: 24px; line-height: 24px; }
 .pn-day { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
 .pn-changed { color: var(--signal-ink); font-weight: 600; }
 .pn-err { color: var(--bad-ink); }
