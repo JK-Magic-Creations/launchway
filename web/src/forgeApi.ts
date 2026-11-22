@@ -36,7 +36,15 @@ const enc = encodeURIComponent;
 const repoBase = (o: string, n: string) => `/api/v1/repositories/${enc(o)}/${enc(n)}`;
 const hooksBase = (s: HookScope) => (s.name ? `${repoBase(s.owner, s.name)}/hooks` : `/api/v1/owners/${enc(s.owner)}/hooks`);
 
+export interface RepoReach {
+  people: { who: string; kind: "user" | "group"; role: string }[];
+  tokens: { id: string; name: string; owner: string; access: "read" | "write"; pattern: string; expires_at: number; last_used: number; source_ranges?: string[] }[];
+}
+
 export const forgeApi = {
+  reach: (o: string, n: string) => call<RepoReach>("GET", `${repoBase(o, n)}/credentials`),
+  makeCredential: (o: string, n: string, b: { name: string; access: "read" | "write"; expires_in_days: number; source_ranges?: string[] }) =>
+    call<{ id: string; token: string }>("POST", `${repoBase(o, n)}/credentials`, b),
   repositories: () => call<{ items: HostedRepo[] }>("GET", "/api/v1/repositories").then((r) => r.items),
   repository: (o: string, n: string) => call<HostedRepo>("GET", repoBase(o, n)),
   /** Change a repository: name, default branch, visibility or archived (an administrator of it). */

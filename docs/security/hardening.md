@@ -15,8 +15,9 @@ authors. For operators and platform engineers, and for developers who write pipe
 - [ ] **Give the fewest people `admin`.** Grant `viewer` to everyone who needs to see, `operator`
   to the teams that own Flights (`projects:` patterns), and `admin` to a small group. Limit
   operators of production with `environments:` on their bindings.
-- [ ] **Serve over HTTPS**, normally behind a reverse proxy. Set `server.trust_proxy: true` only if
-  clients cannot reach Launchway except through that proxy. The proxy must not buffer
+- [ ] **Serve over HTTPS**, normally behind a reverse proxy. List your proxies in `server.trusted_proxies`, so that forwarding
+  headers are believed from them only (the older `server.trust_proxy: true` believes every peer: use it only if
+  clients cannot reach Launchway except through that proxy). The proxy must not buffer
   `/api/v1/stream`.
 - [ ] **Keep the client secret out of the file:** `client_secret_env` or `client_secret_file`.
 - [ ] **Use PostgreSQL** with TLS and a user that owns only Launchway's database, for anything
@@ -103,6 +104,10 @@ The chart ships these on by default; check that you have not switched one off.
 
 ### People and records
 
+- [ ] **Give each automation its own narrow credential.** A service account per automation, a token
+  limited to the repositories it needs (`read` unless it must push) and to the addresses it runs from, and the
+  shortest expiry you can live with ([Credentials for machines](../guide/credentials-for-machines.md)). The Logbook
+  names the token on every request, so an alert can tell one automation from another.
 - [ ] **Revoke the API tokens of people who leave.** Their tokens keep their last known groups
   until they expire. Keep `auth.tokens.max_days` short.
 - [ ] **Keep the Logbook.** Launchway only adds to it; copy it to your log archive if you must

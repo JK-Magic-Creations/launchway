@@ -87,6 +87,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	// Git over SSH, deploy keys, protected branches and webhooks, with hosting off: the SSH status says so plainly; every other call that
 	// is offered answers feature_off. Operators are offered the tools that change a repository's keys, branches and hooks.
 	"list_users":                 {nil, false, [5]string{mRefused, mRefused, mRefused, mRefused, mOK}},
+	"list_service_accounts":      {nil, false, [5]string{mRefused, mRefused, mRefused, mRefused, mOK}},
 	"get_ssh_info":               {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"list_ssh_keys":              {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"add_ssh_key":                {map[string]any{"public_key": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},

@@ -111,12 +111,15 @@ var contractSQL = []string{
   role           TEXT    NOT NULL DEFAULT '',
   projects       TEXT    NOT NULL DEFAULT '',
   last_used_from TEXT    NOT NULL DEFAULT '',
+  repos          TEXT    NOT NULL DEFAULT '',
+  repo_access    TEXT    NOT NULL DEFAULT '',
+  source_ranges  TEXT    NOT NULL DEFAULT '',
   PRIMARY KEY (base_id, id),
   UNIQUE (base_id, hash),
   UNIQUE (base_id, username, name)
 )`,
-	`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, last_used, role, projects, last_used_from)
-  SELECT base_id, id, hash, username, name, created_at, expires_at, last_used, role, projects, last_used_from FROM api_tokens_old`,
+	`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, last_used, role, projects, last_used_from, repos, repo_access, source_ranges)
+  SELECT base_id, id, hash, username, name, created_at, expires_at, last_used, role, projects, last_used_from, repos, repo_access, source_ranges FROM api_tokens_old`,
 	`DROP TABLE api_tokens_old`,
 
 	`CREATE TABLE local_accounts_old AS SELECT * FROM local_accounts`,

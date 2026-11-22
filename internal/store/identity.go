@@ -183,9 +183,10 @@ func (i *Identity) CreateToken(sc Scope, t APIToken, storedHash string) error {
 	if len(t.Projects) == 0 {
 		projects = []byte("")
 	}
+	repos, ranges := encodeList(t.Repositories), encodeList(t.SourceRanges)
 	err := i.env.Do(sc, true, func(q *Q) error {
-		_, err := q.Exec(`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, role, projects) VALUES(?,?,?,?,?,?,?,?,?)`,
-			q.Base(), t.ID, storedHash, t.User, t.Name, t.CreatedAt, t.ExpiresAt, t.Role, string(projects))
+		_, err := q.Exec(`INSERT INTO api_tokens(base_id, id, hash, username, name, created_at, expires_at, role, projects, repos, repo_access, source_ranges) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
+			q.Base(), t.ID, storedHash, t.User, t.Name, t.CreatedAt, t.ExpiresAt, t.Role, string(projects), repos, t.RepoAccess, ranges)
 		return err
 	})
 	if IsConflict(err) {
@@ -194,13 +195,19 @@ func (i *Identity) CreateToken(sc Scope, t APIToken, storedHash string) error {
 	return err
 }
 
-const tokenColumns = `t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, t.role, t.projects, t.last_used_from` //nolint:gosec // column names, not a credential
+const tokenColumns = `t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, t.role, t.projects, t.last_used_from, t.repos, t.repo_access, t.source_ranges` //nolint:gosec // column names, not a credential
 
 func scanToken(sc Row, extra ...any) (*APIToken, error) {
 	t := &APIToken{}
-	var projects string
-	if err := sc.Scan(append([]any{&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.Role, &projects, &t.LastUsedFrom}, extra...)...); err != nil {
+	var projects, repos, ranges string
+	if err := sc.Scan(append([]any{&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.Role, &projects, &t.LastUsedFrom, &repos, &t.RepoAccess, &ranges}, extra...)...); err != nil {
 		return nil, err
+	}
+	if repos != "" {
+		_ = json.Unmarshal([]byte(repos), &t.Repositories)
+	}
+	if ranges != "" {
+		_ = json.Unmarshal([]byte(ranges), &t.SourceRanges)
 	}
 	if projects != "" {
 		_ = json.Unmarshal([]byte(projects), &t.Projects)
@@ -211,14 +218,15 @@ func scanToken(sc Row, extra ...any) (*APIToken, error) {
 // TokenByHash finds a token of this Base by either stored form of the hash of
 // its value, with its owner's groups as of their latest sign-in. A token of
 // another Base is not found.
-func (i *Identity) TokenByHash(sc Scope, hash, limitedHash string) (*APIToken, []string, error) {
+func (i *Identity) TokenByHash(sc Scope, hash string, limitedHashes ...string) (*APIToken, []string, error) {
 	var groups, name, email sql.NullString
 	var t *APIToken
 	err := i.env.Do(sc, false, func(q *Q) error {
 		var err error
 		t, err = scanToken(q.QueryRow(`SELECT `+tokenColumns+`, u.group_list, u.display_name, u.email
 			FROM api_tokens t LEFT JOIN users u ON u.base_id = t.base_id AND u.username = t.username
-			WHERE t.base_id = ? AND t.hash IN (?, ?)`, q.Base(), hash, limitedHash), &groups, &name, &email)
+			WHERE t.base_id = ? AND t.hash IN (`+strings.TrimSuffix(strings.Repeat("?,", 1+len(limitedHashes)), ",")+`)`,
+			append([]any{q.Base(), hash}, anys(limitedHashes)...)...), &groups, &name, &email)
 		return err
 	})
 	if errors.Is(err, sql.ErrNoRows) {
@@ -932,4 +940,13 @@ func (i *Identity) SetMemberRole(sc Scope, handle, role string) error {
 // RemoveMember removes a member from the Base.
 func (i *Identity) RemoveMember(sc Scope, handle string) error {
 	return i.env.Do(sc, true, func(q *Q) error { return removeMember(q, strings.TrimSpace(handle)) })
+}
+
+// encodeList is a list as JSON, or "" for none.
+func encodeList[T any](l []T) string {
+	if len(l) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(l)
+	return string(b)
 }

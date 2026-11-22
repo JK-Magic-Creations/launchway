@@ -177,7 +177,9 @@ See [Encryption at rest](../guide/encryption-at-rest.md). The root key is held o
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `server.trust_proxy` | boolean | `false` | A reverse proxy in front sets `X-Forwarded-Proto` and `X-Forwarded-For`, and clients cannot reach the server except through it. Set it only then |
+| `server.trust_proxy` | boolean | `false` | The older switch: believe `X-Forwarded-Proto` and `X-Forwarded-For` from every peer, which is safe only if clients cannot reach the server except through the proxy (a warning is logged). Prefer `server.trusted_proxies` |
+| `server.trusted_proxies` | list of address ranges | none | The proxies in front (CIDR ranges or single addresses). Their `X-Forwarded-For` and `X-Forwarded-Proto` are believed; those of every other peer are ignored. Checked when the server starts |
+| `server.client_address_header` | text | none | The header holding the one client address your edge sets (such as `X-Real-IP`), believed only from a trusted proxy. Empty reads `X-Forwarded-For` |
 | `server.drain_delay` | duration | `0s` | How long a stopping server keeps serving after `/readyz` reports not ready, so load balancers that check `/readyz` move away first. Checked when the server starts |
 
 ## Auth
@@ -191,6 +193,7 @@ See [Set up sign-in and roles](../howto/oidc-and-roles.md) and [Roles](roles.md)
 | `auth.allow_anonymous` | boolean | `false` | Lets a server with `mode: none` listen on an address other than loopback, when something in front already decides who may reach it |
 | `auth.idle_timeout` | duration | `8h` | A session nobody has used this long ends. At least `1m`; at most `session_lifetime` |
 | `auth.session_lifetime` | duration | `24h` | Every session ends this long after sign-in. At least `1m` |
+| `auth.tokens.service_accounts_from_tokens` | boolean | `false` | Lets an administrator's API token, not only an administrator's signed-in session, make tokens for service accounts |
 | `auth.tokens.max_days` | whole number | `365` | The longest an API token may last, in days, 1 to 3650. `0` means the default |
 
 ### OpenID Connect

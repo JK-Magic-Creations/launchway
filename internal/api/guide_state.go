@@ -208,6 +208,11 @@ func (s *Server) securityFacts(copied, kube, _ bool) securitycheck.Facts {
 	} else if s.TrustProxy {
 		f.TLS = securitycheck.Unknown
 	}
+	if len(s.TrustedProxies) > 0 {
+		f.ProxyNamed = securitycheck.Yes
+	} else if s.TrustProxy {
+		f.ProxyNamed = securitycheck.No
+	}
 	return f
 }
 

@@ -33,20 +33,29 @@ func (s *Server) listTokens(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, list)
 }
 
+// tokenRequest is the body that makes a token.
+type tokenRequest struct {
+	Name          string `json:"name"`
+	ExpiresInDays int    `json:"expires_in_days"`
+	// Role limits the token to viewer or operator (or admin); empty is
+	// whatever its owner has when it is used. Projects limits it to
+	// Flights matching these patterns. Repositories (owner/name, or
+	// owner/*) with RepoAccess ("read" or "write") limits it to hosted
+	// repositories and nothing else. SourceRanges limits where it may be used
+	// from. Repositories cannot be combined with Projects.
+	Role         string   `json:"role"`
+	Projects     []string `json:"projects"`
+	Repositories []string `json:"repositories"`
+	RepoAccess   string   `json:"repo_access"`
+	SourceRanges []string `json:"source_ranges"`
+}
+
 func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 	if !s.tokensOn(w) {
 		return
 	}
 	id := identityFrom(r)
-	var in struct {
-		Name          string `json:"name"`
-		ExpiresInDays int    `json:"expires_in_days"`
-		// Role limits the token to viewer or operator (or admin); empty is
-		// whatever its owner has when it is used. Projects limits it to
-		// projects matching these patterns.
-		Role     string   `json:"role"`
-		Projects []string `json:"projects"`
-	}
+	var in tokenRequest
 	if !decode(w, r, &in) {
 		return
 	}
@@ -58,6 +67,13 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "tokens can only be made from a signed-in browser session, not with another token")
 		return
 	}
+	s.mintToken(w, r, id, id.User, "", in)
+}
+
+// mintToken validates a request and stores the token for owner, who is the
+// maker (a person) or a service account's principal. floor is the service
+// account's role ("" for a person).
+func (s *Server) mintToken(w http.ResponseWriter, r *http.Request, id *identity, owner, floor string, in tokenRequest) {
 	if !auth.ValidName(in.Name) || len(in.Name) > 100 {
 		writeErr(w, http.StatusBadRequest, "give the token a name of 1 to 100 characters")
 		return
@@ -71,19 +87,49 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "a token must expire in 1 to "+strconv.Itoa(most)+" days")
 		return
 	}
-	if msg := s.checkTokenLimits(id, in.Role, in.Projects); msg != "" {
+	if len(in.Repositories) > 0 && len(in.Projects) > 0 {
+		writeErr(w, http.StatusBadRequest, "a token limited to repositories can do nothing else, so it cannot also name Flights: make two tokens")
+		return
+	}
+	if floor == "" {
+		if msg := s.checkTokenLimits(id, in.Role, in.Projects); msg != "" {
+			writeErr(w, http.StatusBadRequest, msg)
+			return
+		}
+	} else if msg := s.checkServiceTokenLimits(floor, in.Role, in.Projects); msg != "" {
+		writeErr(w, http.StatusBadRequest, msg)
+		return
+	}
+	repos, msg := s.parseTokenRepos(r, id, in.Repositories, in.RepoAccess)
+	if msg != "" {
+		writeErr(w, http.StatusBadRequest, msg)
+		return
+	}
+	ranges, msg := parseSourceRanges(in.SourceRanges)
+	if msg != "" {
 		writeErr(w, http.StatusBadRequest, msg)
 		return
 	}
 	now := s.Now()
 	value := tokenPrefix + auth.RandomString(32)
-	t := engine.APIToken{ID: ids.New("tok"), Name: in.Name, User: id.User, CreatedAt: now.UnixMilli(),
-		ExpiresAt: now.Add(time.Duration(days) * 24 * time.Hour).UnixMilli(), Role: in.Role, Projects: in.Projects}
+	t := engine.APIToken{ID: ids.New("tok"), Name: in.Name, User: owner, CreatedAt: now.UnixMilli(),
+		ExpiresAt: now.Add(time.Duration(days) * 24 * time.Hour).UnixMilli(), Role: in.Role, Projects: in.Projects,
+		Repositories: repos, RepoAccess: in.RepoAccess, SourceRanges: ranges}
 	if err := s.Engine.CreateLimitedToken(t, auth.Hash(value)); err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, "", "expires in "+strconv.Itoa(days)+" days"+tokenLimitsDetail(in.Role, in.Projects))
+	detail := "expires in " + strconv.Itoa(days) + " days" + tokenLimitsDetail(in.Role, in.Projects)
+	if len(repos) > 0 {
+		detail += ", " + in.RepoAccess + " on " + strings.Join(in.Repositories, " ")
+	}
+	if len(ranges) > 0 {
+		detail += ", only from " + strings.Join(ranges, " ")
+	}
+	if owner != id.User {
+		detail += ", for " + owner
+	}
+	setAudit(r, in.Name, detail)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusCreated, struct {
 		engine.APIToken

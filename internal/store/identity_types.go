@@ -39,8 +39,34 @@ type APIToken struct {
 	Role         string   `json:"role,omitempty"`
 	Projects     []string `json:"projects,omitempty"`
 	LastUsedFrom string   `json:"last_used_from,omitempty"`
+	// Repositories limits the token to hosted repositories (see TokenRepo);
+	// RepoAccess ("read" or "write") is non-empty exactly when it does.
+	// SourceRanges are the CIDR ranges the token may be used from (none for
+	// anywhere).
+	Repositories []TokenRepo `json:"repositories,omitempty"`
+	RepoAccess   string      `json:"repo_access,omitempty"`
+	SourceRanges []string    `json:"source_ranges,omitempty"`
 	// OwnerName names whose token it is, in lists only admins see.
 	OwnerName string `json:"user,omitempty"`
+}
+
+// TokenRepo is one hosted repository a token is limited to: an exact
+// "owner/name" (with the repository's ID, so a repository deleted and made
+// again under the name is not the one the token was made for) or "owner/*".
+type TokenRepo struct {
+	Pattern string `json:"pattern"`
+	ID      string `json:"id,omitempty"`
+}
+
+// ServiceAccount is a non-person account that owns tokens: no password and
+// no sign-in.
+type ServiceAccount struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Role        string `json:"role"` // the most a token of the account can have
+	Disabled    bool   `json:"disabled"`
+	CreatedAt   int64  `json:"created_at"`
+	CreatedBy   string `json:"created_by,omitempty"`
 }
 
 // LocalAccount is one built-in account.

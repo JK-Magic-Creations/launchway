@@ -379,6 +379,8 @@
   },
   "securityContext": true,
   "server": {
+    "trustedProxies": true,
+    "clientAddressHeader": true,
     "affinity": true,
     "dataVolume": {
       "sizeLimit": true

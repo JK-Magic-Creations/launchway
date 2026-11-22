@@ -48,14 +48,14 @@ type Server struct {
 	// their steps may read secrets. Nil gives auth.DefaultDraftRule
 	// everywhere. It applies with or without sign-in.
 	Drafts *auth.DraftRules
-	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
-	// reverse proxy that every client must go through.
-	TrustProxy  bool
-	OpenInstall bool  // no sign-in on a reachable address; see signin_request.go
-	UI          fs.FS // the built web UI; may be nil
-	Version     string
-	Log         *slog.Logger
-	Now         func() time.Time // for tests
+	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For from every peer (the older switch; see ProxySettings).
+	TrustProxy    bool
+	ProxySettings       // trusted proxies, and who may make service-account tokens (token_repos.go)
+	OpenInstall   bool  // no sign-in on a reachable address; see signin_request.go
+	UI            fs.FS // the built web UI; may be nil
+	Version       string
+	Log           *slog.Logger
+	Now           func() time.Time // for tests
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration

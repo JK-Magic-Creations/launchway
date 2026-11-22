@@ -514,6 +514,15 @@ type ServerConfig struct {
 	// X-Forwarded-Proto and X-Forwarded-For, and that clients cannot reach
 	// the server except through it.
 	TrustProxy bool `yaml:"trust_proxy"`
+	// TrustedProxies are the address ranges (CIDR) of the proxies whose
+	// forwarding headers are believed; a request from any other address has
+	// its X-Forwarded-For, X-Forwarded-Proto and ClientAddressHeader ignored.
+	// Set, it replaces the "believe every peer" meaning of trust_proxy. Off
+	// when empty.
+	TrustedProxies []string `yaml:"trusted_proxies"`
+	// ClientAddressHeader is the header holding the one client address that
+	// the proxy sets (such as X-Real-IP); empty reads X-Forwarded-For.
+	ClientAddressHeader string `yaml:"client_address_header"`
 	// DrainDelay is how long a stopping server keeps serving after /readyz
 	// starts to report it is not ready, so that load balancers that check
 	// /readyz stop sending it requests first; default 0s.

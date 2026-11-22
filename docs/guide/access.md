@@ -104,7 +104,14 @@ revoked at any time. It may be limited further:
   of an admin reads and changes nothing;
 - to **Flights**, by names or patterns such as `pay-*`: elsewhere it is as if the Flights did not
   exist. A token limited to Flights is never an admin of every Flight, so it cannot read the
-  audit trail.
+  audit trail;
+- to **repositories** hosted here (`acme/shop`, or `acme/*`) with `read` or `write` access: such a token
+  can do nothing else;
+- to **source addresses** (CIDR ranges): a request from elsewhere is refused and recorded.
+
+See [Credentials for machines](credentials-for-machines.md) for the rules, for service accounts that
+own tokens for automation, and for which credential suits which job. A token is named in the Logbook
+(`token_id`, `token_name`) on every request it authenticates.
 
 The page shows when and from which address each token was last used. Admins of every Flight also
 see everyone's tokens there and may revoke any (`GET /api/v1/admin/tokens`,
@@ -118,7 +125,7 @@ A token that is refused (unknown, revoked, expired, or not allowed by its limits
 The Logbook as `token.use`. An address that fails to authenticate 20 times within a minute
 (with tokens or webhook secrets) is refused with `429` and `Retry-After` for the rest of that
 minute; each server counts on its own and remembers at most 10,000 addresses. Behind a reverse
-proxy, the address is the one the proxy saw only with `server.trust_proxy: true`; otherwise
+proxy, the address is the one the proxy saw only from a peer in `server.trusted_proxies` (see below); otherwise
 `X-Forwarded-For` is ignored, so a client cannot dodge the limit by making addresses up.
 
 A limited token works only on servers that know limits: an older server, during a Return to base (rollback),
@@ -139,11 +146,27 @@ cannot be shown in a frame on another site.
 
 ## Behind a reverse proxy
 
-Set `server.trust_proxy: true` only if every client reaches Launchway through one reverse proxy.
-Launchway then believes its `X-Forwarded-Proto` (to mark cookies `Secure`) and takes the client's
-address from the last entry of `X-Forwarded-For`, the one the proxy added. The proxy must pass the
-`Host` header through unchanged, and must not buffer `/api/v1/stream`. Cookies are also `Secure`
-whenever `redirect_url` starts with `https://`.
+Launchway believes the headers a proxy adds (`X-Forwarded-Proto`, to mark cookies `Secure`, and the
+client's address) only from a peer you name. List your proxies' addresses:
+
+```yaml
+server:
+  trusted_proxies: [10.0.0.0/8]       # the proxies in front: ranges (CIDR) or single addresses
+  client_address_header: X-Real-IP    # optional: the one-address header your edge sets;
+                                      # empty reads X-Forwarded-For
+```
+
+The rule: a request whose TCP peer is **in** `trusted_proxies` has its forwarding headers believed; a
+request from **any other address** has them ignored, so a client that reaches Launchway directly
+cannot forge its address or the scheme. With `X-Forwarded-For`, the address is the last entry that
+is not itself one of your trusted proxies (a chain of your own proxies is skipped, and anything a
+client wrote before them is never read); with `client_address_header`, the header must hold exactly one
+address, or it is ignored. Without `trusted_proxies` nothing is believed, unless the older
+`server.trust_proxy: true` is set: that believes the headers from every peer (the server logs a warning
+at start), which is right only if clients cannot reach Launchway except through the proxy. Prefer
+`trusted_proxies` (Helm: `server.trustedProxies` and `server.clientAddressHeader`); `launchway doctor security` reports "client addresses are believed from any peer" until you do. The client address is what the Logbook, the failed-sign-in limit and a token's
+source-address limit use. The proxy must pass the `Host` header through unchanged, and must not buffer
+`/api/v1/stream`. Cookies are also `Secure` whenever `redirect_url` starts with `https://`.
 
 ## The Logbook {#audit-trail}
 

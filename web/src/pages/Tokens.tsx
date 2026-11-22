@@ -5,7 +5,10 @@ import type { Role } from "../api";
 import { ago, clock } from "../format";
 import { useMe } from "../auth";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
-import { triggersApi, type Token, type TokenLimits } from "../triggers";
+import { triggersApi, type NewToken, type Token, type TokenLimits } from "../triggers";
+import { forgeApi } from "../forgeApi";
+import { ServiceAccountsSection } from "./ServiceAccounts";
+import { parseRepositories, parseRanges } from "./tokenLimits";
 import "../triggers.css";
 import { terms } from "../terms";
 
@@ -26,6 +29,10 @@ export function TokensPage() {
   const [days, setDays] = useState(90);
   const [role, setRole] = useState<Role | "">("");
   const [projects, setProjects] = useState("");
+  const [repos, setRepos] = useState("");
+  const [access, setAccess] = useState<"read" | "write">("read");
+  const [ranges, setRanges] = useState("");
+  const [choices, setChoices] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState<{ name: string; token: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -37,6 +44,7 @@ export function TokensPage() {
   useEffect(() => {
     if (me?.auth_mode !== "oidc") return;
     load();
+    forgeApi.repositories().then((r) => setChoices(r.map((x) => x.path))).catch(() => setChoices([]));
     triggersApi.tokenLimits().then((l) => { setLimits(l); setDays(l.default_days); }).catch(setError);
   }, [load, me?.auth_mode]);
 
@@ -54,9 +62,12 @@ export function TokensPage() {
     setBusy(true); setError(null); setCopied(false);
     try {
       const patterns = projects.split(",").map((s) => s.trim()).filter(Boolean);
-      const t = await triggersApi.createToken({ name: name.trim(), expires_in_days: days, role: role || undefined, projects: patterns.length ? patterns : undefined });
+      const body: NewToken = { name: name.trim(), expires_in_days: days, role: role || undefined, projects: patterns.length ? patterns : undefined };
+      if (repoList.length) { body.repositories = repoList; body.repo_access = access; }
+      if (rangeList.length) body.source_ranges = rangeList;
+      const t = await triggersApi.createToken(body);
       setMade({ name: t.name, token: t.token });
-      setName(""); setProjects(""); setRole("");
+      setName(""); setProjects(""); setRole(""); setRepos(""); setRanges("");
       load();
     } catch (err) { setError(err); } finally { setBusy(false); }
   };
@@ -72,6 +83,12 @@ export function TokensPage() {
     try { await navigator.clipboard.writeText(made.token); setCopied(true); } catch { setCopied(false); }
   };
 
+  const repoParsed = parseRepositories(repos);
+  const rangeParsed = parseRanges(ranges);
+  const repoList = repoParsed.ok ? repoParsed.values : [];
+  const rangeList = rangeParsed.ok ? rangeParsed.values : [];
+  const formProblem = (!repoParsed.ok && repoParsed.problem) || (!rangeParsed.ok && rangeParsed.problem) ||
+    (repoList.length > 0 && projects.trim() ? "A token for repositories can do nothing else, so it cannot also name a list. Make two tokens." : "");
   const maxDays = limits?.max_days ?? 365;
   const roles = ROLES.slice(0, limits?.your_role ? ROLES.indexOf(limits.your_role) + 1 : 0);
   return (
@@ -103,9 +120,27 @@ export function TokensPage() {
               <span>{terms().say("{Projects}")}</span>
               <input value={projects} placeholder={terms().say("every {project}, or: pay-*, web")} onChange={(e) => setProjects(e.target.value)} />
             </label>
+            <label className="field">
+              <span>Repositories</span>
+              <input value={repos} list="token-repos" placeholder="none, or: acme/shop, acme/*" aria-describedby="token-repos-help" onChange={(e) => setRepos(e.target.value)} />
+              <datalist id="token-repos">{choices.map((c) => <option key={c} value={c} />)}</datalist>
+            </label>
+            <label className="field">
+              <span>Access to them</span>
+              <select value={access} disabled={!repoList.length} onChange={(e) => setAccess(e.target.value as "read" | "write")}>
+                <option value="read">Read only</option>
+                <option value="write">Read and push</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Only from addresses</span>
+              <input value={ranges} placeholder="anywhere, or: 203.0.113.0/24" onChange={(e) => setRanges(e.target.value)} />
+            </label>
           </div>
+          <p className="sub" id="token-repos-help">Name repositories (pick from the list, or type <Mono>owner/name</Mono> or <Mono>owner/*</Mono>) and the token reaches those and nothing else. Address ranges limit where it may be used from.</p>
+          {formProblem && <p className="bad-ink" role="alert">{formProblem}</p>}
           <p className="sub">Every token expires, after at most {maxDays} days on this server. The role can be no higher than your own.</p>
-          <div><button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>{busy ? "Making…" : "Make token"}</button></div>
+          <div><button type="submit" className="btn btn-primary" disabled={busy || !name.trim() || !!formProblem}>{busy ? "Making…" : "Make token"}</button></div>
         </form>
       </section>
 
@@ -124,6 +159,7 @@ export function TokensPage() {
       <ErrorBox error={error} />
       {tokens && tokens.length === 0 && <Empty title="You have no tokens" />}
       {tokens && tokens.length > 0 && <TokenTable tokens={tokens} onRevoke={(t) => revoke(t, false)} />}
+      {me.admin && <ServiceAccountsSection />}
       {me.admin && all && (
         <>
           <h2 className="h-sm" style={{ marginTop: 24 }}>Everyone's tokens</h2>
@@ -146,7 +182,7 @@ function TokenTable({ tokens, owner, onRevoke }: { tokens: Token[]; owner?: bool
             <tr key={t.id}>
               {owner && <td>{t.user}</td>}
               <td>{t.name}<div className="faint small mono">{t.id}</div></td>
-              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.projects?.length ? t.projects.join(", ") : terms().say("every {project}")}</td>
+              <td className="token-scope">{t.role ? roleName(t.role) : terms().say("{owner}'s role")}{" · "}{t.repo_access ? <>{t.repo_access === "write" ? "read and push" : "read only"}: {t.repositories?.length ? t.repositories.map((r) => r.pattern).join(", ") : "no repository left"}</> : t.projects?.length ? t.projects.join(", ") : terms().say("every {project}")}{t.source_ranges?.length ? <div className="faint small">only from {t.source_ranges.join(", ")}</div> : null}</td>
               <td title={clock(t.created_at)}>{ago(t.created_at, now)}</td>
               <td>{t.expires_at <= now ? <span className="bad-ink">expired</span> : clock(t.expires_at)}</td>
               <td>{t.last_used ? <span title={clock(t.last_used)}>{ago(t.last_used, now)}{t.last_used_from && <span className="faint"> from {t.last_used_from}</span>}</span> : "never"}</td>

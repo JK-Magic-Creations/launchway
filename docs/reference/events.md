@@ -335,6 +335,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.control_outcome` | what the launch Station (runner) did with a control, recorded when it answers (outcome `ok` or `failed`) |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |
+| `service_account.create` | `POST /api/v1/service-accounts` (the detail says the role) |
+| `service_account.update` | `PATCH /api/v1/service-accounts/{name}` (the role, or switched off or on) |
+| `service_account.delete` | `DELETE /api/v1/service-accounts/{name}`: the account and its tokens |
 | `token.revoke` | `DELETE /api/v1/tokens/{id}`, and an admin's `DELETE /api/v1/admin/tokens/{id}` |
 | `token.use` | a request with an API token that is refused: malformed, unknown, revoked or expired, or not allowed by its limits or its owner's role on a call that has no action of its own |
 | `config.create` | `POST /api/v1/config/{kind}`: an object was created (the detail names it and its version) |
@@ -557,11 +560,12 @@ Each entry has these fields:
 | `id` | the entry's number; newer entries have larger numbers |
 | `at` | when, in Unix milliseconds |
 | `user` | who: the user name, `git:<host kind>` for a Git hook, `webhook:<trigger>` for a webhook trigger, or empty for a sign-in that failed before anyone was known |
-| `source` | the client's address (behind a reverse proxy, the one the proxy saw, with `server.trust_proxy: true`) |
+| `source` | the client's address (behind a reverse proxy, the one the proxy saw: see [Behind a proxy](../guide/access.md#behind-a-reverse-proxy)) |
 | `action` | one of the actions above |
 | `project` | the Flight, or empty |
 | `target` | what was acted on: a Sortie ID, `run/step`, a token's name, a waiver, or a webhook delivery |
 | `outcome` | `ok`; `denied` when the permission check or the handler refused it with `403`; `failed` when the call was allowed but did not succeed |
+| `token_id`, `token_name` | the API token the request was authenticated with (pushes, API changes, refused uses), so that an alert can tell one automation from another; absent when no token was used. Never the secret |
 | `detail` | a short description, at most 1000 bytes, such as `run #2 of main at fa0b04cb, inputs scan=quick`, or why it was refused or failed |
 
 ### Reading the Logbook

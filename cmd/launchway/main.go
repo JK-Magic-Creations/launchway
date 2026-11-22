@@ -61,6 +61,7 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
                                                 (launchway runs, for more)
+  launchway service-accounts list|create|update|delete|token  non-person accounts that own tokens for automation
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
   launchway notifications [--limit N]           the log of notifications sent, retried or failed
   launchway deployments options|rollback|review  send a service back after a deployment succeeded ({rollback}); review {emergency_rollbacks}
@@ -120,45 +121,46 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 
 // commands take their arguments and nothing else, by name (registry.go adds registry).
 var commands = map[string]func([]string) error{
-	"runs":           cmdRuns,
-	"debrief":        cmdDebrief,
-	"tests":          cmdTests,
-	"attention":      cmdAttention,
-	"recent":         cmdRecent,
-	"organize":       cmdOrganize,
-	"approvals":      cmdApprovals,
-	"notifications":  cmdNotifications,
-	"deployments":    cmdDeployments,
-	"release":        cmdRelease,
-	"rollout":        cmdRollout,
-	"templates":      cmdTemplates,
-	"policy":         cmdPolicy,
-	"waivers":        cmdWaivers,
-	"mcp":            cmdMCP,
-	"verifications":  cmdVerifications,
-	"health-sources": cmdHealthSources,
-	"models":         cmdModels,
-	"runners":        cmdRunners,
-	"step-resources": cmdStepResources,
-	"config":         cmdConfig,
-	"run-limits":     cmdRunLimits,
-	"caches":         cmdCaches,
-	"events":         cmdEvents,
-	"event-sources":  cmdEventSources,
-	"run-triggers":   cmdRunTriggers,
-	"squadrons":      cmdSquadrons,
-	"units":          cmdSquadrons,
-	"standards":      cmdStandards,
-	"findings":       cmdFindings,
-	"state":          cmdState,
-	"configuration":  cmdConfiguration,
-	"variables":      cmdVariables,
-	"toggles":        cmdToggles,
-	"doctor":         cmdDoctor,
-	"users":          cmdUsers,
-	"bases":          cmdBases,
-	"install":        cmdInstall,
-	"work":           cmdWork,
+	"runs":             cmdRuns,
+	"debrief":          cmdDebrief,
+	"tests":            cmdTests,
+	"attention":        cmdAttention,
+	"recent":           cmdRecent,
+	"organize":         cmdOrganize,
+	"approvals":        cmdApprovals,
+	"notifications":    cmdNotifications,
+	"deployments":      cmdDeployments,
+	"release":          cmdRelease,
+	"rollout":          cmdRollout,
+	"templates":        cmdTemplates,
+	"policy":           cmdPolicy,
+	"waivers":          cmdWaivers,
+	"mcp":              cmdMCP,
+	"verifications":    cmdVerifications,
+	"health-sources":   cmdHealthSources,
+	"models":           cmdModels,
+	"runners":          cmdRunners,
+	"step-resources":   cmdStepResources,
+	"config":           cmdConfig,
+	"run-limits":       cmdRunLimits,
+	"caches":           cmdCaches,
+	"events":           cmdEvents,
+	"event-sources":    cmdEventSources,
+	"run-triggers":     cmdRunTriggers,
+	"squadrons":        cmdSquadrons,
+	"units":            cmdSquadrons,
+	"standards":        cmdStandards,
+	"findings":         cmdFindings,
+	"state":            cmdState,
+	"configuration":    cmdConfiguration,
+	"variables":        cmdVariables,
+	"toggles":          cmdToggles,
+	"doctor":           cmdDoctor,
+	"users":            cmdUsers,
+	"service-accounts": cmdServiceAccounts,
+	"bases":            cmdBases,
+	"install":          cmdInstall,
+	"work":             cmdWork,
 }
 
 func main() {
@@ -971,4 +973,19 @@ func logChartNotice(log *slog.Logger) {
 	if m := config.NetworkPolicyNotice(os.Getenv); m != "" {
 		log.Info(m)
 	}
+}
+
+// setProxy gives the server what the configuration says about proxies in front of it and about who may make
+// service accounts' tokens, and warns when the older trust_proxy is on without server.trusted_proxies.
+func setProxy(srv *api.Server, cfg *config.Config, log *slog.Logger) error {
+	ranges, err := cfg.Server.TrustedProxyPrefixes()
+	if err != nil {
+		return err
+	}
+	if cfg.Server.TrustProxy && len(ranges) == 0 {
+		log.Warn("server.trust_proxy is on without server.trusted_proxies, so the forwarding headers (and with them the client address that token source-address limits and the Logbook use) are believed from every address that reaches this server. Set server.trusted_proxies to the address ranges of your proxies, for example `server: {trusted_proxies: [10.0.0.0/8]}` (Helm: server.trustedProxies); the older trust_proxy then no longer widens it")
+	}
+	srv.TrustedProxies, srv.ClientAddrHeader = ranges, cfg.Server.ClientAddressHeader
+	srv.AdminTokenMakesServiceTokens = cfg.Auth.Tokens.ServiceAccountsFromTokens
+	return nil
 }

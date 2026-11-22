@@ -93,7 +93,7 @@ func (m *Manager) addLibraries(cat *catalog, libs []Library, old *catalog) error
 			return fmt.Errorf("library %q has no repo", l.Name)
 		}
 		lib := &project{Project: Project{Name: l.Name, URL: l.URL, DefaultBranch: "main"},
-			dir: filepath.Join(m.dataDir, "libraries", l.Name+".git"), mirror: &mirror{}}
+			dir: filepath.Join(m.dataDir, "libraries", l.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal}
 		if old != nil {
 			if was := old.libraries[l.Name]; was != nil && was.URL == l.URL {
 				lib.mirror = was.mirror

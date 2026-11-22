@@ -25,12 +25,12 @@ import (
 // was in the clear waits while an older server is seen and then completes without losing a value. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 // schemaLast is the schema of the build under test: the last migration (a merge that adds one changes it here).
-const schemaLast = schemaUsage
+const schemaLast = schemaNarrow
 
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaLast || schemaLast != 54 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 54", schemaLast, len(migrations))
+	if len(migrations) != schemaLast || schemaLast != 55 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 55", schemaLast, len(migrations))
 	}
 	for i := schemaEncryption; i <= schemaLast; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {

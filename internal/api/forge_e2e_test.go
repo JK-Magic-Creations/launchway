@@ -61,7 +61,7 @@ func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Opti
 	}
 	go_.Backend, go_.Log = h.Store, quiet()
 	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens, Mirrors: h.Mirrors, Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks,
-		Pulls: h.Pulls, RepoByID: h.Forge.Repository}
+		Pulls: h.Pulls, RepoByID: h.Forge.Repository, Local: h.Store}
 	e.api.WirePulls()
 	t.Cleanup(h.Pulls.Stop)
 	// The server is already running, and a Git process outside this one is often the first

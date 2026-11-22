@@ -113,6 +113,11 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 	lock.Lock()
 	defer lock.Unlock()
 
+	from, env := l.URL, []string(nil)
+	if l.Hosted != "" && l.Credential != "" {
+		// Hosted by the server this runner talks to: read through it with the credential made for this run.
+		from, env = r.hostedClone(l.Hosted, l.Credential)
+	}
 	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err != nil {
 		if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 			return "", err
@@ -122,7 +127,7 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 			return "", err
 		}
 		defer os.RemoveAll(tmp)
-		if err := git(ctx, "", "clone", "--mirror", "--quiet", l.URL, tmp); err != nil {
+		if err := gitEnv(ctx, "", env, "clone", "--mirror", "--quiet", from, tmp); err != nil {
 			return "", err
 		}
 		_ = os.RemoveAll(dir)
@@ -130,11 +135,16 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 			return "", err
 		}
 	}
+	if env != nil {
+		if err := git(ctx, dir, "remote", "set-url", "origin", from); err != nil {
+			return "", err
+		}
+	}
 	has := func() bool { return git(ctx, dir, "cat-file", "-e", l.Commit+"^{commit}") == nil }
 	if has() {
 		return dir, nil
 	}
-	if err := git(ctx, dir, "remote", "update", "--prune"); err != nil {
+	if err := gitEnv(ctx, dir, env, "remote", "update", "--prune"); err != nil {
 		return "", err
 	}
 	if has() {
@@ -142,7 +152,7 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 	}
 	// A commit no branch or tag reaches any more, which some hosts still
 	// hand out when asked by its ID.
-	_ = git(ctx, dir, "fetch", "--quiet", "origin", l.Commit)
+	_ = gitEnv(ctx, dir, env, "fetch", "--quiet", "origin", l.Commit)
 	if has() {
 		return dir, nil
 	}

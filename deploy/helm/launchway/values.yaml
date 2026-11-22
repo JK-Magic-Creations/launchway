@@ -507,6 +507,14 @@ runnerToken:
 server:
   # -- Number of servers. Two or more for high availability.
   replicas: 2
+  # -- The address ranges (CIDR) of the proxies in front of the servers, such as the Ingress
+  # controller or the Gateway. Their X-Forwarded-For and X-Forwarded-Proto are believed; those of any
+  # other peer are ignored. Written as server.trusted_proxies. Behind an Ingress or a Gateway route
+  # set it: without it the headers are believed from every address that reaches a server.
+  trustedProxies: []
+  # -- The header holding the one client address that your edge sets (such as X-Real-IP); believed
+  # only from a trusted proxy. Unset: X-Forwarded-For. Written as server.client_address_header.
+  clientAddressHeader:
   # -- Rolling update settings. maxUnavailable 0 keeps every existing server serving until its
   # replacement is ready.
   strategy:

@@ -287,3 +287,17 @@ func (p *Policy) HasEverywhereAdmin() bool {
 	}
 	return false
 }
+
+// BindingsOn lists the bindings that grant a role on a project (or repository path): who has what.
+func (p *Policy) BindingsOn(project string) []Binding {
+	if p == nil {
+		return nil
+	}
+	var out []Binding
+	for i := range p.bindings {
+		if p.bindings[i].covers(project) {
+			out = append(out, p.bindings[i])
+		}
+	}
+	return out
+}

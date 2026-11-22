@@ -30,6 +30,10 @@ type SchedulesConfig struct {
 type TokensConfig struct {
 	// MaxDays is the longest a token may last; default 365, at most 3650.
 	MaxDays int `yaml:"max_days"`
+	// ServiceAccountsFromTokens lets an administrator's API token, not only an
+	// administrator's signed-in session, make tokens for service accounts.
+	// Default false.
+	ServiceAccountsFromTokens bool `yaml:"service_accounts_from_tokens"`
 }
 
 // GitWebhookConfig is how a project's Git host proves its webhook calls.
@@ -78,6 +82,9 @@ func (c *Config) checkTriggers() error {
 		return err
 	}
 	if _, err := c.TokenMaxDays(); err != nil {
+		return err
+	}
+	if _, err := c.Server.TrustedProxyPrefixes(); err != nil {
 		return err
 	}
 	if err := c.Forge.Check(); err != nil {

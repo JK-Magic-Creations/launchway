@@ -55,6 +55,11 @@ type ForgeHosting struct {
 	// Updates reports dependencies and what the updater would open (nil: not
 	// available).
 	Updates UpdatesService
+	// Local reads a hosted repository straight from this server's storage
+	// (nil: servers fetch hosted repositories like any other).
+	Local interface {
+		WithCache(ctx context.Context, repo string, fn func(gitDir string) error) error
+	}
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -123,7 +128,7 @@ func (s *Server) listRepos(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
 	out := make([]forge.Repository, 0, len(page.Items))
 	for _, x := range page.Items {
-		if s.authorize(id, auth.Read, x.Path) {
+		if s.authorize(id, auth.Read, x.Path) && (!id.repoLimited() || id.repoIDMatches(x)) {
 			out = append(out, x)
 		}
 	}
@@ -234,6 +239,7 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		return
 	}
 	if renamedFrom != "" {
+		s.tokensFollowRename(renamedFrom, got)
 		s.emitRepository(ctx, identityFrom(r).User, got, "renamed", map[string]string{"old_path": renamedFrom})
 	}
 	writeJSON(w, http.StatusOK, got)
@@ -248,6 +254,7 @@ func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if gone.ID != "" {
+		s.tokensForgetRepo(gone)
 		s.emitRepository(r.Context(), identityFrom(r).User, gone, "deleted", nil)
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -259,14 +266,22 @@ func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int,
 	if s.Forge == nil {
 		return http.StatusNotFound, featureOff
 	}
-	return s.checkRepo(id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
+	return s.checkRepo(r.Context(), id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
 }
 
 // checkRepo applies a repository access class. A repository someone may not
 // read is reported exactly as one that does not exist.
-func (s *Server) checkRepo(id *identity, a access, repo string) (int, string) {
+func (s *Server) checkRepo(ctx context.Context, id *identity, a access, repo string) (int, string) {
 	if !s.authorize(id, auth.Read, repo) {
 		return http.StatusNotFound, "no such repository"
+	}
+	if id.repoLimited() {
+		// A token limited to repositories is bound to them by ID, on every route: a repository
+		// made again under a listed name, or removed some other way, is not the one it was made for.
+		got, err := s.Forge.Provider.Repositories().Get(ctx, repo)
+		if err != nil || !id.repoIDMatches(got) {
+			return http.StatusNotFound, "no such repository"
+		}
 	}
 	switch {
 	case a == repoWrite && !s.authorize(id, auth.Operate, repo):

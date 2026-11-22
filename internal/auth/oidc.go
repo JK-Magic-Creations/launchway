@@ -247,7 +247,9 @@ func (c *OIDC) claims(subject string, m map[string]any) (*Claims, error) {
 			break
 		}
 	}
-	if !ValidName(out.Username) {
+	if !ValidName(out.Username) || strings.HasPrefix(out.Username, "service:") {
+		// "service:" is the principal of a service account (see
+		// internal/api/service_accounts.go): no provider may mint one.
 		return nil, fmt.Errorf("the ID token has no usable username (claims %s, email, sub)", c.o.UsernameClaim)
 	}
 	switch g := m[c.o.GroupsClaim].(type) {

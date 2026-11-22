@@ -71,7 +71,20 @@ export interface Token {
   role?: Role;
   /** Project patterns it is limited to; absent: every project. */
   projects?: string[];
+  /** Hosted repositories it is limited to (and then to nothing else), with the access it has to them. */
+  repositories?: { pattern: string }[];
+  repo_access?: "read" | "write";
+  /** Address ranges it may be used from; absent: anywhere. */
+  source_ranges?: string[];
   user?: string;
+}
+
+/** A non-person account that owns tokens for automation. */
+export interface ServiceAccount { name: string; description?: string; role: Role; disabled: boolean; created_at: number; created_by?: string; }
+
+export interface NewToken {
+  name: string; expires_in_days: number; role?: Role; projects?: string[];
+  repositories?: string[]; repo_access?: "read" | "write"; source_ranges?: string[];
 }
 
 export interface TokenLimits { max_days: number; default_days: number; your_role: Role | ""; }
@@ -91,7 +104,13 @@ export const triggersApi = {
   schedules: (project: string, background = false) => call<SchedulesView>("GET", `/api/v1/projects/${enc(project)}/schedules`, undefined, { background }),
   tokens: () => call<Token[]>("GET", "/api/v1/tokens"),
   tokenLimits: () => call<TokenLimits>("GET", "/api/v1/tokens/limits"),
-  createToken: (t: { name: string; expires_in_days: number; role?: Role; projects?: string[] }) => call<Token & { token: string }>("POST", "/api/v1/tokens", t),
+  createToken: (t: NewToken) => call<Token & { token: string }>("POST", "/api/v1/tokens", t),
+  serviceAccounts: () => call<{ service_accounts: ServiceAccount[] }>("GET", "/api/v1/service-accounts").then((r) => r.service_accounts),
+  createServiceAccount: (a: { name: string; role: Role; description: string }) => call<ServiceAccount>("POST", "/api/v1/service-accounts", a),
+  updateServiceAccount: (name: string, change: { role?: Role; disabled?: boolean }) => call<ServiceAccount>("PATCH", `/api/v1/service-accounts/${enc(name)}`, change),
+  deleteServiceAccount: (name: string) => call<void>("DELETE", `/api/v1/service-accounts/${enc(name)}`),
+  serviceTokens: (name: string) => call<Token[]>("GET", `/api/v1/service-accounts/${enc(name)}/tokens`),
+  createServiceToken: (name: string, t: NewToken) => call<Token & { token: string }>("POST", `/api/v1/service-accounts/${enc(name)}/tokens`, t),
   revokeToken: (id: string) => call<void>("DELETE", `/api/v1/tokens/${enc(id)}`),
   allTokens: () => call<Token[]>("GET", "/api/v1/admin/tokens"),
   revokeAnyToken: (id: string) => call<void>("DELETE", `/api/v1/admin/tokens/${enc(id)}`),

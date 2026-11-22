@@ -468,6 +468,14 @@ type Source struct {
 	Kind string `json:"kind"`           // git or dir
 	URL  string `json:"url,omitempty"`  // git: what to clone
 	Path string `json:"path,omitempty"` // dir: a local directory used as-is
+	// Hosted and Credential are set by the server when it leases the job, for a
+	// repository hosted by this same installation: Hosted is the repository's
+	// path (owner/name) and Credential a short-lived read-only credential
+	// bound to that repository and this run. A runner then clones from the
+	// server it already talks to instead of from URL, with no setup of its own.
+	// Never stored with the run.
+	Hosted     string `json:"hosted,omitempty"`
+	Credential string `json:"credential,omitempty"`
 	// Libraries are the shared libraries the run's templates came from, at
 	// the commits they were expanded from. The runner puts each one's files
 	// in the workspace, at .launchway/lib/<name>.
@@ -479,4 +487,7 @@ type LibrarySource struct {
 	Name   string `json:"name"`   // as the pipeline calls it
 	URL    string `json:"url"`    // what to fetch
 	Commit string `json:"commit"` // the commit the run uses, always
+	// Hosted and Credential: as Source's, set at lease time for a library hosted by this installation.
+	Hosted     string `json:"hosted,omitempty"`
+	Credential string `json:"credential,omitempty"`
 }

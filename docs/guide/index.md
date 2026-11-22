@@ -32,6 +32,7 @@ key and setting see the [reference](../reference/index.md).
 | [Verifying a deployment](verification.md) | Metrics and logs after a deploy, health sources, how the verdict is decided |
 | [Notifications](notifications.md) | Telling people an approval waits or something went wrong: channels, rules, the delivery log |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
+| [Credentials for machines](credentials-for-machines.md) | Which credential for a mirror, a GitOps controller, a build system or a deploy step: repository and address limits, service accounts |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
 | [Browsing code](browsing-code.md) | Files, history, blame, comparing, branches and tags of a hosted repository, in the web interface, CLI and tools |
 | [Searching code](searching-code.md) | Literal and regular-expression search inside a repository, with its bounds |
