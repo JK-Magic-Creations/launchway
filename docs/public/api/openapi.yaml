@@ -512,6 +512,81 @@ paths:
             tags:
                 - runner
             x-launchway-access: runner
+    /api/runner/v1/deploy/inspect:
+        post:
+            description: A deploy runner waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
+            operationId: post_api_runner_v1_deploy_inspect
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security:
+                - runnerToken: []
+            summary: A deploy runner waits for a request to look into a delivery (the tree, a manifest, logs, a workload control).
+            tags:
+                - runner
+            x-launchway-access: runner
+    /api/runner/v1/deploy/inspect-chunk:
+        post:
+            description: A deploy runner sends lines of a followed log; the answer says whether to stop (the viewer left).
+            operationId: post_api_runner_v1_deploy_inspect_chunk
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security:
+                - runnerToken: []
+            summary: A deploy runner sends lines of a followed log; the answer says whether to stop (the viewer left).
+            tags:
+                - runner
+            x-launchway-access: runner
+    /api/runner/v1/deploy/inspect-done:
+        post:
+            description: A deploy runner answers a request to look into a delivery, or says why it could not.
+            operationId: post_api_runner_v1_deploy_inspect_done
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security:
+                - runnerToken: []
+            summary: A deploy runner answers a request to look into a delivery, or says why it could not.
+            tags:
+                - runner
+            x-launchway-access: runner
     /api/runner/v1/deploy/lease:
         post:
             description: A deploy runner waits for deploy or rollback work for its targets.
@@ -6512,6 +6587,191 @@ paths:
             tags:
                 - runs
             x-launchway-access: run-viewer
+    /api/v1/runs/{id}/deployments/{dep}/inspect:
+        get:
+            description: 'The live tree of what a deployment made, read by a deploy runner of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control). Answers 502 when the runner could not look, saying what to turn on, and 504 when none answered. Cached for 3 seconds. The view is recorded in the Logbook once every few minutes per person'
+            operationId: get_api_v1_runs_id_deployments_dep_inspect
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: dep
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The live tree of what a deployment made, read by a deploy runner of its Airfield: tree (nodes with health, role, replicas, events, what changed in this Launch; the rollout''s steps and weights), actions (pause, resume, restart, scale, each ok or with why), and what the caller may do (can_logs, can_control).'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+    /api/v1/runs/{id}/deployments/{dep}/inspect/control:
+        post:
+            description: 'Pause, resume, restart or scale the delivery''s workload: {action, object, replicas, reason}; the reason is required. Answers result (applied, already_applied), or 409 with why it was not applied. The runner''s outcome is recorded as deployment.control_outcome'
+            operationId: post_api_v1_runs_id_deployments_dep_inspect_control
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: dep
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Pause, resume, restart or scale the delivery''s workload: {action, object, replicas, reason}; the reason is required.'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: deployment.control
+    /api/v1/runs/{id}/deployments/{dep}/inspect/logs:
+        get:
+            description: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, canary, preview, active) or a Job (job), merged by time, each line tagged with its source and redacted. previous=true, tail (at most 5000). At most 20 pods are read'
+            operationId: get_api_v1_runs_id_deployments_dep_inspect_logs
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: dep
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The end of the logs of a pod (pod, container), a ReplicaSet (replica_set), a role (role: stable, canary, preview, active) or a Job (job), merged by time, each line tagged with its source and redacted.'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: deployment.logs
+    /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream:
+        get:
+            description: 'The same followed, as server-sent events: lines (a JSON list of {t, src, line}) and a last end event. At most 4 streams per person and 24 per Airfield, 8 MiB and 15 minutes each, and the runner stops when nobody reads'
+            operationId: get_api_v1_runs_id_deployments_dep_inspect_logs_stream
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: dep
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The same followed, as server-sent events: lines (a JSON list of {t, src, line}) and a last end event.'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: deployment.logs
+    /api/v1/runs/{id}/deployments/{dep}/inspect/manifest:
+        get:
+            description: 'One object''s live manifest as redacted YAML: ?object=Kind/namespace/name. Refused for an object that is not in the delivery''s tree'
+            operationId: get_api_v1_runs_id_deployments_dep_inspect_manifest
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: dep
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One object''s live manifest as redacted YAML: ?object=Kind/namespace/name.'
+            tags:
+                - runs
+            x-launchway-access: run-viewer
+            x-launchway-audit: deployment.manifest
     /api/v1/runs/{id}/deployments/{dep}/promote:
         post:
             description: Promotes a paused rollout one step.
