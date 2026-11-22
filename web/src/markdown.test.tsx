@@ -24,4 +24,30 @@ describe("Markdown", () => {
     expect(container.querySelector(".md-suggestion")?.textContent).toContain("new line");
     expect(container.querySelector("blockquote")?.textContent).toBe("quoted");
   });
+
+  it("renders a table: a header row, a divider row, the body, alignment, escaped pipes and inline Markdown in cells", () => {
+    const text = "Intro\n| Name | Count | Note |\n|:---|---:|:---:|\n| `a|b` | **3** | x \\| y |\n| second | 4 |\n\nAfter the table.";
+    const { container } = render(<Markdown text={text} />);
+    const t = container.querySelector("table")!;
+    expect([...t.querySelectorAll("th")].map((c) => c.textContent)).toEqual(["Name", "Count", "Note"]);
+    expect(t.querySelectorAll("th")[0].getAttribute("scope")).toBe("col");
+    const rows = [...t.querySelectorAll("tbody tr")];
+    expect(rows).toHaveLength(2);
+    expect([...rows[0].querySelectorAll("td")].map((c) => c.textContent)).toEqual(["a|b", "3", "x | y"]);
+    expect(rows[0].querySelector("code")?.textContent).toBe("a|b");
+    expect(rows[0].querySelector("strong")?.textContent).toBe("3");
+    expect([...rows[1].querySelectorAll("td")].map((c) => c.textContent)).toEqual(["second", "4", ""]);
+    expect(t.querySelectorAll("th")[1].className).toBe("md-right");
+    expect(t.querySelectorAll("th")[2].className).toBe("md-center");
+    expect(container.textContent).toContain("Intro");
+    expect(container.textContent).toContain("After the table.");
+    // A scrolling table can be reached and read with the keyboard.
+    expect(container.querySelector(".md-table")?.getAttribute("tabindex")).toBe("0");
+  });
+
+  it("leaves a line with pipes that is not a table as text", () => {
+    const { container } = render(<Markdown text={"a | b | c\nstill the same paragraph\n\nx | y\n--- \nnot a divider row of the same width"} />);
+    expect(container.querySelector("table")).toBeNull();
+    expect(container.textContent).toContain("a | b | c");
+  });
 });

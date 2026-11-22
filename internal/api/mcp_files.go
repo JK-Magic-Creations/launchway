@@ -28,6 +28,9 @@ func addFilesTools(srv *mcp.Server, c *mcpCall) {
 		addTool(srv, c, &mcp.Tool{Name: "write_repository_file", Annotations: changes("Add or change one file of a repository", false, true),
 			Description: "Operators of the repository. Make one commit on a branch that adds a file (expected_sha empty: it must not exist) or replaces it (expected_sha: its current id from read_repository_file). The branch must exist; protected branches take it only from administrators; a mirror or archived repository takes none. Same follow-up as a push (webhooks, push mirrors, pull requests). Audited."},
 			mcpCallTimeout, writeRepoFile)
+		addTool(srv, c, &mcp.Tool{Name: "upload_repository_files", Annotations: changes("Add several files to a repository in one commit", false, true),
+			Description: "Operators of the repository. Make one commit on a branch that adds up to 100 files (1 MiB each, 8 MiB in all; content is base64 by default). An existing file is a conflict and nothing is written unless replace is true. Same branch rules, follow-up and audit as write_repository_file. Audited."},
+			mcpCallTimeout, uploadRepoFiles)
 		addTool(srv, c, &mcp.Tool{Name: "delete_repository_file", Annotations: changes("Delete one file of a repository", true, false),
 			Description: "Operators of the repository. Make one commit on a branch that removes a file (expected_sha: its current id from read_repository_file). Same rules, follow-up and audit as write_repository_file; the file stays in the history."},
 			mcpCallTimeout, deleteRepoFile)
@@ -130,5 +133,24 @@ func deleteRepoFile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 	}
 	body := writeFileIn{Branch: in.Branch, Path: in.Path, Message: in.Message, ExpectedSHA: in.ExpectedSHA}
 	err := c.apiJSON(ctx, "delete_repository_file", http.MethodDelete, apiPath("/api/v1/repositories/%s/%s/files", in.Owner, in.Name), body, &out)
+	return out, err
+}
+
+type uploadToolIn struct {
+	repositoryIn
+	Branch  string       `json:"branch,omitempty" jsonschema:"the branch to commit to (default: the default branch); it must exist"`
+	Message string       `json:"message" jsonschema:"the commit message"`
+	Replace bool         `json:"replace,omitempty" jsonschema:"overwrite files that exist (default: an existing file is a conflict)"`
+	Files   []uploadFile `json:"files" jsonschema:"the files to add"`
+}
+
+func uploadRepoFiles(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in uploadToolIn) (files.Uploaded, error) {
+	var out files.Uploaded
+	if in.Owner == "" || in.Name == "" || len(in.Files) == 0 {
+		return out, errors.New("say which repository (owner and name) and at least one file")
+	}
+	body := uploadIn{Branch: in.Branch, Message: in.Message, Replace: in.Replace}
+	body.Files = in.Files
+	err := c.apiJSON(ctx, "upload_repository_files", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/files", in.Owner, in.Name), body, &out)
 	return out, err
 }

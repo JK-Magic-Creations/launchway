@@ -39,6 +39,10 @@ const hooksBase = (s: HookScope) => (s.name ? `${repoBase(s.owner, s.name)}/hook
 export const forgeApi = {
   repositories: () => call<{ items: HostedRepo[] }>("GET", "/api/v1/repositories").then((r) => r.items),
   repository: (o: string, n: string) => call<HostedRepo>("GET", repoBase(o, n)),
+  /** Change a repository: name, default branch, visibility or archived (an administrator of it). */
+  update: (o: string, n: string, b: { name?: string; default_branch?: string; visibility?: string; archived?: boolean }) => call<HostedRepo>("PATCH", repoBase(o, n), b),
+  /** Move a repository to the trash: it stops being served, its data is kept. */
+  remove: (o: string, n: string) => call<void>("DELETE", repoBase(o, n)),
   ssh: () => call<SshInfo>("GET", "/api/v1/ssh"),
   myKeys: () => call<{ items: SshKey[] }>("GET", "/api/v1/user/ssh-keys").then((r) => r.items),
   addMyKey: (b: { name: string; public_key: string; expires_at?: string }) => call<SshKey>("POST", "/api/v1/user/ssh-keys", b),

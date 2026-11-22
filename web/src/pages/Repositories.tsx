@@ -4,6 +4,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { PageHead, Sheet } from "../kit/layout";
 import { Chip } from "../kit/Status";
 import { forgeApi, type HostedRepo, type SshKey } from "../forgeApi";
+import { RepoGeneral } from "./RepoGeneral";
 import { HooksPanel } from "./HooksPanel";
 import { MergeRulesPanel } from "./MergeRules";
 import { PageTabs, useTab } from "../components/PageTabs";
@@ -174,6 +175,7 @@ export function RepositorySettings({ owner, name }: { owner: string; name: strin
   return (
     <>
       <CloneBox repo={repo} />
+      <RepoGeneral repo={repo} admin={admin} onChanged={setRepo} />
       {admin && (
         <>
           <PageTabs current={tab} onChange={setTab}

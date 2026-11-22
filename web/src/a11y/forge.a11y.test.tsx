@@ -23,18 +23,18 @@ describe.each(["light", "dark"])("Git hosting views, %s theme", (theme) => {
   };
 
   it("the SSH clone address", async () => {
-    await open("/repositories/acme/shop");
+    await open("/repositories/acme/shop/settings");
     fireEvent.click(await screen.findByRole("tab", { name: "SSH" }, { timeout: 8000 }));
     await expectClean("SSH clone address");
   }, 20000);
   it.each([["Deploy keys"], ["Webhooks"], ["Protected branches"]])("the %s tab", async (tab) => {
-    await open("/repositories/acme/shop");
+    await open("/repositories/acme/shop/settings");
     fireEvent.click(await screen.findByRole("tab", { name: tab }, { timeout: 8000 }));
     await screen.findByRole("tabpanel", {}, { timeout: 100 }).catch(() => {});
     await expectClean(tab);
   }, 20000);
   it("the delivery log", async () => {
-    await open("/repositories/acme/shop?tab=hooks");
+    await open("/repositories/acme/shop/settings?tab=hooks");
     fireEvent.click(await screen.findByRole("button", { name: /Delivery log/ }, { timeout: 8000 }));
     await screen.findByRole("table", { name: "Delivery log" }, { timeout: 8000 });
     await expectClean("delivery log");

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../../api";
-import { canOperate, useMe } from "../../auth";
+import { canChange, useMe } from "../../auth";
 import { ErrorBox, Link } from "../../components/ui";
 import { blameHref, browseApi, codeHref, commitHref, commitsHref, compareHref, type Entry, type Item } from "../../browseApi";
 import { Dialog } from "../../kit/Dialog";
@@ -10,6 +10,7 @@ import { Breadcrumb, CopyButton, MsgLink, RefSwitcher, RepoFrame, useFetched, us
 import { NameIcon } from "./icons";
 import { FileView } from "./FileView";
 import { findReadme, Readme } from "./Readme";
+import { Uploader } from "./Uploader";
 
 const Editor = lazy(() => import("./Editor").then((m) => ({ default: m.Editor })));
 
@@ -72,7 +73,7 @@ export function CodePage({ path }: { path: string }) {
   const { repo } = useRepo(path);
   const refName = q.get("ref") ?? undefined;
   const p = q.get("path") ?? "";
-  const mode = q.get("edit") ? "edit" : q.get("new") ? "new" : "";
+  const mode = q.get("edit") ? "edit" : q.get("new") ? "new" : q.get("upload") ? "upload" : "";
   const { data: item, error: loadError } = useFetched<Item>(`${path}|${refName ?? ""}|${p}`, () => browseApi.read(path, refName, p, true));
   const empty = loadError instanceof ApiError && loadError.status === 404 && !p && !refName;
   const error = empty ? null : loadError;
@@ -86,7 +87,7 @@ export function CodePage({ path }: { path: string }) {
     return () => window.removeEventListener("hashchange", on);
   }, []);
   const current = item?.ref ?? refName ?? repo?.default_branch ?? "main";
-  const canWrite = canOperate(me, path) && !repo?.mirror && !repo?.archived;
+  const canWrite = canChange(me, path) && !repo?.mirror && !repo?.archived;
   const goRef = useCallback((r: string) => navigate(codeHref(path, r, item?.type === "dir" || !item ? p || undefined : p)), [path, item, p]);
   const setHashTo = (h: string) => { history.replaceState(null, "", `${location.pathname}${location.search}${h}`); setHash(h); };
 
@@ -113,7 +114,14 @@ export function CodePage({ path }: { path: string }) {
   const parent = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
   const sentence = repo ? <>{repo.visibility} repository{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}. Press <kbd>t</kbd> to find a file.</> : undefined;
 
-  if (mode && item) {
+  if (mode === "upload" && item) {
+    return (
+      <RepoFrame path={path} tab="code" title="Upload files" sentence="The files become one commit." error={error}>
+        <Uploader repo={path} refName={current} protectedNames={protectedNames} dir={item.type === "dir" ? p : p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ""} />
+      </RepoFrame>
+    );
+  }
+  if (mode && mode !== "upload" && item) {
     return (
       <RepoFrame path={path} tab="code" title={mode === "new" ? "New file" : `Edit ${item.path}`} sentence="The change becomes one commit." error={error}>
         <Suspense fallback={<div className="loading">Loading…</div>}>
@@ -135,6 +143,7 @@ export function CodePage({ path }: { path: string }) {
             <Link href={commitsHref(path, current, p || undefined)} className="btn btn-sm">History</Link>
             {current !== repo?.default_branch && repo?.default_branch && <Link href={compareHref(path, current, repo.default_branch)} className="btn btn-sm">Compare with {repo.default_branch}</Link>}
             {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { new: "1" })} className="btn btn-sm">New file</Link>}
+            {item.type === "dir" && canWrite && <Link href={codeHref(path, current, p || undefined, { upload: "1" })} className="btn btn-sm">Upload files</Link>}
           </div>
           {item.type === "dir" ? (
             <>

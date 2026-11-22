@@ -19,7 +19,7 @@ function span(s: number): string {
 
 // RepositoryPage is a hosted repository: where to clone it from, and its
 // mirrors. The tab is part of the address, so a link opens the right one.
-export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | "mirrors" | "history" }) {
+export function RepositoryPage({ path, tab }: { path: string; tab: "settings" | "mirrors" | "history" }) {
   const [repo, setRepo] = useState<Repository | null>(null);
   const [error, setError] = useState<unknown>(null);
   const load = useCallback(() => { mirrorsApi.repository(path).then((r) => { setRepo(r); setError(null); }).catch(setError); }, [path]);
@@ -32,9 +32,9 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
           {repo && <p className="sub">{repo.visibility} repository, default branch {repo.default_branch ?? "main"}{repo.mirror ? ", a mirror: it takes no pushes" : ""}{repo.archived ? ", archived" : ""}.</p>}
         </div>
       </header>
-      <RepoTabs path={path} on={tab === "overview" ? "settings" : tab} />
+      <RepoTabs path={path} on={tab} />
       <ErrorBox error={error} />
-      {tab === "overview" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
+      {tab === "settings" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
       {repo && tab === "mirrors" && <MirrorsTab repo={repo} reload={load} />}
       {repo && tab === "history" && <Suspense fallback={<div className="loading">Loading…</div>}><ImportedHistory path={path} /></Suspense>}
     </div>

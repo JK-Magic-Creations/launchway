@@ -9723,6 +9723,44 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.branch_create
+    /api/v1/repositories/{owner}/{name}/branches/rename:
+        post:
+            description: 'Rename a branch: {"name", "new_name"}. Never the default branch (409: make another the default first) and never onto a name that exists (409). The rules of a push apply to both names, so a protected name is for administrators. Pull requests and runs that name the old branch are not moved. Answers {"name", "was", "commit", "note"}.'
+            operationId: post_api_v1_repositories_owner_name_branches_rename
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Rename a branch: {"name", "new_name"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.branch_rename
     /api/v1/repositories/{owner}/{name}/commits:
         get:
             description: 'The newest commits reachable from ?ref= (a branch, tag or commit; default: the default branch), newest first, optionally only those that changed ?path=; ?limit= (default 30, at most 200). {"ref", "items": [{"sha", "subject", "message", "author", "authored_at", "committer", "committed_at", "parents"}]}.'
@@ -10133,6 +10171,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+        post:
+            description: 'One commit that adds several files, for an upload: {"branch", "message", "replace", "files": [{"path", "content", "encoding"}]}; encoding is base64 (the default) or utf8. At most 100 files, 1 MiB each and 8 MiB in all (400 otherwise). A file that exists is a 409 and nothing is written, unless replace is true. The branch must exist and the rules of protected branches apply as to a push, with the same refusal; a mirror or archived repository takes none. Answers 201 {"branch", "paths", "commit", "parent"}. Webhooks, push mirrors and pull requests are told as for a push.'
+            operationId: post_api_v1_repositories_owner_name_files
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One commit that adds several files, for an upload: {"branch", "message", "replace", "files": [{"path", "content", "encoding"}]}; encoding is base64 (the default) or utf8.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.files_upload
         put:
             description: 'One commit that adds or changes one file: {"branch", "path", "content", "encoding" (utf8 or base64), "message", "expected_sha"}. The branch must exist and the rules of protected branches apply as to a push; an empty expected_sha creates and refuses if the file exists, otherwise it must be the file''s current sha. A mirror or archived repository takes none. Answers {"branch", "path", "commit", "sha", "parent"}. Webhooks, push mirrors and pull requests are told as for a push.'
             operationId: put_api_v1_repositories_owner_name_files
@@ -10498,6 +10573,79 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: webhook.test
+    /api/v1/repositories/{owner}/{name}/inspections:
+        get:
+            description: 'Whether an Inspection can be started now: {"available", "reason", "project", "branch", "runs": [{"id", "number", "status", "sha", "created_at"}]}. reason says in a sentence why not: Standing orders unavailable or switched off for the installation, no project watches the repository (an Inspection is a Sortie (run), and a Sortie belongs to a project), no operator role on that project, or no Station online. runs are the latest Inspections started by hand. Findings are the project''s: GET /api/v1/projects/{name}/findings.'
+            operationId: get_api_v1_repositories_owner_name_inspections
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Whether an Inspection can be started now: {"available", "reason", "project", "branch", "runs": [{"id", "number", "status", "sha", "created_at"}]}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        post:
+            description: 'Starts a run of only the Inspection (the checks Standing orders call for and the verdict) at {"ref"} (a branch or tag; default: the default branch), whatever the repository''s own pipeline says or whether it has one. Needs the operator role on the project that watches the repository. 409 with the reason when it cannot start (see GET), also when no check applies to what the repository holds. Answers 201 {"run", "project"}.'
+            operationId: post_api_v1_repositories_owner_name_inspections
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Starts a run of only the Inspection (the checks Standing orders call for and the verdict) at {"ref"} (a branch or tag; default: the default branch), whatever the repository''s own pipeline says or whether it has one.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.inspect
     /api/v1/repositories/{owner}/{name}/merge-rules:
         get:
             description: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass. Also actions: edit_rules and edit_settings (available to administrators of the repository, with the reason when not) and require_signed_commits (never available yet), so an interface offers only what can work.'
@@ -12213,6 +12361,43 @@ paths:
             x-launchway-access: repo-admin
             x-launchway-audit: mirror.promote
     /api/v1/repositories/{owner}/{name}/tags:
+        delete:
+            description: 'Delete the tag named by ?name=. Answers {"name", "was", "undo"}: the object it pointed at and the command that brings it back.'
+            operationId: delete_api_v1_repositories_owner_name_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Delete the tag named by ?name=.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.tag_delete
         get:
             description: 'The tags, newest first: {"items": [{"name", "commit", "subject", "annotated", "message", "tagger", "committed_at"}], "total", "truncated"}; ?q= and ?limit= as for branches.'
             operationId: get_api_v1_repositories_owner_name_tags
@@ -12248,6 +12433,43 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+        post:
+            description: 'Make a lightweight tag: {"name", "from"} where from is a branch, tag or commit (default: the default branch). The rules of a push apply, so a protected name is for administrators; a mirror or archived repository takes none. A tag that exists is never moved (409). Answers 201 {"name", "commit"}.'
+            operationId: post_api_v1_repositories_owner_name_tags
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Make a lightweight tag: {"name", "from"} where from is a branch, tag or commit (default: the default branch).'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: repository.tag_create
     /api/v1/repositories/{owner}/{name}/updates/preview:
         get:
             description: 'What the dependency updater would do now, ignoring its schedule: decisions, each a pull request to open, update in place, close or keep, or one that is queued behind a limit with the reason; security fixes first. Opens nothing: the updater runs as a pipeline step (launchway updates run). Same answer shape as /dependencies.'

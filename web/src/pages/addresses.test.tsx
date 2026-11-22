@@ -62,7 +62,7 @@ describe("repository pages keep what is shown in the address", () => {
   });
   it("the tab bar is the same on every page of a repository, and marks the page it is on", () => {
     const { container } = render(<RepoTabs path="acme/svc" on="graph" />);
-    expect([...container.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Code", "Commits", "Branches", "Tags", "Search", "Pull requests", "Dependencies", "Graph", "Mirrors", "Imported history", "Settings"]);
+    expect([...container.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Overview", "Code", "Commits", "Branches", "Tags", "Search", "Pull requests", "Dependencies", "Security", "Graph", "Mirrors", "Imported history", "Settings"]);
     expect(container.querySelector("[aria-current=page]")?.textContent).toBe("Graph");
     expect(container.querySelector("a[href='/repositories/acme/svc/settings']")).toBeTruthy();
   });

@@ -401,6 +401,19 @@ func TestInspectionStepsAreInjectedInParallelWithAGate(t *testing.T) {
 		if s.Timeout <= 0 || s.Reports == nil {
 			t.Errorf("%s has no time budget or reports", s.ID)
 		}
+		// Every tool image becomes a container: without its own request each would be promised the default of a
+		// build step (1 CPU, 2 GiB) and a run of a dozen checks would ask for about twenty GiB.
+		r := s.Resources
+		if r == nil || r.CPU != "250m" || r.CPULimit != "2" || r.Memory == "" || r.MemoryLimit == "" {
+			t.Errorf("%s asks for %+v", s.ID, r)
+		}
+		c, _ := CheckByID(s.Added.Check)
+		if heavy := c.Tool == "trivy" || c.Tool == "govulncheck"; heavy != (r != nil && r.Memory == "1Gi" && r.MemoryLimit == "4Gi") {
+			t.Errorf("%s (%s) asks for %+v", s.ID, s.Added.Check, r)
+		}
+		if r != nil && r.Memory != "1Gi" && (r.Memory != "512Mi" || r.MemoryLimit != "2Gi") {
+			t.Errorf("%s asks for %+v", s.ID, r)
+		}
 	}
 	for _, want := range []string{"inspect-secrets", "inspect-vuln-deps", "inspect-vuln-reach-go", "inspect-dockerfile", "inspect-pipeline-lint", "inspect-license", "inspect-sbom"} {
 		if !ids[want] {

@@ -41,7 +41,31 @@ export function inline(text: string, ctx?: Context): ReactNode[] {
   return out;
 }
 
-/** Markdown blocks: paragraphs, headings, lists, quotes and fenced code (a suggestion block is shown as a suggestion). */
+/** The cells of a table row: split at the pipes that are not escaped (\|) or inside `code`; the pipes at the edges are not cells. */
+function cells(line: string): string[] {
+  const out: string[] = [];
+  let cur = "", code = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === "\\" && line[i + 1] === "|") { cur += "|"; i++; continue; }
+    if (c === "`") code = !code;
+    if (c === "|" && !code) { out.push(cur); cur = ""; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  if (out[0].trim() === "") out.shift();
+  if (out.length && out[out.length - 1].trim() === "") out.pop();
+  return out.map((c) => c.trim());
+}
+
+const DIVIDER = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/;
+
+/** A table starts at a row with a pipe whose next line is the divider row (--- or :---: between pipes), with as many cells. */
+function tableAt(lines: string[], i: number): boolean {
+  return lines[i].includes("|") && i + 1 < lines.length && lines[i + 1].includes("-") && DIVIDER.test(lines[i + 1]) && cells(lines[i]).length === cells(lines[i + 1]).length;
+}
+
+/** Markdown blocks: paragraphs, headings, lists, quotes, tables and fenced code (a suggestion block is shown as a suggestion). */
 export function Markdown({ text, ctx }: { text: string; ctx?: Context }) {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
@@ -74,11 +98,24 @@ export function Markdown({ text, ctx }: { text: string; ctx?: Context }) {
       const q: string[] = [];
       while (i < lines.length && /^>\s?/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/, ""));
       blocks.push(<blockquote key={k++}>{inline(q.join(" "), ctx)}</blockquote>);
+    } else if (tableAt(lines, i)) {
+      const head = cells(line);
+      const align = cells(lines[i + 1]).map((d) => (d.startsWith(":") && d.endsWith(":") ? "md-center" : d.endsWith(":") ? "md-right" : d.startsWith(":") ? "md-left" : undefined));
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].trim() !== "" && lines[i].includes("|")) rows.push(cells(lines[i++]));
+      blocks.push(
+        <div key={k++} className="md-table" role="region" aria-label={`Table: ${head.filter(Boolean).join(", ") || "rows"}`} tabIndex={0}>
+          <table>
+            <thead><tr>{head.map((h, c) => <th key={c} scope="col" className={align[c]}>{inline(h, ctx)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, ri) => <tr key={ri}>{head.map((_, c) => <td key={c} className={align[c]}>{inline(r[c] ?? "", ctx)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>);
     } else if (line.trim() === "") {
       i++;
     } else {
       const p: string[] = [];
-      while (i < lines.length && lines[i].trim() !== "" && !/^(```|#{1,6}\s|>\s?|\s*[-*]\s+|\s*\d+\.\s+)/.test(lines[i])) p.push(lines[i++]);
+      while (i < lines.length && lines[i].trim() !== "" && !/^(```|#{1,6}\s|>\s?|\s*[-*]\s+|\s*\d+\.\s+)/.test(lines[i]) && !tableAt(lines, i)) p.push(lines[i++]);
       blocks.push(<p key={k++}>{inline(p.join(" "), ctx)}</p>);
     }
   }

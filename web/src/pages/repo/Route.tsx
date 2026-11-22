@@ -7,11 +7,15 @@ import { CodePage } from "./CodePage";
 import { CommitPage } from "./CommitPage";
 import { CommitsPage } from "./CommitsPage";
 import { ComparePage } from "./ComparePage";
+import { OverviewPage } from "./OverviewPage";
 import { SearchPage } from "./SearchPage";
+import { SecurityPage } from "./SecurityPage";
 
 /** The one lazy entry to every page that reads a repository's code. */
 export function RepoCodeRoute({ view, path, sha }: { view: string; path: string; sha?: string }) {
   switch (view) {
+    case "security": return <SecurityPage path={path} />;
+    case "overview": return <OverviewPage path={path} />;
     case "blame": return <BlamePage path={path} />;
     case "commits": return <CommitsPage path={path} />;
     case "commit": return <CommitPage path={path} sha={sha ?? ""} />;

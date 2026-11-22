@@ -17,7 +17,7 @@ const open = async (path: string) => {
 
 describe("an address opens the view it names", () => {
   it.each([
-    ["/repositories/acme/shop?tab=hooks", () => screen.findByRole("tab", { name: "Webhooks", selected: true }, { timeout: 8000 })],
+    ["/repositories/acme/shop/settings?tab=hooks", () => screen.findByRole("tab", { name: "Webhooks", selected: true }, { timeout: 8000 })],
     ["/projects/shop-api/pipeline?view=history", () => screen.findByText(/Every run of shop-api/, {}, { timeout: 8000 })],
     ["/pipelines?q=shop-web&view=table", async () => { const box = (await screen.findByRole("searchbox", {}, { timeout: 8000 })) as HTMLInputElement; expect(box.value).toBe("shop-web"); return box; }],
     ["/activity?show=needs", () => screen.findByRole("button", { name: "Needs attention", pressed: true }, { timeout: 8000 })],
@@ -46,7 +46,7 @@ describe("a view that is changed is in the address, and the address restores it"
     expect(screen.getByRole("button", { name: "Failed", pressed: true })).toBeTruthy();
   }, 20000);
   it("a repository's tab: Back returns to the one before", async () => {
-    await open("/repositories/acme/shop");
+    await open("/repositories/acme/shop/settings");
     await userEvent.click(await screen.findByRole("tab", { name: "Webhooks" }, { timeout: 8000 }));
     expect(location.search).toBe("?tab=hooks");
     expect(document.title).toMatch(/^Hooks · /);

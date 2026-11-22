@@ -59,6 +59,7 @@ func BuildSteps(in InjectInput) (*Injection, error) {
 			OnFailure: "continue", Env: map[string]string{},
 			Added: &pipeline.Added{By: pipeline.AddedByStandingOrders, Check: c.ID, Why: ec.Because},
 		}
+		s.Resources = ResourcesFor(c.Tool)
 		switch c.Report {
 		case ReportSBOM:
 			s.Reports = &pipeline.Reports{SBOM: c.Outputs}
@@ -94,6 +95,27 @@ func BuildSteps(in InjectInput) (*Injection, error) {
 	}
 	out.Steps = append(out.Steps, gate)
 	return &out, nil
+}
+
+// The resources an injected check asks for. Without them every tool image becomes a container with the
+// installation's default for a script step (one CPU and 2 GiB), which for a run with a dozen checks is a
+// request of about twenty GiB for work that mostly reads files.
+//
+// These numbers are a starting point, chosen modest on purpose: a measurement of real runs will replace them.
+// The scanners that unpack images or build a database of advisories (trivy) and the Go vulnerability check,
+// which compiles the code, get more.
+var (
+	modestResources = pipeline.Resources{CPU: "250m", CPULimit: "2", Memory: "512Mi", MemoryLimit: "2Gi"}
+	heavyResources  = pipeline.Resources{CPU: "250m", CPULimit: "2", Memory: "1Gi", MemoryLimit: "4Gi"}
+)
+
+// ResourcesFor is what a check run by the tool asks for.
+func ResourcesFor(tool string) *pipeline.Resources {
+	r := modestResources
+	if tool == "trivy" || tool == "govulncheck" {
+		r = heavyResources
+	}
+	return &r
 }
 
 // wildcards turns file names into globs that find them at any depth.

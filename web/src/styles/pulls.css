@@ -11,6 +11,11 @@
 .md pre { background: var(--sheet-3); padding: 10px 12px; border-radius: var(--r1); overflow-x: auto; font-family: var(--mono); font-size: var(--fs-small); }
 .md code { font-family: var(--mono); font-size: .92em; background: var(--sheet-3); padding: 1px 4px; border-radius: 4px; }
 .md pre code { background: none; padding: 0; }
+.md-table { overflow-x: auto; margin: 0 0 12px; max-width: 100%; }
+.md table { border-collapse: collapse; font-size: var(--fs-small); min-width: 50%; }
+.md th, .md td { border: 1px solid var(--line, var(--sheet-3)); padding: 4px 10px; text-align: left; vertical-align: top; }
+.md th { background: var(--sheet-3); font-weight: 600; }
+.md .md-center { text-align: center; } .md .md-right { text-align: right; }
 .md blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--line-2); color: var(--ink-2); }
 .md-suggestion { border: 1px solid var(--ok); border-radius: var(--r1); margin: 8px 0; }
 .md-suggestion-head { background: var(--ok-wash); color: var(--ok-ink); padding: 4px 10px; font-size: var(--fs-small); font-weight: 600; }
