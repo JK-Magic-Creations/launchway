@@ -3,13 +3,13 @@ import { PageHead } from "../kit/layout";
 import { Empty, ErrorBox } from "../components/ui";
 import { CheckInput, SelectInput, TextInput } from "../components/ConfigForm";
 import { Loading, useLoad } from "../work/common";
-import { HOST_KINDS, hostKind, kindLabel } from "../hostKinds";
+import { HOST_KINDS, hostKind } from "../hostKinds";
 import { outsideApi, type Connection, type ConnectionTest } from "../outsideApi";
 
 // Connections to outside Git hosts: a narrow service-account credential, kept as a reference to a secret, through
 // which a Flight keeps its code on a host Launchway does not own. Add one, test what its token may do, remove it.
 
-const KINDS = HOST_KINDS.map((k) => ({ value: k.value, label: kindLabel(k) }));
+const KINDS = HOST_KINDS.map((k) => ({ value: k.value, label: k.name }));
 
 export function ConnectionsPage() {
   const load = useCallback(() => outsideApi.connections(), []);

@@ -85,11 +85,11 @@ function Attached({ name, f, onChanged }: { name: string; f: FlightOutside; onCh
       <section aria-labelledby="hook-h">
         <h2 id="hook-h" className="h-sm">Webhook</h2>
         {f.webhook_url ? <CopyBlock title="Address to call" text={f.webhook_url} note="Add this as a webhook on the repository." /> :
-          <p>Launchway does not know its own public address, so it cannot show the webhook address. Set <code>forge.public_url</code>.</p>}
+          <p>Launchway does not know its public address, so it cannot show the webhook address. Set <code>forge.public_url</code>.</p>}
         <ol>
           {webhookSteps(hk).map((t) => <li key={t}>{t}</li>)}
         </ol>
-        <p role="status">{f.last_delivery_at ? <>Last delivery received {new Date(f.last_delivery_at).toLocaleString()}.</> : "No delivery received yet. Until one arrives the Flight is polled."}</p>
+        <p role="status">{f.last_delivery_at ? <>Last delivery received {new Date(f.last_delivery_at).toLocaleString()}.</> : "No delivery yet; the Flight is polled."}</p>
       </section>
       <section aria-labelledby="lack-h">
         <h2 id="lack-h" className="h-sm">What this host cannot do</h2>

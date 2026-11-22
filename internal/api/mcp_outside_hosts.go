@@ -24,7 +24,7 @@ func addOutsideHostTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. The connections to outside Git hosts (a host that keeps the code while Launchway runs the pipelines): name, kind, base_url, where the credential is read from (never the credential), the owners allowed, and what the host can and cannot do."},
 		mcpCallTimeout, listOutsideHosts)
 	addTool(srv, c, &mcp.Tool{Name: "add_outside_host", Annotations: changes("Connect an outside Git host", false, false),
-		Description: "Administrators only. Connect a Git host Launchway does not host (kind github or gitlab: the public service, or a self-managed install through base_url). The credential is a reference: credential_env (the NAME of an environment variable of the server) or credential_file (an absolute path), or sealed:NAME for a token kept sealed; never the token. webhook_secret_env or webhook_secret_file names the secret that signs the host's webhooks. owners limits which owners or groups Flights may use. An internal address is refused unless the server allows it (forge.mirror_allow). Audited."},
+		Description: "Administrators only. Connect a Git host Launchway does not host (kind github, gitlab, gitea or forgejo: the public service, or a self-managed install through base_url). The credential is a reference: credential_env (the NAME of an environment variable of the server) or credential_file (an absolute path), or sealed:NAME for a token kept sealed; never the token. webhook_secret_env or webhook_secret_file names the secret that signs the host's webhooks. owners limits which owners or groups Flights may use. An internal address is refused unless the server allows it (forge.mirror_allow). Audited."},
 		mcpCallTimeout, addOutsideHost)
 	addTool(srv, c, &mcp.Tool{Name: "remove_outside_host", Annotations: changes("Remove an outside Git host connection", true, true),
 		Description: "Administrators only. Forget a connection to an outside Git host. Refused while a Flight still keeps its code on it. Audited."},
@@ -54,7 +54,7 @@ func listOutsideHosts(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _
 
 type addOutsideHostIn struct {
 	Name              string   `json:"name" jsonschema:"a short name, lower case letters, digits, . _ -"`
-	Kind              string   `json:"kind" jsonschema:"the kind of host: github or gitlab (the public service or a self-managed install)"`
+	Kind              string   `json:"kind" jsonschema:"the kind of host: github, gitlab, gitea or forgejo (gitea and forgejo are always self-managed: give base_url)"`
 	BaseURL           string   `json:"base_url,omitempty" jsonschema:"a self-managed install's address, https://git.example.com; empty is the public service"`
 	UploadURL         string   `json:"upload_url,omitempty" jsonschema:"the host's upload address when it differs from the derived one"`
 	CredentialEnv     string   `json:"credential_env,omitempty" jsonschema:"the NAME of an environment variable of the server that holds the token"`

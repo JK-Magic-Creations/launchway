@@ -48,7 +48,7 @@ func add(t *testing.T, s *hosts.Service, h *githubfake.Host, owners ...string) {
 func TestConnectionRules(t *testing.T) {
 	s, h := setup(t)
 	ctx := t.Context()
-	if _, err := s.Add(ctx, hosts.AddInput{Name: "x", Kind: forge.KindGitea, Credential: forge.SecretRef{Env: "LW_HOSTS_TOKEN"}}, "d"); !errors.Is(err, forge.ErrInvalid) {
+	if _, err := s.Add(ctx, hosts.AddInput{Name: "x", Kind: forge.KindPlain, Credential: forge.SecretRef{Env: "LW_HOSTS_TOKEN"}}, "d"); !errors.Is(err, forge.ErrInvalid) {
 		t.Errorf("a kind with no provider: %v", err)
 	}
 	if _, err := s.Add(ctx, hosts.AddInput{Name: "x", Kind: forge.KindGitHub, BaseURL: h.BaseURL()}, "d"); !errors.Is(err, forge.ErrInvalid) {

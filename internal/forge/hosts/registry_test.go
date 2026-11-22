@@ -10,8 +10,14 @@ import (
 )
 
 func TestRegistryKinds(t *testing.T) {
-	if k := hosts.Kinds(); len(k) == 0 || k[0] != forge.KindGitHub {
-		t.Fatalf("kinds = %v", k)
+	have := map[forge.Kind]bool{}
+	for _, k := range hosts.Kinds() {
+		have[k] = true
+	}
+	for _, k := range []forge.Kind{forge.KindGitHub, forge.KindGitLab, forge.KindGitea, forge.KindForgejo} {
+		if !have[k] {
+			t.Fatalf("kind %s is not registered: %v", k, hosts.Kinds())
+		}
 	}
 	s, _ := setup(t)
 	_, err := s.Add(t.Context(), hosts.AddInput{Name: "x", Kind: "nope", Credential: forge.SecretRef{Env: "X"}}, "d")

@@ -2,7 +2,7 @@
 
 Hosting repositories in Launchway is optional. A Flight (codebase) can keep its code on a Git host you already use: Launchway holds a **connection** to that host, a narrow service-account token kept as a reference to a secret, and through it your Sorties run on that code, report back to it and write to it. The host is the primary; Launchway never needs a copy it owns.
 
-This page covers the host kinds `github` and `gitlab`: each the public service and self-managed installs of it (give the install's address as the base address). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) follows, with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
+This page covers the host kinds `github` and `gitlab` (each the public service and self-managed installs of it: give the install's address as the base address) and `gitea` and `forgejo` (self-managed installs: the base address is required). The sections up to "The limits" describe GitHub; [GitLab](#gitlab) and [Gitea and Forgejo](#gitea-and-forgejo) follow, each with its own token scopes and roles. Every kind passes the same conformance suite and the same pages work for all of them.
 
 ## What works
 
@@ -147,6 +147,44 @@ launchway repos host add acme-gl --kind gitlab \
   --owner acme
 launchway repos host test acme-gl
 ```
+
+## Gitea and Forgejo
+
+The kinds `gitea` and `forgejo` are one implementation under two names: Forgejo keeps the API of the Gitea it came from, and every call used here was compared operation by operation between the two hosts' own OpenAPI files. Both are self-managed by nature, so the base address (`--base-url https://git.example.com`) is required; the API is at `<base>/api/v1`. Where they differ, the provider handles it: a created tag answers 200 on Gitea and 201 on Forgejo, a Forgejo branch protection has no force-push setting (unknown is not treated as immutable), and the webhook signature header is named for the host.
+
+- A repository is `owner/name`. The **owners** list names users or organizations.
+- The token is sent as `Authorization: token <token>`. Git over HTTPS uses it as the password with the account's own login as the user name.
+- **Choosing a repository** lists what the account owns or contributes to (the host's repository search for the account); a repository you know by name can be attached with `launchway repos outside attach`.
+- The webhook is checked by its **signature**: the hex HMAC-SHA256 of the raw body, in `X-Gitea-Signature` (Gitea) or `X-Forgejo-Signature` (Forgejo, which also sends the Gitea-named headers), compared in constant time. A replay is dropped by the delivery ID (`X-Gitea-Delivery` or `X-Forgejo-Delivery`). Events: `push` (branches and tags), `create` (a tag), `pull_request` and `pull_request_sync`. The documentation lists the pull request payload only as an object, so the head, the fork and the title are read from it when present and otherwise asked of the API; an event with no head starts nothing by itself, and Launchway asks the host before a pull request runs.
+- A commit status has the states pending, success, failure and error. The summary is **one comment** on the pull request, edited in place (the host's comment API treats a pull request as an issue).
+- **Release files** are the release's own attachments (uploaded as the raw file with its name). A pre-release is marked as the host's API allows.
+- **Write-back** commits with the contents API (create or update; a new branch is cut in the same call) and opens a pull request. A direct write to a branch whose protection rule disables push, or limits it to a list, is refused before anything is pushed.
+- The host has **no call that tells a token's scopes or expiry**, so Test judges the write features by the account's push permission on the repositories it reaches, and says so; a token that is too narrow shows up as a refusal (403) from the call that needs it.
+
+What these hosts add: **merge when checks succeed** (the host schedules the merge of a pull request once its required checks pass; Launchway drives it for a write-back pull request with `write_back.merge: auto`, and cancels it when asked), **branch protection rules** (who may push or merge, required approvals and checks: read by Launchway, set on the host) and **statuses on the pull request**.
+
+What they do not let a connection do: create or delete repositories; make or change a draft pull request (the API has no draft option); merge, review, or change protection (do it on the host; mark the Launchway status names as required in the branch protection so a failing Sortie blocks the merge).
+
+Token scopes and roles (the host's API usage page names the scopes as `read:` or `write:` plus `repository`, `issue`, `user`, and others, with write including read; it does not map scopes to endpoints, so these are the scopes the features need by their names, and a 403 tells you if one is short):
+
+| To | Token scope | Role on the repository |
+| --- | --- | --- |
+| Choose a repository, run Sorties, checkout | `read:repository` and `read:user` | read |
+| Commit statuses | `write:repository` | write |
+| The pull request comment | `write:repository` and `write:issue` | write |
+| Tags, releases and attachments | `write:repository` | write |
+| File changes and write-back pull requests | `write:repository` | write |
+| Refuse a direct write to a protected branch | `read:repository` | administrator (the host lists protection for administrators) |
+| The webhook (set by you) | none for the connection | administrator, to add it |
+
+```sh
+launchway repos host add acme-gt --kind gitea --base-url https://git.example.com \
+  --credential-env ACME_GT_TOKEN \
+  --webhook-secret-env ACME_GT_HOOK
+launchway repos host test acme-gt
+```
+
+These providers are labelled experimental until they have passed the conformance suite against a live installation (`LAUNCHWAY_LIVE_GITEA_TOKEN`, `LAUNCHWAY_LIVE_GITEA_BASE`, `LAUNCHWAY_LIVE_GITEA_REPO` and `LAUNCHWAY_LIVE_GITEA_KIND` run that test).
 
 ## In the Logbook
 

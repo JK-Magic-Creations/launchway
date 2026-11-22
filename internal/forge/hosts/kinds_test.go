@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
+	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitea/giteafake"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/gitlab/gitlabfake"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
@@ -27,7 +28,34 @@ type hostCase struct {
 	lacks    forge.Capability                                // one capability the kind declares not native
 }
 
-var kindCases = []hostCase{{
+func giteaCase(kind forge.Kind) hostCase {
+	return hostCase{
+		kind: kind,
+		start: func(t *testing.T) (string, string, string, func() []string) {
+			h := giteafake.New(kind == forge.KindForgejo)
+			t.Cleanup(h.Close)
+			hostFake = h
+			return h.BaseURL(), giteafake.Token, giteafake.WebhookSecret, func() []string { return h.Violations }
+		},
+		delivery: func(t *testing.T, secret string) *http.Request {
+			body := `{"ref":"refs/heads/main","before":"` + strings.Repeat("0", 40) + `","after":"` + strings.Repeat("a", 40) + `","repository":{"full_name":"acme/app"},"sender":{"login":"bob"}}`
+			r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://x/hook", bytes.NewBufferString(body))
+			for k, v := range hostFake.Delivery("push", "del-1", []byte(body)) {
+				r.Header[k] = v
+			}
+			if secret != giteafake.WebhookSecret { // a delivery signed with another secret
+				name := map[bool]string{true: "X-Forgejo-Signature", false: "X-Gitea-Signature"}[kind == forge.KindForgejo]
+				r.Header.Set(name, giteafake.Sign([]byte(secret), []byte(body)))
+			}
+			return r
+		},
+		lacks: forge.CapDrafts,
+	}
+}
+
+var hostFake *giteafake.Host
+
+var kindCases = []hostCase{giteaCase(forge.KindGitea), giteaCase(forge.KindForgejo), {
 	kind: forge.KindGitLab,
 	start: func(t *testing.T) (string, string, string, func() []string) {
 		h := gitlabfake.New()

@@ -10,23 +10,22 @@ export interface HostKind {
   change: string;
   /** The address of an install is needed (there is no public service to assume). */
   addressRequired?: boolean;
-  /** The webhook form's name for the secret, and whether its content type must be chosen. */
-  secretField: string;
-  json?: boolean;
+  /** The webhook form's name for the secret (default "Secret"), and whether it has no content type to choose. */
+  secretField?: string;
+  noType?: boolean;
 }
 
 export const HOST_KINDS: HostKind[] = [
-  { value: "github", name: "GitHub", change: "pull request", secretField: "Secret", json: true },
-  { value: "gitlab", name: "GitLab", change: "merge request", secretField: "Secret token" },
+  { value: "github", name: "GitHub", change: "pull request" },
+  { value: "gitlab", name: "GitLab", change: "merge request", secretField: "Secret token", noType: true },
+  { value: "gitea", name: "Gitea", change: "pull request", addressRequired: true },
+  { value: "forgejo", name: "Forgejo", change: "pull request", addressRequired: true },
 ];
-
-/** The kind's label in the picker. */
-export const kindLabel = (k: HostKind) => `${k.name}${k.addressRequired ? ", self-managed" : ", public or self-managed"}`;
 
 /** The steps of the host's webhook form. */
 export const webhookSteps = (k?: HostKind) => [
-  ...(k?.json ? ["Content type application/json."] : []),
-  `The secret you stored for this connection goes in ${k?.secretField ?? "its secret field"}.`,
+  ...(k?.noType ? [] : ["Content type application/json."]),
+  `The secret you stored for this connection goes in ${k?.secretField ?? "Secret"}.`,
   `Events: pushes, tag pushes and ${k?.change ?? "pull request"}s.`,
 ];
 
