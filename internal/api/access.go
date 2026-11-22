@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"slices"
 	"strings"
@@ -392,10 +394,42 @@ func lastListItem(values []string) string {
 	return strings.TrimSpace(items[len(items)-1])
 }
 
-// cookie returns a cookie with the attributes every Launchway cookie has.
+// cookieSecure says whether a cookie for this request carries the Secure
+// attribute. It does, with one documented exception: a request made over
+// plain HTTP from this machine to a loopback name (http://localhost:8080,
+// local development and the test suites), where there is no network to
+// protect it and some browsers do not store Secure cookies over http. Every
+// other request, including plain HTTP from another machine, gets Secure: a
+// deployment that terminates TLS in front of the server without telling it
+// (server.trusted_proxies) then fails to keep a session, loudly, instead of
+// sending session cookies in the clear.
+func (s *Server) cookieSecure(r *http.Request) bool {
+	if s.isHTTPS(r) || (s.Auth != nil && s.Auth.SecureCookies) {
+		return true
+	}
+	return !(loopbackName(r.Host) && loopbackName(peerAddr(r)))
+}
+
+// loopbackName reports whether host (with or without a port) is localhost
+// or a loopback address.
+func loopbackName(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") || strings.HasSuffix(strings.ToLower(host), ".localhost") {
+		return true
+	}
+	ip, err := netip.ParseAddr(host)
+	return err == nil && ip.IsLoopback()
+}
+
+// cookie returns a cookie with the attributes every Launchway cookie has:
+// HttpOnly, SameSite=Lax, and Secure (see cookieSecure). Every cookie the
+// server sets is made here.
 func (s *Server) cookie(r *http.Request, name, value, path string, maxAge time.Duration) *http.Cookie {
 	c := &http.Cookie{Name: name, Value: value, Path: path, HttpOnly: true, SameSite: http.SameSiteLaxMode,
-		Secure: s.isHTTPS(r) || (s.Auth != nil && s.Auth.SecureCookies)}
+		Secure: s.cookieSecure(r)}
 	if maxAge > 0 {
 		c.MaxAge = int(maxAge / time.Second)
 	} else {
