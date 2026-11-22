@@ -54,7 +54,7 @@ export function SquadronViewPage({ name }: { name: string }) {
     <div className="page sq-page">
       <PageHead eyebrow={t.say("{Unit}")} title={title}
         sentence={data.description || (flights.length === 0 ? t.say("No {projects} yet.") : needs.length > 0 ? <><b>{needs.length} {needs.length === 1 ? "thing needs" : "things need"} a person.</b></> : failing > 0 ? `${failing} of ${flights.length} latest results failed.` : "Everything here is fine or still going.")}
-        actions={flights.length > 0 ? addFlight : undefined} />
+        actions={<>{flights.length > 0 ? addFlight : null}<LinkButton href={`/units/${encodeURIComponent(data.name)}/insights`}>Insights</LinkButton></>} />
       {flights.length > 0 && (
         <Band cells={[
           { key: "n", label: t.say("{Projects}"), value: flights.length, foot: "in this folder" },

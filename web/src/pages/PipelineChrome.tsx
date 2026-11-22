@@ -14,6 +14,7 @@ const PAGES: { id: string; label: string; path: (enc: string) => string }[] = [
   { id: "tests", label: "Tests and coverage", path: (e) => `/projects/${e}/tests` },
   { id: "security", label: "Security", path: (e) => `/projects/${e}/security` },
   { id: "standards", label: "{Standards}", path: (e) => `/projects/${e}/standards` },
+  { id: "insights", label: "Insights", path: (e) => `/projects/${e}/insights` },
   { id: "caches", label: "Build caches", path: (e) => `/projects/${e}/caches` },
   { id: "configuration", label: "Configuration", path: (e) => `/projects/${e}/configuration` },
   { id: "variables", label: "Variables", path: (e) => `/projects/${e}/variables` },

@@ -116,6 +116,7 @@ export const SECTIONS: Section[] = [
       { id: "runs", get label() { return say("{Runs}"); }, href: "/activity", icon: "activity", aka: "Runs" },
       { id: "approvals", label: "Waiting for a decision", href: "/activity/approvals", icon: "gate" },
       { id: "events", label: "Events", href: "/activity/events", icon: "clock" },
+      { id: "insights", label: "Insights", href: "/activity/insights", icon: "activity" },
     ],
   },
   {
@@ -230,6 +231,8 @@ export const PAGES: PageInfo[] = [
   page("/units", "home", undefined, () => terms().say("{Units}"), () => [{ label: terms().say("{Units}") }]),
   page("/units/new", "home", undefined, () => terms().say("Add a {unit}"), () => [{ label: terms().say("{Units}"), href: "/units" }, { label: terms().say("Add a {unit}") }]),
   page("/units/:name", "home", undefined, (p) => terms().say(`{Unit} ${p.name}`), (p) => [{ label: terms().say("{Units}"), href: "/units" }, { label: p.name }]),
+  page("/units/:name/insights", "home", undefined, (p) => `Insights of ${p.name}`,
+    (p) => [{ label: terms().say("{Units}"), href: "/units" }, { label: p.name, href: `/units/${enc(p.name)}` }, { label: "Insights" }]),
   page("/units/:name/projects/new", "home", undefined, (p) => terms().say(`Add a {project} to ${p.name}`),
     (p) => [{ label: terms().say("{Units}"), href: "/units" }, { label: p.name, href: `/units/${enc(p.name)}` }, { label: terms().say("Add a {project}") }]),
   page("/projects/:name", "projects", undefined, (p) => p.name, (p) => [{ label: p.name }]),
@@ -239,6 +242,7 @@ export const PAGES: PageInfo[] = [
   projectSub("tests", "Tests", "Tests and coverage"),
   projectSub("security", "Security", "Security"),
   projectSub("caches", "Caches", "Build caches"),
+  projectSub("insights", "Insights", "Insights"),
   projectSub("standards", "{Standards}", "{Standards}"),
   page("/projects/:name/configuration", "pipelines", undefined, (p) => `Configuration of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Configuration" }]),
   page("/runs/:id/configuration/:step", "pipelines", undefined, (p) => `Configuration report of ${p.step}`, () => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: "Configuration report" }]),
@@ -282,6 +286,7 @@ export const PAGES: PageInfo[] = [
     (p) => [{ label: "Repositories", href: "/repositories" }, { label: p.owner }]),
 
   page("/activity", "activity", "runs", () => terms().say("{Runs}"), () => [{ label: terms().say("{Runs}") }]),
+  page("/activity/insights", "activity", "insights", () => "Insights", () => [{ label: "Insights" }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
   page("/activity/events", "activity", "events", () => "Events", () => []),
   page("/runs/:id", "activity", "runs", (p) => (launchOf() ? "Launch of " : "") + terms().say(`{Run} ${p.id}`), (p) => launchOf()

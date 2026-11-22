@@ -1,0 +1,12 @@
+/* Insights pages: charts with their tables, drawn with fixed colors so "copy as image" is what is on screen. */
+.ichart { margin: 0 0 22px; padding: 0 16px; }
+.ichart h3 { font-size: 14px; margin: 14px 0 6px; }
+.ichart-svg { width: 100%; max-width: 680px; height: auto; background: #ffffff; border: 1px solid var(--line, #d0d5dd); border-radius: 6px; }
+.ichart-svg:focus-visible { outline: 3px solid var(--focus, #1f5fbf); outline-offset: 2px; }
+.ichart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0; padding: 0; font-size: 13px; }
+.ichart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ichart-tools { display: flex; gap: 12px; align-items: center; margin: 4px 0; }
+.ichart-table summary { cursor: pointer; font-size: 13px; padding: 4px 0; }
+.ins-branch { display: inline-flex; gap: 8px; align-items: center; }
+.ins-branch input { min-width: 12ch; }
+@media (forced-colors: active) { .ichart-svg { forced-color-adjust: none; } }
