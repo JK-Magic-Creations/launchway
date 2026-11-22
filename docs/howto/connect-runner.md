@@ -286,13 +286,13 @@ keeps retrying.
 
 ## Health checks
 
-With `--health-listen ADDRESS`, a Station (and a deploy runner) serves three endpoints:
+With `--health-listen ADDRESS`, a Station serves three endpoints (so does a Station that serves Argo CD targets):
 
 - `/healthz` answers `ok` while the process is up;
-- `/livez` answers `ok` while the loop that takes work from the server has polled within the last five minutes. A runner that is up but stuck answers 503 and the reason; a loop waiting for a free place is not stuck while the work that holds the places is within its time. The runner itself logs the stacks of its goroutines at error level and exits with an error when this has lasted, so that its supervisor starts it again;
-- `/readyz` answers `ok` while the server has answered the runner within the last two minutes.
+- `/livez` answers `ok` while the loop that takes work from the server has polled within the last five minutes. A Station that is up but stuck answers 503 and the reason; a loop waiting for a free place is not stuck while the work that holds the places is within its time. The Station itself logs the stacks of its goroutines at error level and exits with an error when this has lasted, so that its supervisor starts it again;
+- `/readyz` answers `ok` while the server has answered the Station within the last two minutes.
 
-A runner also logs one line every ten minutes (`idle: 12 polls, last work 3m ago (...)`), so that a quiet log is never ambiguous.
+A Station also logs one line every ten minutes (`idle: 12 polls, last work 3m ago (...)`), so that a quiet log is never ambiguous.
 
 ```sh
 curl -s http://127.0.0.1:8081/readyz

@@ -254,6 +254,120 @@ func (d *DeployRunner) doAction(ctx context.Context, job *engine.Job, sys func(s
 	}
 }
 
+// actState is what the server told the runner about the step an action serves.
+type actState struct {
+	mu        sync.Mutex
+	lost      bool // the server no longer has the lease: it ended the step or gave it away
+	requested bool // the run was canceled
+	cancel    context.CancelFunc
+}
+
+// end records what the server said and stops the action.
+func (s *actState) end(canceled, gone bool) {
+	s.mu.Lock()
+	s.lost, s.requested = s.lost || gone, s.requested || canceled
+	s.mu.Unlock()
+	s.cancel()
+}
+
+func (s *actState) flags() (lost, requested bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lost, s.requested
+}
+
+// reportBack sends the action's log lines and heartbeats until the returned
+// function is called, which sends what is left and waits for both to end.
+func (d *DeployRunner) reportBack(report context.Context, job *engine.Job, log *slog.Logger, logs *logBuffer, st *actState, sys func(string, ...any)) (stop func()) {
+	flush := func() {
+		for {
+			batch := logs.take(engine.MaxLogBatch)
+			if len(batch) == 0 {
+				return
+			}
+			if err := d.Client.Logs(report, job.LeaseID, batch); err != nil {
+				if errors.Is(err, ErrLeaseLost) {
+					st.end(false, true)
+				}
+				return
+			}
+		}
+	}
+	bgStop, bgDone := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(bgDone)
+		fl := time.NewTicker(logFlushEvery)
+		defer fl.Stop()
+		for {
+			select {
+			case <-bgStop:
+				return
+			case <-fl.C:
+				flush()
+			}
+		}
+	}()
+	beatStop, beatDone := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(beatDone)
+		keepLease(report, beatStop, d.Client, job, log, func(canceled, gone bool) {
+			if canceled {
+				sys("The run was canceled; stopping the action.")
+			}
+			st.end(canceled, gone)
+		})
+	}()
+	return func() {
+		close(beatStop)
+		<-beatDone
+		close(bgStop)
+		<-bgDone
+		flush()
+	}
+}
+
+// doWithRetries does the action. It is safe to do again, so when something it
+// needs cannot be reached (the cluster, a secret store), it is tried again with
+// growing pauses until the action's time runs out: a short outage does not use
+// up the step's tries.
+func (d *DeployRunner) doWithRetries(parent, actx context.Context, job *engine.Job, st *actState, sys func(string, ...any)) actionResult {
+	for pause := 2 * time.Second; ; pause = min(2*pause, 30*time.Second) {
+		r := d.doAction(actx, job, sys)
+		lost, requested := st.flags()
+		if !errors.Is(r.err, argocd.ErrUnavailable) || lost || requested || parent.Err() != nil {
+			return r
+		}
+		if dl, _ := actx.Deadline(); time.Until(dl) < pause {
+			return r
+		}
+		sys("%v; trying again in %s", r.err, pause)
+		select {
+		case <-time.After(pause):
+		case <-actx.Done():
+		}
+	}
+}
+
+// actionOutcome is the result to report for an action that ended with err.
+func actionOutcome(r actionResult, requested bool, sys func(string, ...any)) engine.Result {
+	switch {
+	case requested:
+		sys("The action was stopped because the run was canceled.")
+		return engine.Result{Outcome: "canceled", Error: "canceled", Deploy: r.facts}
+	case r.err == nil:
+		if r.facts != nil && r.facts.Sync != "" {
+			sys("Sync: %s", r.facts.Sync)
+		}
+		sys("Done; waiting for Argo CD")
+		return engine.Result{Outcome: "succeeded", Deploy: r.facts}
+	case errors.Is(r.err, argocd.ErrUnavailable) || errors.Is(r.err, context.DeadlineExceeded):
+		sys("%v. The action will be tried again.", r.err)
+		return engine.Result{Outcome: "lost", Error: r.err.Error()}
+	}
+	sys("%v", r.err)
+	return engine.Result{Outcome: "failed", Error: r.err.Error(), Deploy: r.facts}
+}
+
 // act does one action. The server tells the runner when the step it holds was
 // ended (the lease is gone) or the run was canceled: the action then stops at
 // once, and its retries are safe.
@@ -286,110 +400,18 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	}
 	logs := newLogBuffer()
 	sys := func(format string, args ...any) { logs.add("system", fmt.Sprintf(format, args...)) }
-	var stateMu sync.Mutex
-	lost, requested := false, false
-	end := func(canceled, gone bool) {
-		stateMu.Lock()
-		lost, requested = lost || gone, requested || canceled
-		stateMu.Unlock()
-		cancelAct()
-	}
-	flush := func() {
-		for {
-			batch := logs.take(engine.MaxLogBatch)
-			if len(batch) == 0 {
-				return
-			}
-			if err := d.Client.Logs(report, job.LeaseID, batch); err != nil {
-				if errors.Is(err, ErrLeaseLost) {
-					end(false, true)
-				}
-				return
-			}
-		}
-	}
-	bgStop, bgDone := make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(bgDone)
-		fl := time.NewTicker(logFlushEvery)
-		defer fl.Stop()
-		for {
-			select {
-			case <-bgStop:
-				return
-			case <-fl.C:
-				flush()
-			}
-		}
-	}()
-	beatStop, beatDone := make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(beatDone)
-		keepLease(report, beatStop, d.Client, job, log, func(canceled, gone bool) {
-			if canceled {
-				sys("The run was canceled; stopping the action.")
-			}
-			end(canceled, gone)
-		})
-	}()
+	st := &actState{cancel: cancelAct}
+	stopReporting := d.reportBack(report, job, log, logs, st, sys)
 	sys("Deploy runner %s, target %s, application %s", d.Info.Name, dj.Target, dj.Application)
 	if job.Attempt > 1 {
 		sys("Attempt %d", job.Attempt)
 	}
-	var facts *engine.DeployFacts
-	var err error
-	// The action is safe to do again, so when something it needs cannot be
-	// reached (the cluster, a secret store), it is tried again here, with
-	// growing pauses, until the action's time runs out: a short outage does
-	// not use up the step's tries.
-	for pause := 2 * time.Second; ; pause = min(2*pause, 30*time.Second) {
-		r := d.doAction(actx, job, sys)
-		facts, err = r.facts, r.err
-		stateMu.Lock()
-		over := lost || requested
-		stateMu.Unlock()
-		if !errors.Is(err, argocd.ErrUnavailable) || over || parent.Err() != nil {
-			break
-		}
-		if dl, _ := actx.Deadline(); time.Until(dl) < pause {
-			break
-		}
-		sys("%v; trying again in %s", err, pause)
-		select {
-		case <-time.After(pause):
-		case <-actx.Done():
-		}
-	}
+	r := d.doWithRetries(parent, actx, job, st, sys)
 	cancelAct()
-	stateMu.Lock()
-	wasLost, wasRequested := lost, requested
-	stateMu.Unlock()
-	res := engine.Result{Outcome: "succeeded", Deploy: facts}
-	switch {
-	case wasRequested && !wasLost:
-		sys("The action was stopped because the run was canceled.")
-		res = engine.Result{Outcome: "canceled", Error: "canceled", Deploy: facts}
-	case err == nil:
-		if facts != nil && facts.Sync != "" {
-			sys("Sync: %s", facts.Sync)
-		}
-		sys("Done; waiting for Argo CD")
-	case errors.Is(err, argocd.ErrUnavailable) || errors.Is(err, context.DeadlineExceeded):
-		sys("%v. The action will be tried again.", err)
-		res = engine.Result{Outcome: "lost", Error: err.Error()}
-	default:
-		sys("%v", err)
-		res = engine.Result{Outcome: "failed", Error: err.Error(), Deploy: facts}
-	}
-	close(beatStop)
-	<-beatDone
-	close(bgStop)
-	<-bgDone
-	flush()
-	stateMu.Lock()
-	wasLost = lost
-	stateMu.Unlock()
-	if wasLost {
+	_, requested := st.flags()
+	res := actionOutcome(r, requested, sys)
+	stopReporting()
+	if lost, _ := st.flags(); lost {
 		log.Warn("the server ended or gave away the step while the action ran; the action was stopped, and its retry is safe")
 		return
 	}
