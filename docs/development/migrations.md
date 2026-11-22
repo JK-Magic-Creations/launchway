@@ -614,7 +614,7 @@ covers the new columns (`schemaMarkersParity2`).
 Migrations 40 to 52 are all real: the Depot (40), Switches (41), the event log (42), review depth (43), the
 Debrief (44), Standing orders (45), releases (46), the software graph (47), configuration as code (48), fleets (49),
 work tracking (50), organizing (51) and the wall between Bases (52). The numbers were held by empty stand-ins while
-the branches waited to merge; none remains. The next branch takes 53. A database that has recorded a number can never
+the branches waited to merge; none remains. Migration 53 brought inspect requests and 54 what each step attempt used. The next branch takes 55. A database that has recorded a number can never
 receive a held number later, because a migration is never slipped in behind a recorded version.
 
 A new table also needs a line in the Depot (registry) of tables and an owner: see

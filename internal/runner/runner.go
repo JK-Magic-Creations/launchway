@@ -609,6 +609,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
 		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, Hold: mask.Hold, AsksResources: job.ResourcesAsked,
+		Usage: &executor.Usage{},
 	}
 	caches := r.newCacheRun(job, spec, sys)
 	collect := r.collector(job, spec, sys, caches)
@@ -668,11 +669,17 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 			}
 		}
 		sys("Failed with exit code %d after %s", code, took)
+		if line := usageLine(spec.Usage); line != "" {
+			sys("%s", line)
+		}
 		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs,
-			Excerpt: tail.excerpt()}, collect
+			Excerpt: tail.excerpt(), Usage: usageOf(spec.Usage)}, collect
 	}
 	sys("Succeeded in %s", took)
-	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs}, collect
+	if line := usageLine(spec.Usage); line != "" {
+		sys("%s", line)
+	}
+	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs, Usage: usageOf(spec.Usage)}, collect
 }
 
 // Limits on a failed step's excerpt, as sent to the server.

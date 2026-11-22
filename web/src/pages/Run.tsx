@@ -3,6 +3,8 @@ import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
 import { whyWaiting } from "../components/whyWaiting";
+import { UsageNote } from "../components/UsageNote";
+import type { StepUsage } from "../components/usageText";
 import { RerunButton, RerunFailedButton, RerunPicker } from "../components/Rerun";
 import { StepCauseView } from "../components/StepCause";
 import { RunFlowBanners } from "../components/RunFlow";
@@ -550,6 +552,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             {step.runner && <span className="meta only-everything">on {step.runner}</span>}
             {(step as { workspace?: string }).workspace && <span className="meta only-everything" title="a fresh checkout shared with no other step">own workspace</span>}
             {step.waiting_for && <span className="meta wait" data-code={step.waiting_code}>{step.waiting_for}</span>}
+            {(step as { usage?: StepUsage }).usage && <UsageNote usage={(step as { usage?: StepUsage }).usage!} />}
             {step.container && !step.container.startsWith("image-") && <span className="meta only-everything">in <strong>{step.container}</strong></span>}
             {step.image && <span className="meta mono only-everything">{step.image}</span>}
           </div>

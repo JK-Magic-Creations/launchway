@@ -705,6 +705,9 @@ func (cl *client) show(args []string) error {
 				fmt.Fprintf(cl.out, "             then: %s\n", n.Summary)
 			}
 		}
+		if line := s.Usage.Sentence(); line != "" {
+			fmt.Fprintf(cl.out, "             %s\n", line)
+		}
 		for _, c := range s.Caches {
 			cl.printCache(c)
 		}

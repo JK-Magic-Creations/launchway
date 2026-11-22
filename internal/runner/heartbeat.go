@@ -79,3 +79,31 @@ func keepLease(ctx context.Context, stop <-chan struct{}, c beater, job *engine.
 		}
 	}
 }
+
+// flushEvery flushes the step's log lines every logFlushEvery until stop is closed.
+func flushEvery(stop <-chan struct{}, flush func()) {
+	fl := time.NewTicker(logFlushEvery)
+	defer fl.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-fl.C:
+			flush()
+		}
+	}
+}
+
+// leaseEvents says what to do when the server cancels the run or takes the
+// step's lease away.
+func leaseEvents(log *slog.Logger, sys func(string, ...any), stopWith func(requested, lost bool)) func(canceled, lost bool) {
+	return func(canceled, lost bool) {
+		if lost {
+			log.Warn("lease lost; stopping the step")
+			stopWith(false, true)
+		} else if canceled {
+			sys("The run was canceled; stopping.")
+			stopWith(true, false)
+		}
+	}
+}

@@ -60,6 +60,7 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersOrganize,
 	schemaMarkersWall,
 	schemaMarkersInspect,
+	schemaMarkersUsage,
 }
 
 type schemaMarker struct {

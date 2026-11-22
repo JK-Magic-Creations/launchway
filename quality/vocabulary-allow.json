@@ -898,6 +898,10 @@
       "rule": "word:project",
       "contains": "permanent name",
       "why": "The usage says which permanent name a Flight keeps."
+    },
+    {
+      "path": "docs/development/automatic-resources.md",
+      "why": "A contributor design page that discusses the code's own terms (run, runner, queue, environment) and the Kubernetes objects they map to."
     }
   ]
 }

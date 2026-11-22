@@ -45,6 +45,9 @@ type Spec struct {
 	// another step that runs in the same container may ask while this one
 	// does not.
 	AsksResources bool
+	// Usage, if set, is filled by an executor that can read what the step
+	// used (see usage.go); the caller reads it after Run returns.
+	Usage *Usage
 }
 
 // Sink receives output lines as they are produced.

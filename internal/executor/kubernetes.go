@@ -300,6 +300,9 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 
 	streamCtx, stopStream := context.WithCancel(context.Background())
 	defer stopStream()
+	finishUsage := k.startMeasuring(ctx, rp.name, container, s)
+	defer finishUsage(-1) // a step that did not end normally is not measured
+	started := time.Now()
 	done := make(chan error, 1)
 	script := stepScript(dir)
 	go func() {
@@ -324,6 +327,8 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		}
 		return -1, ctx.Err()
 	}
+
+	finishUsage(time.Since(started))
 
 	// Copy the outputs file back so the runner can read it as usual.
 	var outputs bytes.Buffer

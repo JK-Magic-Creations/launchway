@@ -1309,6 +1309,13 @@ maximum) and writes one line to the step's log saying what it lowered and why. A
 memory only is held to its memory, and its CPU default is lowered if need be, and the other way
 round.
 
+**What a step really used.** Whatever a step asks for, the Station measures what it uses: the most
+memory and the most CPU of its container, read from the container's cgroup (cgroup v2 `memory.peak`
+and `cpu.stat`, or the v1 equivalents), the same for every language. The Sortie page shows it next to
+each step (`reserved 4.0Gi, used 1.1Gi peak`), `launchway runs show` and the API's `usage` field give
+it, and the step's log ends with it. Nothing is read from the cluster's metrics API, so no extra
+permission is needed on Kubernetes. A step that could not be measured says `use not measured` and why.
+
 ## Lane
 
 A lane makes runs take turns: at most one run of a lane goes at a time. A Sortie that arrives while the

@@ -465,6 +465,12 @@ Steps:
   pending    smoke-test
 ```
 
+A step that ran also gets a line under it with what it reserved and what it really used, measured
+from its container: `reserved 4.0Gi memory, used 1.1Gi memory at most and 1.9 CPU at most`. Where a
+Station could not measure (the host executor has no container, or the container offers no cgroup)
+the line says `use not measured` and why; a number is never guessed. A container is shared by the
+steps of a Sortie that use the same image, so two such steps running at once show the container's use.
+
 ### launchway runs logs
 
 Prints a Sortie's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.

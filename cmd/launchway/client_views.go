@@ -64,6 +64,8 @@ type runView struct {
 		FailureCause string      `json:"failure_cause"`
 		Retry        int         `json:"retry"`
 		Caches       []cacheView `json:"caches"`
+		// Usage is what the step reserved and used, when it ran.
+		Usage *engine.StepUsage `json:"usage"`
 		// Runner is the runner that took the step; Workspace is set for a
 		// step with a workspace of its own; WaitingFor says what a queued
 		// step waits for when no runner may take it.

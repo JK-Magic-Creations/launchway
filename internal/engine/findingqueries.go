@@ -299,8 +299,12 @@ func (e *Engine) loadFindings(ts []triple, extra string, extraArgs ...any) ([]Fi
 		return nil, nil
 	}
 	cond, args := findingTripleFilter(ts)
+	trackCol := "track" // a database older than the Standing orders schema has no such column
+	if !e.knows(schemaStandings) {
+		trackCol = "'' AS track"
+	}
 	rows, err := e.db.Query(`SELECT id, step_id, attempt, run_id, run_number, fingerprint, tool, rule_id, severity, level, message, file,
-			start_line, end_line, start_column, secret, track FROM findings f WHERE `+cond+extra+` ORDER BY id`, append(args, extraArgs...)...)
+			start_line, end_line, start_column, secret, `+trackCol+` FROM findings f WHERE `+cond+extra+` ORDER BY id`, append(args, extraArgs...)...)
 	if err != nil {
 		return nil, err
 	}

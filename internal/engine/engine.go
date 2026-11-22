@@ -221,11 +221,9 @@ const (
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID  string            `json:"lease_id"`
-	LeaseTTL pipeline.Duration `json:"lease_ttl"`
-	// Beat is how often the runner sends a heartbeat for the lease; 0 (an
-	// older server) means a third of LeaseTTL.
-	Beat      pipeline.Duration `json:"beat,omitempty"`
+	LeaseID   string            `json:"lease_id"`
+	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
+	Beat      pipeline.Duration `json:"beat,omitempty"` // heartbeat every; 0 (older server): a third of LeaseTTL
 	RunID     string            `json:"run_id"`
 	Project   string            `json:"project"`
 	RunNumber int               `json:"run_number"`
@@ -342,6 +340,7 @@ type Result struct {
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
 	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
+	Usage  *StepUsage    `json:"usage,omitempty"`  // what the attempt used (schema 54)
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -1119,7 +1118,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
 			return ErrLeaseLost
 		}
-		if err := c.endFinishedLease(leaseID); err != nil {
+		if err := c.endFinishedAttempt(leaseID, l, res); err != nil {
 			return err
 		}
 		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsDeployKind() {

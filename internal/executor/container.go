@@ -97,7 +97,17 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	}
 	args = append(args, "-e", "LAUNCHWAY_OUTPUTS")
 	env = append(env, "LAUNCHWAY_OUTPUTS=/launchway/"+OutputsFile)
-	args = append(args, s.Image, "-e", "/launchway/script.sh")
+	if s.Usage != nil {
+		*s.Usage = Usage{}
+		if sc, ok := s.stepContainer(); ok {
+			s.Usage.ReservedMemory, s.Usage.ReservedCPUMilli = sc.amount().Memory, sc.amount().CPU
+		}
+		_ = os.Remove(filepath.Join(s.MetaDir, usageFile))
+		args = append(args, s.Image, "-c", measureWrapper())
+	} else {
+		args = append(args, s.Image, "-e", "/launchway/script.sh")
+	}
+	started := time.Now()
 
 	cmd := exec.Command(c.Bin, args...)
 	cmd.Env = env
@@ -124,6 +134,9 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	}()
 	select {
 	case err := <-done:
+		if s.Usage != nil {
+			readUsageFile(s.MetaDir, time.Since(started), s.Usage)
+		}
 		return exitCode(err)
 	case <-ctx.Done():
 		// Stop the container itself; killing the client alone can leave it running.

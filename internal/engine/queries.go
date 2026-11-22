@@ -175,6 +175,9 @@ type StepView struct {
 	ReusedFrom       string `json:"reused_from,omitempty"`
 	ReusedFromNumber int    `json:"reused_from_number,omitempty"`
 	ReusedAttempt    int    `json:"reused_attempt,omitempty"`
+	// Usage is what the step's latest measured attempt used, against what was
+	// reserved (schema 54); nil if no attempt reported any.
+	Usage *StepUsage `json:"usage,omitempty"`
 	// Inputs is what each attempt was given, oldest first; empty for
 	// attempts leased by a server older than schema 8.
 	Inputs []AttemptInputs `json:"inputs"`
@@ -603,6 +606,9 @@ func (e *Engine) stepView(runID, stepID string) (*StepView, error) {
 	if in := inputs[stepID]; in != nil {
 		v.Inputs = in
 	}
+	if us, err := e.stepUsages(runID); err == nil {
+		v.Usage = us[stepID]
+	}
 	steps := []StepView{*v}
 	if err := e.stepTests(runID, steps); err != nil {
 		return nil, err
@@ -670,6 +676,10 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if err != nil {
 		return nil, err
 	}
+	usages, err := e.stepUsages(id)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := e.db.Query(`SELECT `+e.stepCols()+` FROM steps WHERE run_id = ? ORDER BY position`, id)
 	if err != nil {
 		return nil, err
@@ -707,6 +717,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
 		}
+		v.Usage = usages[v.ID]
 		st.attachCause(v)
 		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
 			v.Caches = s.Evidence.Caches

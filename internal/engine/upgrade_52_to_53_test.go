@@ -15,8 +15,8 @@ import (
 // On SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromThePublishedBuildAtSchema52KeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if schemaWall != 52 || schemaInspect != 53 || schemaLast != 53 || len(migrations) != 53 {
-		t.Fatalf("the schemas are wall %d, inspect %d, last %d with %d migrations; this test names 52 and 53", schemaWall, schemaInspect, schemaLast, len(migrations))
+	if schemaWall != 52 || schemaInspect != 53 || schemaLast < 53 {
+		t.Fatalf("the schemas are wall %d, inspect %d, last %d; this test names 52 and 53", schemaWall, schemaInspect, schemaLast)
 	}
 	clk, addr := newClock(), testdb.New(t)
 	old := mustOpenAs(t, addr, clk, schemaWall, &syncBuffer{})
@@ -33,7 +33,7 @@ func TestUpgradeFromThePublishedBuildAtSchema52KeepsEverything(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaInspect, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
@@ -44,7 +44,7 @@ func TestUpgradeFromThePublishedBuildAtSchema52KeepsEverything(t *testing.T) {
 	if n := strings.Count(log.String(), "applied a database migration"); n != 1 {
 		t.Errorf("%d migrations applied, want exactly 1:\n%s", n, log.String())
 	}
-	checkMarkers(t, cur, schemaLast)
+	checkMarkers(t, cur, schemaInspect)
 	if info, err := cur.Schema(ctx); err != nil || info.Database != 53 || info.Code != 53 || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}

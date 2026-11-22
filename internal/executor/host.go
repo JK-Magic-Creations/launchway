@@ -38,6 +38,10 @@ func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 				"The podman, docker and kubernetes executors enforce it")
 		}
 	}
+	if s.Usage != nil {
+		*s.Usage = Usage{}
+		s.Usage.notMeasured("the host executor runs the step as a process of the Station, with no container or cgroup of its own, so what it used is not measured")
+	}
 	script, err := writeScript(s)
 	if err != nil {
 		return -1, err
