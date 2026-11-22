@@ -156,7 +156,9 @@ steps:
           # The chart is pinned to a commit: it travels with the image, in the same GitOps commit.
           - { file: argocd-apps/launchway-sandbox.yaml, set: "spec.sources[0].targetRevision", value: { run: sha } }
       # Argo CD syncs this Application by itself: ask it for nothing.
-      sync: { request: never, windows: wait }
+      # leftovers: warn, because the deploy runner that carries out this release still counts the chart's own
+      # hook objects as leftovers; a healthy delivery must not fail on that. Remove after this release.
+      sync: { request: never, windows: wait, leftovers: warn }
       health: application
     rollout: { name: launchway-sandbox-server, namespace: launchway-sandbox }
 
@@ -223,7 +225,9 @@ steps:
           - { file: helm-values/launchway-dev.yaml, set: image.tag,    value: { run: short_sha } }
           - { file: helm-values/launchway-dev.yaml, set: image.digest, value: { output: image.digest } }
           - { file: argocd-apps/launchway-dev.yaml, set: "spec.sources[0].targetRevision", value: { run: sha } }
-      sync: { request: never, windows: wait }
+      # leftovers: warn, because the deploy runner that carries out this release still counts the chart's own
+      # hook objects as leftovers; a healthy delivery must not fail on that. Remove after this release.
+      sync: { request: never, windows: wait, leftovers: warn }
       health: application
     # The Argo Rollout's canary gates (analysis) are the verdict; Launchway watches and records.
     rollout: { name: launchway-dev-server, namespace: launchway-dev }
