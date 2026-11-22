@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // HostedLocal lets a project whose repository is hosted by this same
@@ -52,17 +53,28 @@ func (p *project) fetchHosted(ctx context.Context) (done bool, err error) {
 			if err := os.MkdirAll(filepath.Dir(p.dir), 0o750); err != nil {
 				return err
 			}
-			if _, err := gitRun(ctx, "", nil, "", "clone", "--mirror", "--quiet", gitDir, p.dir); err != nil {
+			if _, err := gitRun(ctx, "", nil, "", "-c", "protocol.ext.allow=always", "clone", "--mirror", "--quiet", localRemote(gitDir), p.dir); err != nil {
 				_ = os.RemoveAll(p.dir)
 				return err
 			}
 			return nil
 		}
-		_, err := gitRun(ctx, p.dir, nil, "", "fetch", "--quiet", "--prune", gitDir, "+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*")
+		_, err := gitRun(ctx, p.dir, nil, "", "-c", "protocol.ext.allow=always", "fetch", "--quiet", "--prune", localRemote(gitDir), "+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*")
 		return err
 	})
 	if err != nil {
 		err = fmt.Errorf("reading %s from this server's own storage: %w", path, err)
 	}
 	return true, err
+}
+
+// localRemote names a repository directory on this machine as a Git remote that
+// needs no shell. Given a plain path, git starts "git-upload-pack '<path>'"
+// through /bin/sh, and the server's image has no shell: every read of a hosted
+// repository failed there with "cannot exec ... No such file or directory".
+// The ext transport runs the command itself, split on spaces, with "% " for a
+// space and "%%" for a percent sign in an argument.
+func localRemote(gitDir string) string {
+	esc := strings.NewReplacer("%", "%%", " ", "% ").Replace(gitDir)
+	return "ext::git-upload-pack " + esc
 }
