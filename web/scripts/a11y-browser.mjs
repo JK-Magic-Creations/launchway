@@ -34,6 +34,8 @@ const PAGES = [
   ["Build caches", "/projects/shop-api/caches"], ["Configuration of a project", "/projects/shop-api/configuration"],
   ["Pipeline templates", "/library/starters"], ["Depot", "/depot/store"], ["Switches", "/projects/shop-api/toggles"],
   ["Tests of a project", "/projects/shop-api/tests"],
+  ["API tokens", "/settings/access/keys"], ["Repository settings", "/repositories/launchway/shop/settings"],
+  ["Who can reach a repository", "/repositories/launchway/shop/settings?tab=reach"],
   ["Squadrons", "/units"], ["A Squadron", "/units/shop"], ["An empty Squadron", "/units/archive"], ["Add a Squadron", "/units/new"],
   ["Add a Flight", "/units/shop/projects/new"], ["Choose a Squadron", "/projects/new"], ["Organize into Squadrons", "/units/organize"],
   ["Sign-in", "/signin", { signedOut: true }],
