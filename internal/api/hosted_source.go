@@ -109,7 +109,7 @@ func (s *Server) sourceJobFor(ctx context.Context, job *engine.Job) {
 	}
 	tok, err := s.Forge.RunTokens.MintForRun(repo.ID, job.RunID, hostedSourceTTL)
 	if err != nil {
-		s.Log.Error("making a credential for a run's own repository", "err", err)
+		s.Log.Error("making a credential for the repository of a Sortie", "err", err)
 		return
 	}
 	job.Source.Hosted, job.Source.Credential = repo.Path, tok

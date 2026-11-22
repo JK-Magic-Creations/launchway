@@ -732,6 +732,20 @@ Copies every stored Cargo file not yet recorded in the target store from the sou
 
 S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` forms). To move with servers running: copy, set `artifacts.store` to the new store and roll the servers, copy again for what servers still on the old store kept, and optionally copy with `--delete-source` once no server uses the old one.
 
+## launchway service-accounts
+
+Service accounts are non-person accounts that own tokens for automation ([Credentials for machines](../guide/credentials-for-machines.md)). They need an administrator's credential.
+
+```bash
+launchway service-accounts list [--json]
+launchway service-accounts create NAME [--role viewer|operator|admin] [--description D]
+launchway service-accounts update NAME [--role R] [--disabled=true|false]
+launchway service-accounts delete NAME
+launchway service-accounts token NAME --name N [--repo OWNER/NAME|OWNER/*]... [--access read|write] [--from CIDR]... [--days N] [--role R]
+```
+
+`token` prints the token once. `--repo` with `--access` limits it to those hosted repositories and nothing else; `--from` limits the addresses it may be used from. An administrator's API token makes service-account tokens only where `auth.tokens.service_accounts_from_tokens` is on.
+
 ## launchway mcp
 
 ```text

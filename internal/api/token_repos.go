@@ -23,6 +23,19 @@ const (
 	accessWrite    = "write"
 )
 
+// ProxySettings are what the configuration says about proxies in front of the server and about
+// who may make tokens for service accounts.
+type ProxySettings struct {
+	// TrustedProxies, when not empty, are the only peers whose forwarding headers are believed
+	// (server.trusted_proxies); ClientAddrHeader is the single-address header such a proxy sets
+	// (server.client_address_header), X-Forwarded-For when empty.
+	TrustedProxies   []netip.Prefix
+	ClientAddrHeader string
+	// AdminTokenMakesServiceTokens lets an administrator's API token, not only an administrator's
+	// signed-in session, make a service account's tokens (auth.tokens.service_accounts_from_tokens).
+	AdminTokenMakesServiceTokens bool
+}
+
 // repoNameRE is what an owner or a repository name looks like (the forge's own rule).
 var repoNameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}$`)
 

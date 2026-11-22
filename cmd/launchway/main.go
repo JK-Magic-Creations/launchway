@@ -284,16 +284,8 @@ func cmdServer(args []string) error {
 	api.SetRootKeySource(guideRootKey{su.rootHolder}) // the setup guide's guarded recovery copy reads the unlocked holder
 	forge.SetSealedReader(func(name string) (string, error) { return secretsSvc.ConnectionToken(context.Background(), name) })
 	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
-	trustedProxies, err := cfg.Server.TrustedProxyPrefixes()
-	if err != nil {
-		return err
-	}
-	if cfg.Server.TrustProxy && len(trustedProxies) == 0 {
-		log.Warn("server.trust_proxy is on without server.trusted_proxies: the forwarding headers are believed from every address that reaches this server; list your proxies in server.trusted_proxies so that only they are believed")
-	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
-		TrustProxy: cfg.Server.TrustProxy, TrustedProxies: trustedProxies, ClientAddrHeader: cfg.Server.ClientAddressHeader,
-		AdminTokenMakesServiceTokens: cfg.Auth.Tokens.ServiceAccountsFromTokens, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
 	setDebrief(srv, cfg, log)
 	if store.Available() {
 		srv.Settings = store
@@ -981,4 +973,19 @@ func logChartNotice(log *slog.Logger) {
 	if m := config.NetworkPolicyNotice(os.Getenv); m != "" {
 		log.Info(m)
 	}
+}
+
+// setProxy gives the server what the configuration says about proxies in front of it and about who may make
+// service accounts' tokens, and warns when the older trust_proxy is on without server.trusted_proxies.
+func setProxy(srv *api.Server, cfg *config.Config, log *slog.Logger) error {
+	ranges, err := cfg.Server.TrustedProxyPrefixes()
+	if err != nil {
+		return err
+	}
+	if cfg.Server.TrustProxy && len(ranges) == 0 {
+		log.Warn("server.trust_proxy is on without server.trusted_proxies: the forwarding headers are believed from every address that reaches this server; list your proxies in server.trusted_proxies so that only they are believed")
+	}
+	srv.TrustedProxies, srv.ClientAddrHeader = ranges, cfg.Server.ClientAddressHeader
+	srv.AdminTokenMakesServiceTokens = cfg.Auth.Tokens.ServiceAccountsFromTokens
+	return nil
 }

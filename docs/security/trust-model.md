@@ -50,7 +50,7 @@ flowchart TB
 | # | Crossing | What is checked |
 |---|---|---|
 | 1 | Browser to server | Session from OpenID Connect sign-in (PKCE, state, nonce, ID token signature, issuer, audience, expiry). Sessions are random 256-bit values stored only as SHA-256 hashes. Changes need the `X-Launchway-CSRF` header and a matching `Origin`. Pages cannot be framed by other sites. |
-| 2 | Scripts to server | API tokens that always expire, stored as SHA-256 hashes, optionally limited to a role and to Flights (codebase). 20 failed attempts a minute from one address are refused with `429`. |
+| 2 | Scripts to server | API tokens that always expire, stored as SHA-256 hashes, optionally limited to a role, to Flights (codebase), to named hosted repositories (and then to nothing else) and to source address ranges; owned by a person or by a service account; named in the Logbook on every request. 20 failed attempts a minute from one address are refused with `429`. |
 | 3 | Webhooks | Git host signatures (`X-Hub-Signature-256`, `X-Gitea-Signature`, `X-Forgejo-Signature`, `X-Gitlab-Token`); run triggers by HMAC with a timestamp (replay refused) or a token. Every caller that fails gets the same `404`, and is recorded. |
 | 4 | Server to identity provider | Any OpenID Connect provider through discovery. Roles come from the groups it reports. |
 | 5 | Build Station (runner) to server | The shared Station token. Stations connect out; the server never connects to a Station. |

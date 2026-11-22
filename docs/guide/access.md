@@ -104,7 +104,14 @@ revoked at any time. It may be limited further:
   of an admin reads and changes nothing;
 - to **Flights**, by names or patterns such as `pay-*`: elsewhere it is as if the Flights did not
   exist. A token limited to Flights is never an admin of every Flight, so it cannot read the
-  audit trail.
+  audit trail;
+- to **repositories** hosted here (`acme/shop`, or `acme/*`) with `read` or `write` access: such a token
+  can do nothing else;
+- to **source addresses** (CIDR ranges): a request from elsewhere is refused and recorded.
+
+See [Credentials for machines](credentials-for-machines.md) for the rules, for service accounts that
+own tokens for automation, and for which credential suits which job. A token is named in the Logbook
+(`token_id`, `token_name`) on every request it authenticates.
 
 The page shows when and from which address each token was last used. Admins of every Flight also
 see everyone's tokens there and may revoke any (`GET /api/v1/admin/tokens`,
@@ -157,7 +164,7 @@ client wrote before them is never read); with `client_address_header`, the heade
 address, or it is ignored. Without `trusted_proxies` nothing is believed, unless the older
 `server.trust_proxy: true` is set: that believes the headers from every peer (the server logs a warning
 at start), which is right only if clients cannot reach Launchway except through the proxy. Prefer
-`trusted_proxies`. The client address is what the audit trail, the failed-sign-in limit and a token's
+`trusted_proxies`. The client address is what the Logbook, the failed-sign-in limit and a token's
 source-address limit use. The proxy must pass the `Host` header through unchanged, and must not buffer
 `/api/v1/stream`. Cookies are also `Secure` whenever `redirect_url` starts with `https://`.
 

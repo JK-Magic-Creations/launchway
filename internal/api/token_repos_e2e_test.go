@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 )
@@ -370,4 +371,33 @@ func gitStatusBearer(e *authEnv, tok, path, svc string) int {
 	}
 	resp.Body.Close()
 	return resp.StatusCode
+}
+
+// The two kinds of limit combine by the most restrictive: a viewer role cap on a
+// write token makes it read-only; and no repository token is anything but a
+// reader or operator of its repositories, whatever the checks are asked.
+func TestRepoTokenCombinesWithRoleAndAsksNothingElse(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/shop")
+	_, tok := repoToken(t, e, `{"name":"capped","role":"viewer","repositories":["acme/shop"],"repo_access":"write"}`)
+	if got := gitStatus(e, tok, "/acme/shop", "git-upload-pack"); got != 200 {
+		t.Errorf("reading: %d", got)
+	}
+	if got := gitStatus(e, tok, "/acme/shop", "git-receive-pack"); got != 403 {
+		t.Errorf("a write token with a viewer cap pushing: %d, want 403", got)
+	}
+	id := &identity{User: "ada", Groups: []string{"admins"}, Via: viaToken, repoAccess: "write", repos: []engine.TokenRepo{{Pattern: "acme/*"}}}
+	for _, c := range []struct {
+		a       auth.Action
+		project string
+		want    bool
+	}{
+		{auth.Read, "acme/shop", true}, {auth.Operate, "acme/shop", true}, {auth.AdministerProject, "acme/shop", false},
+		{auth.Read, "acme-other/x", false}, {auth.Read, "acme", false}, {auth.Read, "pay-api", false}, {auth.Read, "", false},
+		{auth.ReadAny, "", false}, {auth.Administer, "", false}, {auth.RunDraft, "pay-api", false}, {auth.RunDraft, "acme/shop", false},
+	} {
+		if got := e.api.authorize(id, c.a, c.project); got != c.want {
+			t.Errorf("authorize(%v, %q) = %v, want %v", c.a, c.project, got, c.want)
+		}
+	}
 }

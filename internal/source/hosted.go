@@ -49,7 +49,7 @@ func (p *project) fetchHosted(ctx context.Context) (done bool, err error) {
 	err = h.WithCache(ctx, id, func(gitDir string) error {
 		if _, statErr := os.Stat(filepath.Join(p.dir, "HEAD")); statErr != nil {
 			_ = os.RemoveAll(p.dir)
-			if err := os.MkdirAll(filepath.Dir(p.dir), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(p.dir), 0o750); err != nil {
 				return err
 			}
 			if _, err := gitRun(ctx, "", nil, "", "clone", "--mirror", "--quiet", gitDir, p.dir); err != nil {

@@ -112,6 +112,7 @@
         "guide/notifications",
         "guide/ai",
         "guide/git-over-ssh",
+        "guide/credentials-for-machines",
         "guide/browsing-code",
         "guide/searching-code",
         "guide/editing-in-the-browser",

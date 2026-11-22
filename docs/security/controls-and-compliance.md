@@ -32,7 +32,7 @@ data never reach Launchway:
 |---|---|---|
 | Unique user identity | Every person signs in through your OpenID Connect provider; actions are recorded under their user name | [Sign-in and access](../guide/access.md) |
 | Multi-factor authentication | Delegated to your identity provider: require it there | [OIDC and roles](../howto/oidc-and-roles.md) |
-| Least privilege | Viewer, operator and admin roles per Flight (codebase), limited to Airfields (environments) where needed; API tokens limited to a role and Flights | [Roles and permissions](../reference/roles.md) |
+| Least privilege | Viewer, operator and admin roles per Flight (codebase), limited to Airfields (environments) where needed; API tokens limited to a role, Flights, named repositories and source addresses; service accounts for automation | [Roles and permissions](../reference/roles.md) |
 | Session management | Idle timeout and maximum session lifetime; sign-out ends the session on every server | [Sign-in and access](../guide/access.md#sessions) |
 | Credential handling | Secrets resolved by Stations only, masked in logs, never stored by the server; sessions and tokens stored as hashes; tokens always expire | [Secrets](../guide/secrets.md) |
 | Encryption of stored secrets | The server's own secrets (signing and sealing keys, the shared Station token, SSH host keys, webhook secrets) are sealed with AES-256-GCM under a root key held outside the database, each bound to its row; rotation and root key replacement online; a database dump alone is useless without the key. Cargo, logs, caches and Git packs are not yet encrypted by Launchway | [Encryption at rest](../guide/encryption-at-rest.md) |
