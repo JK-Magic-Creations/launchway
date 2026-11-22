@@ -128,6 +128,9 @@ type ProjectStatus struct {
 type project struct {
 	Project
 	dir string
+	// hosted says whether an address is one of this installation's own
+	// repositories, which are then read from its storage (see hosted.go).
+	hosted func() HostedLocal
 	// The mirror outlives a change of the project's settings: the new
 	// project shares it with the old one.
 	*mirror
@@ -160,6 +163,8 @@ type Manager struct {
 	// forge is the link to the forge's connection and repository rows (see
 	// forgelink.go); empty until Start has recorded the projects.
 	hosted forgeLink
+	// hostedPtr reads this installation's own repositories from its storage (hosted.go).
+	hostedPtr atomic.Pointer[hostedHolder]
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
@@ -257,7 +262,7 @@ func (m *Manager) build(projects []Project, libraries []Library, old *catalog) (
 				return nil, err
 			}
 		}
-		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}}
+		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal}
 		if old != nil {
 			if was := old.projects[p.Name]; was != nil && was.URL == p.URL {
 				np.mirror = was.mirror
@@ -710,6 +715,10 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 	p.stateMu.Unlock()
 	if recent {
 		return nil
+	}
+	if done, err := p.fetchHosted(ctx); done {
+		p.setErr(err)
+		return err
 	}
 	env, err := remoteEnv(ctx, p.URL)
 	if err != nil {

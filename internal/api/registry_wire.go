@@ -241,6 +241,7 @@ func (s *Server) mintRegistryCredential(project, run, event string, ttl time.Dur
 // the built-in registry added.
 func (s *Server) writeLeased(w http.ResponseWriter, r *http.Request, job *engine.Job) {
 	s.registryJobFor(r, job)
+	s.sourceJobFor(r.Context(), job)
 	writeJSON(w, http.StatusOK, job)
 }
 
