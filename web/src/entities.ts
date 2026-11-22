@@ -24,8 +24,8 @@ export function entityHref(e: EntityRef): string {
     case "environment": return `/deployments/environments/${enc(e.id ?? e.name)}`;
     case "application": return `/deployments/applications/${enc(e.id ?? e.name)}`;
     case "template": return `/library/templates/${enc(e.library ?? "")}/${enc(e.id ?? e.name)}`;
-    case "image": return `/images/digest/${enc(e.id ?? e.name)}`;
-    case "component": return `/images/components?name=${enc(e.id ?? e.name)}`;
+    case "image": return `/depot/digest/${enc(e.id ?? e.name)}`;
+    case "component": return `/depot/components?name=${enc(e.id ?? e.name)}`;
     case "runner": return `/settings/runners#${enc(e.id ?? e.name)}`;
   }
 }

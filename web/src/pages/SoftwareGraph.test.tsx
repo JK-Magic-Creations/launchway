@@ -187,3 +187,24 @@ describe("the requirements file written from what the graph says", () => {
     expect(requirementsYaml([])).toContain("version: 1");
   });
 });
+
+describe("a repository the graph has not read yet", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("says so and offers to read it, instead of showing a raw error", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      const u = new URL(url, "http://x");
+      seen.push((init?.method ?? "GET") + " " + u.pathname);
+      const json = (v: unknown, status: number) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json" } });
+      if (u.pathname.startsWith("/api/v1/graph/neighbours")) return json({ error: "no such node: repository:acme/new" }, 404);
+      if (u.pathname === "/api/v1/repositories/acme/new/graph/refresh") return json({ scope: "repository:acme/new" }, 200);
+      return json({}, 404);
+    }));
+    render(<main><RepositoryGraphPage path="acme/new" /></main>);
+    expect(await screen.findByText("The graph has not read this repository yet")).toBeTruthy();
+    expect(screen.queryByText(/no such node/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Read this repository now" }));
+    expect(await screen.findByText(/Reload this page/)).toBeTruthy();
+    expect(seen).toContain("POST /api/v1/repositories/acme/new/graph/refresh");
+  });
+});

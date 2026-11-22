@@ -25,11 +25,11 @@ export function LibraryPage() {
             <span>{t === 1 ? "library of templates" : "libraries of templates"}<br /><span className="faint">Ready-made pipelines, each in Git and pinned by version.</span></span>
           </Link>
         )}
-        <Link href="/images" className="guided-tile">
+        <Link href="/depot" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">▣</span>
           <span>Images<br /><span className="faint">{terms().say("What your {runs} built, found by digest, repository or project.")}</span></span>
         </Link>
-        <Link href="/images/components" className="guided-tile">
+        <Link href="/depot/components" className="guided-tile">
           <span className="guided-tile-n" aria-hidden="true">◫</span>
           <span>Components<br /><span className="faint">{terms().say("What is inside your software, found by name across every {run}.")}</span></span>
         </Link>

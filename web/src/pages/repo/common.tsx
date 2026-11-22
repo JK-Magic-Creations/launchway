@@ -4,8 +4,9 @@ import { ago } from "../../format";
 import { forgeApi, type HostedRepo } from "../../forgeApi";
 import { ErrorBox, Link } from "../../components/ui";
 import { PageHead } from "../../kit/layout";
-import { codeHref, commitsHref, searchHref, type RefInfo, browseApi } from "../../browseApi";
-import { navigate, onLink } from "../../router";
+import { codeHref, type RefInfo, browseApi } from "../../browseApi";
+import { onLink } from "../../router";
+import { RepoTabs, type RepoTabId } from "../../components/RepoTabs";
 import { ActionPicture, type ActionIcon } from "./icons";
 import "../../styles/code.css";
 
@@ -84,23 +85,16 @@ export function IconAction({ icon, label, href, download, onClick }: { icon: Act
   return <button type="button" className="btn btn-sm btn-icon" onClick={onClick} aria-label={label} title={label}>{inner}</button>;
 }
 
-export type RepoTab = "code" | "commits" | "branches" | "tags" | "search" | "pulls" | "settings";
+export type RepoTab = RepoTabId;
 
 /** The frame every page of a repository's code has: its name, the tabs, and what to say about it. */
 export function RepoFrame({ path, tab, title, sentence, actions, error, children }: {
   path: string; tab: RepoTab; title: ReactNode; sentence?: ReactNode; actions?: ReactNode; error?: unknown; children: ReactNode;
 }) {
-  const tabs: [RepoTab, string, string][] = [
-    ["code", "Code", codeHref(path)], ["commits", "Commits", commitsHref(path)], ["branches", "Branches", `/repositories/${path}/branches`], ["tags", "Tags", `/repositories/${path}/tags`],
-    ["search", "Search", searchHref(path)], ["pulls", "Pull requests", `/repositories/${path}/pulls`], ["settings", "Settings", `/repositories/${path}`],
-  ];
   return (
     <div className="page code-page">
       <PageHead eyebrow={path} title={title} sentence={sentence} actions={actions} />
-      <nav className="tabs" aria-label="Repository">
-        {tabs.map(([id, label, href]) => <a key={id} href={href} className={"tab" + (tab === id ? " tab-on" : "")} aria-current={tab === id ? "page" : undefined}
-          onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); navigate(href); } }}>{label}</a>)}
-      </nav>
+      <RepoTabs path={path} on={tab} />
       <ErrorBox error={error} />
       {children}
     </div>

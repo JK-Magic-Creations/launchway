@@ -29,7 +29,7 @@ export function exploreTiles(p: ExploreProps): Tile[] {
       state: unreachable ? <><Status state="warn" /> {unreachable} cannot be reached</> : p.projects.length ? <><Status state="ok" /> All reachable</> : "None yet" },
     { key: "pipelines", icon: "graph", label: "Pipelines", n: p.projects.length, unit: p.projects.length === 1 ? "pipeline" : "pipelines", href: "/pipelines",
       state: failing ? <><Status state="bad" /> {failing} stopped</> : p.projects.some((x) => x.last_run) ? <><Status state="ok" /> Last runs are fine</> : terms().say("No {runs} yet") },
-    { key: "images", icon: "package", label: "Images", n: p.images ?? "…", unit: p.images === 1 ? "image" : "images", href: "/images",
+    { key: "images", icon: "package", label: "Images", n: p.images ?? "…", unit: p.images === 1 ? "image" : "images", href: "/depot",
       state: p.images === null ? "Counting" : p.images === 0 ? "Nothing built yet" : terms().say("Built by your {runs}") },
     { key: "deployments", icon: "deploy", label: terms().say("{Deploys}"), n: p.applications.length || p.environments.length, unit: p.applications.length ? (p.applications.length === 1 ? "application" : "applications") : terms().say(p.environments.length === 1 ? "{environment}" : "{environments}"), href: "/deployments",
       state: look ? <><Status state="warn" /> {look} need a look</> : p.environments.length ? <><Status state="ok" /> All clear</> : "No places yet" },

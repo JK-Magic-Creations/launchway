@@ -1,13 +1,16 @@
 /* A table that scrolls sideways is a region the keyboard can reach (axe: scrollable-region-focusable), so its tabindex is deliberate. */
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ErrorBox, Link, Mono } from "../components/ui";
+import { ApiError } from "../api";
+import { RepoTabs } from "../components/RepoTabs";
+import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { Button, PageHead, Sheet } from "../kit/layout";
 import "../styles/softgraph.css";
 import {
   graphApi, KINDS, KIND_WORDS, refText, sameRef,
   type Advice, type Fact, type GEdge, type GNode, type Impact, type Kind, type Needs, type Order, type Override, type Path, type Placement, type Rebuild, type Ref, type Step, type Summary, type Truncation, type Where,
 } from "../softgraph/api";
+import { bool, oneOf, useUrlState } from "../urlState";
 import { requirementsYaml } from "../softgraph/needsYaml";
 
 const Canvas = lazy(() => import("../softgraph/Canvas"));
@@ -34,6 +37,27 @@ function Truncated({ t }: { t?: Truncation }) {
   return <p className="sub sg-trunc" role="status"><strong>Not the whole answer.</strong> {TRUNC[t.truncated_reason ?? ""] ?? "It was cut short."}</p>;
 }
 
+/** A repository the graph has not read yet answers "no such node": that is not a failure, it says what to do. */
+function FocusError({ error, focus }: { error: unknown; focus: string }) {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  if (!error) return null;
+  const repo = focus.startsWith("repository:") ? focus.slice("repository:".length) : "";
+  if (!(error instanceof ApiError) || error.status !== 404 || !repo) return <ErrorBox error={error} />;
+  const read = () => { setBusy(true); setErr(null); graphApi.refresh(repo).then(() => setDone(true)).catch(setErr).finally(() => setBusy(false)); };
+  return (
+    <Empty title="The graph has not read this repository yet">
+      It is added when the repository is pushed to or a scan runs. You can read it now: Launchway looks at its manifests, Dockerfiles and requirements and adds what it finds.
+      {" "}
+      {done
+        ? <strong role="status">Read. Reload this page to see the result.</strong>
+        : <Button kind="pri" disabled={busy} onClick={read}>{busy ? "Reading…" : "Read this repository now"}</Button>}
+      <ErrorBox error={err} />
+    </Empty>
+  );
+}
+
 function WhyList({ steps }: { steps?: Step[] }) {
   if (!steps || steps.length === 0) return <p className="faint">This is the thing itself.</p>;
   return (
@@ -57,6 +81,7 @@ export function RepositoryGraphPage({ path }: { path: string }) {
     <div className="page sg">
       <PageHead eyebrow={<Link href={`/repositories/${path}`}>{path}</Link>} title="Graph"
         sentence="What this repository contains, what it depends on, what depends on it, what is built from it, what it needs and where it runs. Only what you may read is shown." />
+      <RepoTabs path={path} on="graph" />
       <Workspace repo={path} initial={`repository:${path}`} />
     </div>
   );
@@ -83,8 +108,12 @@ export function GraphPage() {
 }
 
 function Workspace({ repo, initial }: { repo?: string; initial?: string }) {
-  const [view, setView] = useState<View>("explore");
-  const [focus, setFocus] = useState<string | null>(initial ?? null);
+  // The view and the focus are in the address (?view=impact&focus=repository:acme/shop), so a link opens the same picture and Back undoes a click.
+  const [view, setViewIn] = useUrlState<View>("view", "explore", oneOf(...VIEWS.map((v) => v.id)));
+  const [focusIn, setFocusIn] = useUrlState("focus", initial ?? "");
+  const focus: string | null = focusIn || null;
+  const setView = (v: View) => setViewIn(v, "push");
+  const setFocus = (f: string) => setFocusIn(f, "push");
   const focusRef = useMemo<Ref | null>(() => { const i = focus?.indexOf(":") ?? -1; return focus && i > 0 ? { kind: focus.slice(0, i) as Kind, key: focus.slice(i + 1) } : null; }, [focus]);
   const repoPath = repo ?? (focusRef?.kind === "repository" ? focusRef.key : undefined);
   return (
@@ -193,8 +222,10 @@ function relationOf(focus: string, node: GNode, edges: GEdge[]): string {
 
 function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => void }) {
   const { known, error, busy, expanded, expand, truncated } = useExplore(focus);
-  const [kinds, setKinds] = useState<Set<Kind>>(new Set());
-  const [picture, setPicture] = useState(false);
+  const [kindText, setKindText] = useUrlState("kinds", "");
+  const kinds = useMemo(() => new Set(kindText.split(",").filter((k): k is Kind => (KINDS as string[]).includes(k))), [kindText]);
+  const setKinds = (f: (s: Set<Kind>) => Set<Kind>) => setKindText([...f(kinds)].join(","));
+  const [picture, setPicture] = useUrlState("picture", false, bool);
   const [path, setPath] = useState<Path | null>(null);
   const [pathError, setPathError] = useState<unknown>(null);
   const [selected, setSelected] = useState<string | undefined>();
@@ -209,7 +240,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
   const showPath = (to: string) => { setPathError(null); graphApi.path(focus, to).then(setPath).catch(setPathError); };
   return (
     <>
-      <ErrorBox error={error} />
+      <FocusError error={error} focus={focus} />
       <Sheet title="Filter" pad>
         <fieldset className="sg-kinds">
           <legend>Show only these kinds (none ticked shows all)</legend>
@@ -219,7 +250,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
         </fieldset>
         <p className="sub" role="status">{busy ? "Reading the graph…" : `${shown.length} of ${all.length} nodes shown. Expand a row to read what is next to it.`}</p>
         <Truncated t={truncated} />
-        <Button aria-pressed={picture} onClick={() => setPicture((p) => !p)}>{picture ? "Hide the picture" : "Show as a picture"}</Button>
+        <Button aria-pressed={picture} onClick={() => setPicture(!picture)}>{picture ? "Hide the picture" : "Show as a picture"}</Button>
       </Sheet>
       {picture && (
         <Sheet title="Picture" pad>
@@ -273,7 +304,7 @@ function ImpactView({ focus }: { focus: string }) {
   useEffect(() => { graphApi.impact(focus).then(setImpact).catch(setError); }, [focus]);
   return (
     <>
-      <ErrorBox error={error} />
+      <FocusError error={error} focus={focus} />
       {!impact && !error && <p className="faint" role="status">Working out what a change reaches…</p>}
       {impact && (
         <>

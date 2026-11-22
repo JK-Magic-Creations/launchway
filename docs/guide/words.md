@@ -69,7 +69,7 @@ Three rules keep this safe:
 | `home` | **Tower** | Home | The first page: what needs you now, and a map of everything Launchway holds. |
 | `monitoring` | **Radar** | Monitoring / Monitoring | Health, metrics and the map of how services talk to each other. |
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. |
-| `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. |
+| `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. It is also the name of the area that holds them with the images your pipelines build and their components: Images, Components and the built-in store are its tabs. |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. |
 | `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks every repository gets without asking, and the gates that block a change that introduces a serious problem. |
 | `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security checks, then one verdict on what the change introduces. |

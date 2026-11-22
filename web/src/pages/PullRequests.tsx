@@ -1,4 +1,6 @@
+import { RepoTabs } from "../components/RepoTabs";
 import { useCallback, useEffect, useState } from "react";
+import { oneOf, useUrlState } from "../urlState";
 import { ago } from "../format";
 import { navigate } from "../router";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -26,8 +28,8 @@ const FILTERS: { id: string; label: string; query: (me: string) => Record<string
 
 /** The pull requests of a hosted repository, with filters. */
 export function PullRequestsPage({ path }: { path: string }) {
-  const [filter, setFilter] = useState("open");
-  const [label, setLabel] = useState("");
+  const [filter, setFilter] = useUrlState("filter", "open", oneOf(...FILTERS.map((f) => f.id)));
+  const [label, setLabel] = useUrlState("label", "");
   const [items, setItems] = useState<Pull[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const load = useCallback(() => {
@@ -39,14 +41,10 @@ export function PullRequestsPage({ path }: { path: string }) {
     <div className="page">
       <PageHead title={`Pull requests of ${path}`} sentence="Changes on their way from one branch to another: review them, see what they need, merge them."
         actions={<Button kind="pri" onClick={() => navigate(pullHref(path, "new"))}>New pull request</Button>} />
-      <nav className="tabs" aria-label="Repository">
-        <a href={`/repositories/${path}`} className="tab">Overview</a>
-        <a href={pullHref(path)} className="tab tab-on" aria-current="page">Pull requests</a>
-        <a href={`/repositories/${path}/mirrors`} className="tab">Mirrors</a>
-      </nav>
+      <RepoTabs path={path} on="pulls" />
       <div className="seg" role="group" aria-label="Filter pull requests">
         {FILTERS.map((f) => (
-          <button key={f.id} type="button" className={"btn btn-sm" + (filter === f.id ? " btn-on" : "")} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label}</button>
+          <button key={f.id} type="button" className={"btn btn-sm" + (filter === f.id ? " btn-on" : "")} aria-pressed={filter === f.id} onClick={() => setFilter(f.id, "push")}>{f.label}</button>
         ))}
         <label className="pr-label-filter"><span className="sr-only">Label</span><input value={label} placeholder="Label" aria-label="Filter by label" onChange={(e) => setLabel(e.target.value)} /></label>
       </div>

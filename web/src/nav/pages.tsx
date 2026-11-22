@@ -53,7 +53,6 @@ const PipelinesPage = lz(() => import("../pages/PipelinesList"), "PipelinesPage"
 const LearnPage = lz(() => import("../learn/Learn"), "LearnRoot");
 const KitPage = lz(() => import("../pages/Kit"), "KitPage");
 const ComingPage = lz(() => import("../shell/Coming"), "ComingPage");
-const ImagesSwitch = lz(() => import("../pages/ImagesSwitch"), "ImagesSwitch");
 const SettingsPage = lz(() => import("../pages/SettingsHome"), "SettingsHomePage");
 const AccessPage = lz(() => import("../pages/Settings"), "AccessPage");
 const RunnersPage = lz(() => import("../pages/Runners"), "RunnersPage");
@@ -110,6 +109,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/repositories/:owner/:name/pulls": return <PullRequestsPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/pulls/new": return <NewPullRequestPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/pulls/:number": return <PullRequestPage key={p.owner + "/" + p.name + "#" + p.number} path={p.owner + "/" + p.name} number={Number(p.number)} />;
+    case "/repositories/:owner/:name/settings": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
     case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
     case "/repositories/:owner/:name/dependencies": return <DependenciesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/graph": return <RepositoryGraphPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
@@ -131,15 +131,15 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/library/starters": return <StartersPage />;
     case "/library/templates": return <TemplatesPage />;
     case "/library/templates/:library/:name": return <TemplatePage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
-    case "/images": return <><ImagesSwitch on="images" /><ImagesPage /></>;
-    case "/images/components": return <><ImagesSwitch on="components" /><ComponentsPage /></>;
-    case "/images/registry": return <><ImagesSwitch on="registry" /><RegistryPage /></>;
-    case "/images/registry/:project": return <><ImagesSwitch on="registry" /><RegistryPage key={p.project} project={p.project} /></>;
-    case "/images/digest/:digest": return <ImageDetailPage key={p.digest} digest={p.digest} />;
+    case "/depot": return <ImagesPage />;
+    case "/depot/components": return <ComponentsPage />;
+    case "/depot/store": return <RegistryPage />;
+    case "/depot/store/:project": return <RegistryPage key={p.project} project={p.project} />;
+    case "/depot/digest/:digest": return <ImageDetailPage key={p.digest} digest={p.digest} />;
     case "/pipelines": return <PipelinesPage />;
     case "/kit": return <KitPage />;
     case "/learn": case "/learn/:a": case "/learn/:a/:b": return <LearnPage path={path} />;
-    case "/code/:page": case "/images/:page": case "/traffic": case "/traffic/:page": case "/changes": case "/changes/:page":
+    case "/code/:page": case "/depot/:page": case "/traffic": case "/traffic/:page": case "/changes": case "/changes/:page":
     case "/deployments/hosts": case "/deployments/machine-images":
       return <ComingPage path={path.length > 1 ? path.replace(/\/+$/, "") : path} />;
     case "/settings": return <SettingsPage />;

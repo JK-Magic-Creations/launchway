@@ -5,7 +5,7 @@ import { launch, server } from "./a11y-lib.mjs";
 
 const { url, runs } = server();
 const PAGES = ["/", "/activity", `/runs/${runs.RUN_FAILED}`, `/runs/${runs.RUN_OK}`, `/runs/${runs.RUN_WAITING}`, "/activity/approvals", "/pipelines",
-  "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/deployments", "/images", "/library", "/settings", "/settings/runners",
+  "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/deployments", "/depot", "/library", "/settings", "/settings/runners",
   "/settings/access", "/settings/variables", "/learn", "/learn/concepts/launch-line", "/config", "/kit", "/signin"];
 
 const browser = await launch();
