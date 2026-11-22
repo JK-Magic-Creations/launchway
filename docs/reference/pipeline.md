@@ -110,6 +110,8 @@ lists every variable a step receives.
 | `skip` | list of stage names | none | With `uses`: stages of the Flight plan to leave out; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `extend` | list | none | With `uses`: steps to add before or after a stage |
 | `replace` | mapping | none | With `uses`: stages to take over wholesale |
+| `stages` | mapping | none | With `uses`: settings of single stages by name, such as `stages: { test: { resources: { memory: 6Gi } } }`; see [Changing what a template runs](#changing-what-a-template-runs) |
+| `resources` | mapping | none | With `uses`: the resources of every stage that runs a script and sets none of its own; see [Resources](#resources) |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
 `$LAUNCHWAY_OUTPUTS` instead) and `runs_on` (use [`runner`](#runner)). Names other tools use for
@@ -356,6 +358,25 @@ secrets.
 
 See [Templates](#template-files) and [Reuse steps with library templates](../tutorials/library-templates.md).
 
+### Libraries that use libraries
+
+A template of a library may use the starters that ship with Launchway, written `uses: launchway/go-test`, with no entry anywhere. It may also use
+templates of other libraries, which the library names in a file at its root, `library.yaml`, each at a version it pins:
+
+```yaml
+# library.yaml, at the root of the library
+requires:
+  tools: { repo: shared-tools, version: v2.1.0 }
+```
+
+`tools` is what the library's templates call it (`uses: tools/lint`); `repo` is a library the server's configuration allows, as in a pipeline's `libraries`, and `version` is
+a **tag or a full commit id**, never a branch: what a library pins does not move by itself, and a version that resolves to a branch is refused. When a Sortie is created each
+requirement is resolved to a commit (and what it requires in turn, at most 4 levels down; libraries that require each other in a circle are refused), and the libraries it
+resolved are listed with the pipeline's own, with `required_by` naming the library that asked for each, in `launchway validate --resolved` and in the Sortie's record, so a
+resume and every Station use exactly those files. A step of a required library finds that library's scripts at `$LAUNCHWAY_LIB`. Offline, `--library tools=DIRECTORY` gives the
+directory of a required library, by the name the requiring library calls it. A template that uses a template of a library its own library does not require is refused,
+naming the ones it does.
+
 ## Containers
 
 `containers` names images once, so steps can use them by name, and declares services that run
@@ -365,8 +386,13 @@ and start with each step's pod (a service's state does not carry on to the next 
 
 **A service for more than one step.** Where each step has a pod of its own, a service is started afresh with every
 step, so a database that one step migrated is empty for the next. `launchway validate` warns (code `service-per-step`)
-about a pipeline that has a service and more than one step that runs in a container, and names the steps. What to do:
-make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
+about a pipeline whose service is started for more than one step, and names the steps. **Say which steps need it:** a step that
+writes `services: [db]` starts only those services, `services: []` starts none, and a step that writes nothing (or `services: all`)
+starts every service, as before; the warning names the steps that still start it. A Flight plan stage takes the same key under
+[`stages`](#changing-what-a-template-runs), and the built-in language plans (Go, Node, Python) start the services of the pipeline for
+their `test` stage only. A name that is not a service of the pipeline is refused, with the services it has. The Docker executor
+and a Kubernetes Station set to `kubernetes.pod: per-run` make the services once for the Sortie, so there every step still sees
+them. Other ways: make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
 carry what the later steps need as [Cargo](../guide/artifacts.md) or [outputs](#outputs). Other executors, and a Station set to
 `kubernetes.pod: per-run`, keep one service for the whole Sortie, so the warning is about where the pipeline may run, not a mistake in it.
 
@@ -480,6 +506,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `secrets` | mapping | none | Environment variables whose values a Station looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
+| `services` | list of container names, or `all` | `all` | The service containers (`service: true` under [`containers`](#containers)) that run beside this step; `[]` for none. Where each step has a pod of its own, only these are started with it |
 | `runner` | mapping | the Sortie's Station | A Station and a workspace of this step's own; see [A Station for one step](#a-runner-for-one-step) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Cargo (artifacts)](#artifacts) |
 | `fetch` | list | none | Cargo of earlier steps to put in the workspace first; see [Fetch](#fetch) |
@@ -565,7 +592,7 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 <!-- keys: kind-uses -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `uses` | `library/template` | required | The library, as named under `libraries`, and the template. In a template, a template of the same library is written by name alone |
+| `uses` | `library/template` | required | The library, as named under `libraries`, and the template. In a template, a template of the same library is written by name alone, a starter as `launchway/<name>`, and a template of a library the library [requires](#libraries-that-use-libraries) as `<name>/<template>` |
 | `with` | mapping | none | Values for the template's parameters, by name; at most 50, each at most 4096 bytes. A value is text, a YAML list (for a `list` parameter), or [`{ input: name }`](#value-forms) with an optional `format` |
 | `for_each` | mapping | none | Repeat the whole template once for each combination; see [For each](#for-each) |
 | `exclude` | list | none | With `for_each`: combinations to leave out |
@@ -577,6 +604,8 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `skip` | list of stage names | none | Stages of the template to leave out; what needed one then needs what it needed. A name the template does not have is refused, with the stages it has |
 | `extend` | list | none | Steps to add next to a stage; see [Changing what a template runs](#changing-what-a-template-runs) |
 | `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
+| `stages` | mapping | none | Settings of single stages, by stage name: `resources` (the stage's CPU and memory, as a step's [`resources`](#resources); what it names wins over the stage's own, key by key) and `services` (the service containers the stage starts, as a step's [`services`](#containers); `all` takes back what the plan switched off). A name the template does not have is refused, with the stages it has; so is a stage that runs no script |
+| `resources` | mapping | none | The [resources](#resources) of every stage of the template that runs a script and sets none of its own (a stage's own keys, and `stages`, win key by key). Reaches stages of templates the template uses as well |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
 `POST /api/v1/validate?project=NAME` expand it. `launchway validate FILE --resolved` shows the steps that result, for the starters that ship with Launchway with no server (`--environment dev --environment prod:protected` and `--project-name NAME` stand in for what a server knows of the Flight, `--variable NAME=VALUE` for variables).
@@ -1229,8 +1258,20 @@ default for its kind, which an administrator keeps in the database (see
 [HTTP API](http-api.md)); the defaults that a new installation starts from are in the table below.
 Only a step that runs a script (kind `step`) takes it: an image step is built by the builder, whose
 memory is set where the builder is deployed, launch, rollout, Return to base, verify and ai steps run in
-the Station itself, and an approval runs nothing. A step that uses a template says nothing of its
-own; the template's steps may.
+the Station itself, and an approval runs nothing. A step that uses a template sets the resources of
+the template's stages in two ways: `resources` on the step is the default of every stage that runs a
+script and writes none of its own, and `stages: { test: { resources: { memory: 6Gi } } }` sets one
+stage's. A key a stage writes itself comes first, then the key under `stages`, then the step's
+`resources`; each key (`cpu`, `cpu_limit`, `memory`, `memory_limit`) is settled on its own.
+
+```yaml
+steps:
+  ci:
+    uses: launchway/go-service
+    resources: { memory: 3Gi }                       # every script stage
+    stages:
+      test: { resources: { cpu: 4, memory: 8Gi } }   # this stage only
+```
 
 Each of CPU and memory has an amount the step is **promised** (`cpu`, `memory`: the scheduler keeps
 that much free for it) and a **limit** (`cpu_limit`, `memory_limit`: the most it may use). A limit
@@ -1299,6 +1340,22 @@ uses for how many packages it compiles at once), `MAKEFLAGS=-jN`, `CARGO_BUILD_J
 `LAUNCHWAY_PARALLELISM`. A variable the step sets under `env` is left as it wrote it. With the
 starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well, and
 `cpu: 16, memory: 6Gi` is 6.
+
+**Automatic memory.** A step that writes no memory of its own (no `memory` or `memory_limit` in its
+`resources`, in its stage's, in its plan's, and no `memory` on its container under `containers`) does
+not have to be sized by hand. Each attempt is measured (see `launchway runs usage`), and when the
+installation sizes steps at all (its default for the kind has a memory), the server reads the highest
+memory use of the step's last 20 measured attempts on the same pipeline of the same Flight and the
+same branch family (`main` is its own family; `feat/a` and `feat/b` are the family `feat`). From 3
+attempts on it takes the 95th percentile, adds a quarter, rounds up to 64Mi and gives the step that,
+promised and as its limit. It never gives less than the installation's default, so learning only
+raises; it never gives more than the installation's `max_memory` (twice the default's limit where none
+is set). A step killed for memory (exit 137, with the Station's explanation) that was sized this way is
+run once more with twice the memory it had, within the same cap, and its log says so; a second kill
+fails the step. A step that writes its own memory is never changed and never run again for memory.
+The step's log says where its memory came from, and so do the Sortie page, `runs show` and
+`GET /api/v1/runs/{id}/usage`: *declared in the pipeline file*, *learned from N runs*, *default*, or
+*raised after a memory kill*. CPU is not learned.
 
 **Where it is applied.** Kubernetes sets the pod's requests and limits. Podman and Docker run each
 step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
@@ -1619,6 +1676,8 @@ In a step with `for_each`, the `image`, an `env` value or a `with` value may be 
 |---|---|---|---|
 | `each` | loop key | required | A key under the step's `for_each` |
 | `format` | text | none | Text with exactly one `%s`, and no other `%`, such as `"python:%s"` |
+| `field` | field name | none | For a list taken from a template parameter of type `objects`: the member's record's field to take instead of its name (`name` is the name itself). A record without the field is refused when the template is read, unless `default` is given |
+| `default` | text | none | With `field`: what to take when the member's record has no such field |
 
 ### Parameter values
 
@@ -1631,6 +1690,11 @@ it uses) may be a parameter's value:
 |---|---|---|---|
 | `param` | parameter name | required | A parameter the template declares |
 | `format` | text | none | Text with exactly one `%s`, and no other `%`. For `string` parameters |
+
+A parameter of type `list` is a list wherever a list of patterns or paths is accepted: `when.branch`, `when.tag`, `when.event`, `when.changed`, `skip`, report globs
+(`reports.tests`, `findings` and the others), Cargo `paths`, cache `paths` and `key.files`, `platforms` and `runner.labels`. `when: { branch: { param: branches } }` with
+`branches: [feat/*, fix/*]` is the two patterns `feat/*` and `fix/*`, and `{ param: branches }` may stand next to other items of a list (`branch: [release, { param: branches }]`).
+Written as a single value where one is expected, a list parameter is its JSON text, as it always was.
 
 ## Secret references
 
@@ -1898,10 +1962,11 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 <!-- keys: template-param -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an Airfield's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the launch runs. Both take `options` and `format` as a string does |
+| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `objects` (a list of records, see [Lists of records](#lists-of-records)), `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an Airfield's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the launch runs. Both take `options` and `format` as a string does |
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
+| `fields` | list of names | any | For `objects`: the fields a record may have besides `name`; a record with another is refused, naming the fields it may have |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
 
 A default can also be worked out. These forms are for string, number, boolean, Airfield and application parameters:
@@ -1957,7 +2022,7 @@ same library by name alone; and they take one more key:
 <!-- keys: template-step-extra -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags`, a deploy step's `write_back.changes`, a verify step's `metrics` and `logs` |
+| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags` and build `secrets`, a deploy step's `write_back.changes` and `sync.resources`, a verify step's `metrics` and `logs`, an ai step's `inputs`. An entry may also carry `for_each`, see [Lists of records](#lists-of-records) |
 
 <!-- keys: template-if -->
 | Key | Type | Default | Description |
@@ -1967,6 +2032,54 @@ same library by name alone; and they take one more key:
 | `in` | list parameter name | none | Keep the step when the parameter's value is one of the list's: `if: { param: environment, in: protected }` |
 | `empty` | boolean | none | For a list or text parameter: `empty: false` keeps the step when it has something, `empty: true` when it has nothing |
 | `all` | list of tests | none | Alone: keep the step when every test holds, each written as above |
+
+#### Lists of records
+
+A parameter of type `objects` is a list of records, each with a `name` and the fields the template lists under `fields`: the images of an
+application, the workloads it runs. A use writes them as a YAML list of mappings:
+
+```yaml
+with:
+  apps:
+    - { name: backend, repository: shop/backend, dockerfile: backend/Dockerfile }
+    - { name: frontend, repository: shop/frontend }
+```
+
+A record's name is unique in the list, and is its value in a loop, so where the list drives a step it is written as a loop value is (letters, digits, `. _ + -`). Every field is
+a single value of at most 512 bytes; at most 32 records. The list is kept as a JSON array with the fields in alphabetical order, so two ways of writing the same
+list are one value, and `if: { param: apps, empty: false }` tests whether it has records.
+
+The list repeats things in two ways, so that one template delivers one workload or several:
+
+- **A step**, with [`for_each`](#for-each): `for_each: { app: { param: apps } }` makes one member for each record, named `step[app=<name>]`, and `{ each: app, field: dockerfile, default: Dockerfile }`
+  (see [Loop values](#loop-values)) puts the record's field in the member's `with`, `env` or `image`.
+- **An entry of a list**: a deploy step's `write_back.changes` and `sync.resources`, a verify step's `metrics` and `logs`, an image step's `tags` and build `secrets`, an ai step's
+  `inputs`, may carry `for_each` with one key and one list (a parameter of type `list` or `objects`, or written in place) and is then written once for each value, with each
+  `{ each: app, field: f }` in it, anywhere in the entry, replaced by the text of that record's field. The reference to another step's output, to the tag of the member's build,
+  is `tag: { output: { each: app, format: "build[app=%s].tag" } }`.
+
+```yaml
+steps:
+  build:
+    uses: build
+    for_each: { app: { param: apps } }
+    with: { repository: { each: app, field: repository } }
+  deploy:
+    kind: deploy
+    needs: [build]
+    argocd:
+      write_back:
+        changes:
+          - for_each: { app: { param: apps } }
+            file: { each: app, field: manifest }
+            image: { each: app, field: repository }
+            tag: { output: { each: app, format: "build[app=%s].tag" } }
+      sync:
+        resources:
+          - for_each: { app: { param: apps } }
+            kind: Rollout
+            name: { each: app, field: workload }
+```
 
 Inside a template, steps refer to each other by the names the template gives them; files of the
 library are at `$LAUNCHWAY_LIB`. Templates may use templates down to 4 levels.

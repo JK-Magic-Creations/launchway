@@ -69,5 +69,5 @@ OpenTofu is open source (MPL-2.0) and the default image. Terraform is source-ava
 | `launchway/tofu-apply` | Plan, Clearance and the apply of that plan |
 | `launchway/tofu-plan` | Plan only (pull requests, drift) |
 | `launchway/tofu-check` | `fmt -check` and `validate`, no state or credentials |
-| `launchway/iac-scan` | Misconfiguration scan of the definitions (Trivy, Apache-2.0) |
+| `launchway/iac-scan` | Misconfiguration scan of the definitions (Trivy, Apache-2.0), with the checks built into the pinned scanner; `check_updates: true` downloads the newest, which may need a newer scanner. A scanner that reports an error of its own fails the step, in `report` mode too |
 | `launchway/provision-and-configure` | Infrastructure, wait for the hosts, configure with Ansible, verify no drift |

@@ -136,6 +136,7 @@ func Render(pg bool, m string) string {
 			"{{BIG}}", "BIGINT",
 			"{{BYTES}}", "BYTEA",
 			"{{RAND}}", "md5(random()::text || clock_timestamp()::text)",
+			"{{INSTR}}", "strpos",
 		).Replace(m)
 	}
 	return strings.NewReplacer(
@@ -143,6 +144,7 @@ func Render(pg bool, m string) string {
 		"{{BIG}}", "INTEGER",
 		"{{BYTES}}", "BLOB",
 		"{{RAND}}", "lower(hex(randomblob(16)))",
+		"{{INSTR}}", "instr",
 	).Replace(m)
 }
 

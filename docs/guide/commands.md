@@ -6,7 +6,7 @@ An overview of the `launchway` command. Every flag is in the [command-line refer
 launchway server   [--config launchway.yaml]   the server, web UI and a built-in runner
 launchway runner   --server URL --token T     a runner on another machine (outbound connections only)
                    [--config FILE] [--secrets-config FILE] [--health-listen ADDR]
-launchway run      [--secrets-config FILE] [--images-config FILE]   this directory's pipeline, on this machine
+launchway run      [--secrets-config FILE] [--images-config FILE] [--library NAME=DIR]   this directory's pipeline, on this machine
 launchway validate [file]                     check a pipeline file
 launchway graph    [file]                     the graph a pipeline produces, as JSON
 launchway login    --server URL               store an API token for a server

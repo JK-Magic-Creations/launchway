@@ -196,9 +196,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			continue
 		}
 		scope.values[k] = with[k]
-		if p.Type == paramTypeList {
-			scope.values[k] = canonList(with[k])
-		}
+		scope.values[k] = canonParam(p, with[k])
 	}
 	if !fillParams(t.Params, scope.values, with, name, usesLine, withProblem, vb) {
 		withOK = false
@@ -304,7 +302,7 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		p := &Param{Name: k.Value, Type: paramTypeString, Line: k.Line}
 		nodes[k.Value] = k
 		var defNode, optNode *yaml.Node
-		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from"}, func(k2, v2 *yaml.Node) {
+		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from", "fields"}, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
 			switch k2.Value {
 			case "type":
@@ -319,7 +317,9 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 					return
 				}
 				var d string
-				if v2.Kind == yaml.SequenceNode {
+				if v2.Kind == yaml.SequenceNode && p.Type == paramTypeObjects {
+					d = ps.objectsNode(v2, where)
+				} else if v2.Kind == yaml.SequenceNode {
 					d, _ = ps.inputLiteral(v2, where, InputList)
 				} else {
 					d = ps.str(v2, where)
@@ -332,14 +332,14 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 				}
 			case "from":
 				p.From = ps.variableName(v2, where)
+			case "fields":
+				p.Fields = ps.parseFieldNames(v2, where)
 			case "options":
 				p.Options, optNode = ps.strList(v2, where), v2
 			}
 		})
+		ps.checkParamKinds(p, at, nodes[k.Value], optNode)
 		if optNode != nil {
-			if p.Type == paramTypeBoolean || p.Type == paramTypeList {
-				ps.add(optNode, at+".options", "options are for strings and numbers")
-			}
 			opts := p.Options
 			p.Options = nil // check each against the type alone
 			for _, o := range opts {
@@ -352,8 +352,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		if defNode != nil {
 			if msg := p.check(*p.Default); msg != "" {
 				ps.add(defNode, at+".default", "the default does not fit: %s", msg)
-			} else if p.Type == paramTypeList {
-				d := canonList(*p.Default)
+			} else if p.Type == paramTypeList || p.Type == paramTypeObjects {
+				d := canonParam(p, *p.Default)
 				p.Default = &d
 			}
 		}
@@ -463,6 +463,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 		x.problems = append(x.problems, Problem{Message: fmt.Sprintf("expanded, the pipeline has %d steps; at most %d are allowed", len(out.Steps), MaxExpandedSteps)})
 	}
 	x.checkDeployments(out)
+	x.checkServices(out)
 	if len(x.problems) == 0 && len(out.Steps) == 0 {
 		x.problems = append(x.problems, Problem{Message: "expanded, the pipeline has no steps left: every template step's if was false"})
 	}
@@ -506,6 +507,7 @@ type expander struct {
 	used           map[string]bool // libraries some step used
 	containerNames map[string]bool
 	loopLimit      int
+	required       map[string]*Library // libraries templates required, by repository and commit (requires.go)
 }
 
 // scope is one file's steps: the pipeline's, or a template's for one use.
@@ -527,6 +529,7 @@ type scope struct {
 	when          *Condition
 	retry         *retryPolicy
 	timeout       *Duration
+	resources     *Resources        // the uses step's resources: what a script stage of the template takes where it sets none of its own
 	each          map[string]string // the loop values of the uses step, and of those around it
 	continueFail  bool              // continue_for selected the loop member of the uses step
 }
@@ -545,13 +548,12 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		if !s.IsUse() || (s.ifTest != nil && !s.ifTest.keep) {
 			continue
 		}
-		lib, name := sc.lib, s.Uses
-		if sc.lib == nil {
-			var alias string
-			alias, name, _ = strings.Cut(s.Uses, "/")
-			lib = root.Library(alias)
-		}
 		at := "steps." + s.ID
+		before0 := len(x.problems)
+		lib, name := x.libraryFor(sc, root, s, at)
+		if len(x.problems) > before0 {
+			continue
+		}
 		switch {
 		case lib == nil:
 			x.problem(sc, s.usesLine, 0, at+".uses", "no library called %q is listed under libraries:", s.Uses)
@@ -563,9 +565,13 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			x.problem(sc, s.usesLine, 0, at+".uses", "templates are used %d deep here; at most %d levels are allowed", depth+1, MaxNesting)
 			continue
 		}
+		qualified := lib.Name + "/" + name
 		for i, t := range sc.stack {
-			if t == name {
-				loop := append(append([]string{}, sc.stack[i:]...), name)
+			if t == qualified {
+				loop := append(append([]string{}, sc.stack[i:]...), qualified)
+				for j := range loop {
+					loop[j] = strings.TrimPrefix(loop[j], lib.Name+"/") // a template of the same library is written by name alone
+				}
 				x.problem(sc, s.usesLine, 0, at+".uses", "templates use each other in a loop: %s", strings.Join(loop, " → "))
 				name = ""
 				break
@@ -608,7 +614,7 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		x.used[lib.Name] = true
 		child := &scope{prefix: sc.prefix + s.ID + "/", lib: lib, file: TemplatePath(name), tmpl: t, steps: t.Steps,
 			byID: map[string]*Step{}, children: map[string]*scope{}, containers: map[string]string{}}
-		child.stack = append(append([]string{}, sc.stack...), name)
+		child.stack = append(append([]string{}, sc.stack...), lib.Name+"/"+name)
 		for _, ts := range t.Steps {
 			child.byID[ts.ID] = ts
 		}
@@ -775,6 +781,7 @@ func (x *expander) emit(sc *scope) {
 			child.group = g
 			child.inherit, child.inheritGroups = needs, groups
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
+			child.resources = overlayResources(s.Resources, sc.resources)
 			child.each = mergeEach(sc.each, s.Each)
 			child.continueFail = sc.continueFail || s.continueFail
 			if s.When != nil {
@@ -812,6 +819,7 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
+		c.Services = sc.serviceNames(c.Services)
 		c.When, c.AI = sc.whenFor(c.When), c.AI.inScope(sc.prefix)
 		if sc.continueFail {
 			c.tolerate()
@@ -822,6 +830,7 @@ func (x *expander) emit(sc *scope) {
 		if !s.timeoutSet && sc.timeout != nil {
 			c.Timeout = *sc.timeout
 		}
+		x.planResources(sc, &c, s)
 		if sc.tmpl != nil && !s.IsApproval() {
 			env := make(map[string]string, len(s.Env)+len(sc.tmpl.Values))
 			for k, v := range s.Env {

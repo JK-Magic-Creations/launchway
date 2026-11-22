@@ -2,7 +2,7 @@
 #
 #   ci: { uses: launchway/python-service }
 #
-# The package manager is read from the repository's own files: uv.lock (uv), poetry.lock (Poetry), else pip with requirements*.txt or pyproject.toml. Runs ruff, pytest (JUnit for the Tests tab, Cobertura for Coverage), a secret scan, and the image from the Dockerfile (built, scanned, bill of materials, signed; pushed when push: true).
+# The package manager is read from the repository's own files: uv.lock (uv), poetry.lock (Poetry), pdm.lock (PDM), else pip with requirements*.txt or pyproject.toml. The tools of the later steps are installed into that environment and run from it; the dependency audit reads what the manager installed, not the image's own pip. Runs ruff, pytest (JUnit for the Tests tab, Cobertura for Coverage), a secret scan, and the image from the Dockerfile (built, scanned, bill of materials, signed; pushed when push: true).
 # A database for the tests is a service container beside the steps: add it to your pipeline file with containers: and give the tests its address with test_env (see the guide).
 template: python-service
 description: "Flight plan: a Python service with a Dockerfile: ruff, pytest, secret scan and image"
@@ -32,7 +32,7 @@ params:
   sbom: { type: boolean, default: true, description: "Make the image's software bill of materials" }
   tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
   audit_mode: { type: string, default: "enforce", options: ["enforce", "report"], description: "A dependency with a known serious vulnerability fails the run (enforce) or is only reported" }
-  audit: { type: boolean, default: true, description: "Look for known vulnerabilities in the dependencies (pip-audit)" }
+  audit: { type: boolean, default: true, description: "Look for known vulnerabilities in the dependencies the project installed (pip-audit), not in the image's own pip" }
   analysis: { type: boolean, default: true, description: "Static analysis for insecure code (bandit): high severity and high confidence" }
   analysis_mode: { type: string, default: "enforce", options: ["enforce", "report"], description: "Findings of the static analysis fail the run (enforce) or are only reported" }
   analysis_exclude: { type: string, default: "tests,.venv,.cache", description: "Directory names the static analysis skips at any depth, separated by commas; environments, installed packages, build output and vendored code are always skipped" }
@@ -59,6 +59,7 @@ steps:
   setup:
     description: Install dependencies (uv, Poetry or pip, as the lock file says)
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: python
         paths: [.cache/pip, .cache/uv]
@@ -71,6 +72,7 @@ steps:
     if: { param: lint }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/check.sh"
   test:
@@ -97,6 +99,7 @@ steps:
     if: { param: audit }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/audit.sh"
   analysis:
@@ -104,6 +107,7 @@ steps:
     if: { param: analysis }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 15m
     run: "$LAUNCHWAY_LIB/scripts/python/analysis.sh"
     reports: { findings: [{ param: working_directory, format: "%s/reports/**/bandit.sarif" }] }
@@ -112,6 +116,7 @@ steps:
     if: { param: license_scan }
     needs: [setup]
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     timeout: 10m
     run: "$LAUNCHWAY_LIB/scripts/python/licenses.sh"
   image:

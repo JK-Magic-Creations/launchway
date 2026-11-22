@@ -7,6 +7,7 @@ func (s *Server) laterRoutes() []route {
 	return []route{
 		// Images (schema 15).
 		{"GET /api/v1/runs/{id}/images", runRead, "", s.runImages},
+		{"GET /api/v1/runs/{id}/usage", runRead, "", s.runUsage},
 		{"GET /api/v1/images", signedIn, "", s.searchImages},
 
 		// Policies and waivers (schema 16). Waiving needs the role

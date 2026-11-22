@@ -95,11 +95,19 @@
       "type": "string"
     },
     "replace": {},
+    "resources": {
+      "description": "CPU and memory of the step: { cpu, cpu_limit, memory, memory_limit }. On a step that uses a template: the default of every stage that runs a script.",
+      "type": "object"
+    },
     "runner": {
       "description": "Which runners may run the steps: a pool, labels or both.",
       "type": "object"
     },
     "skip": {},
+    "stages": {
+      "description": "On a step that uses a template: settings of single stages by name, such as { test: { resources: { memory: 6Gi }, services: [db] } }.",
+      "type": "object"
+    },
     "steps": {
       "additionalProperties": {
         "additionalProperties": false,
@@ -223,7 +231,10 @@
             "description": "Files the step writes that Launchway reads: tests, coverage, findings, sbom.",
             "type": "object"
           },
-          "resources": {},
+          "resources": {
+            "description": "CPU and memory of the step: { cpu, cpu_limit, memory, memory_limit }. On a step that uses a template: the default of every stage that runs a script.",
+            "type": "object"
+          },
           "retry": {
             "description": "Extra attempts after a failure, or { times, wait, backoff, on }.",
             "type": [
@@ -250,8 +261,19 @@
           "sensitivity": {},
           "serial": {},
           "service": {},
+          "services": {
+            "description": "The service containers that run beside this step ([] for none, all for every one); a step that says nothing starts them all.",
+            "type": [
+              "array",
+              "string"
+            ]
+          },
           "sign": {},
           "skip": {},
+          "stages": {
+            "description": "On a step that uses a template: settings of single stages by name, such as { test: { resources: { memory: 6Gi }, services: [db] } }.",
+            "type": "object"
+          },
           "tags": {},
           "target": {},
           "temperature": {},

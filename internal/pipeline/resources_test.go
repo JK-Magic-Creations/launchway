@@ -109,9 +109,10 @@ func TestOtherKindsRefuseResources(t *testing.T) {
 			t.Errorf("%v", err)
 		}
 	}
-	// A step that uses a template takes none either: the template says.
-	_, err := Parse([]byte("pipeline: p\nlibraries:\n  platform: { repo: ci, version: v1 }\nsteps:\n  a: { uses: platform/x, resources: { memory: 6Gi } }\n"))
-	if err == nil || !strings.Contains(err.Error(), "a step that uses a template takes no resources") {
+	// A step that uses a template takes them as the default of its stages
+	// (TestUseResourcesAndStages); what it may not take is a script's own keys.
+	_, err := Parse([]byte("pipeline: p\nlibraries:\n  platform: { repo: ci, version: v1 }\nsteps:\n  a: { uses: platform/x, cache: [{ name: c, paths: [x], key: k }] }\n"))
+	if err == nil || !strings.Contains(err.Error(), "a step that uses a template takes no cache") {
 		t.Errorf("%v", err)
 	}
 }
@@ -147,5 +148,47 @@ func TestResourcesInATemplateStepReachTheRunsPipeline(t *testing.T) {
 	}
 	if out.Requires != SchemaResources {
 		t.Fatalf("requires %d, want %d", out.Requires, SchemaResources)
+	}
+}
+
+// A use of a template may set resources for every script stage of it, and for
+// single stages by name; a stage's own settings win, key by key.
+func TestUseResourcesAndStages(t *testing.T) {
+	const tmpl = `template: svc
+steps:
+  build: { image: x, run: make, resources: { cpu: "1" } }
+  test: { image: x, run: make test, needs: build }
+  ship: { image: x, run: ship, needs: test }
+`
+	load := func(*Library, string) ([]byte, error) { return []byte(tmpl), nil }
+	expand := func(use string) (*Pipeline, error) {
+		p, err := Parse([]byte("pipeline: p\nlibraries:\n  platform: { repo: ci, version: v1 }\nsteps:\n  ci:\n    uses: platform/svc\n" + use))
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range p.Libraries {
+			l.Commit = "0123456789012345678901234567890123456789"
+		}
+		return Expand(p, load)
+	}
+	p, err := expand("    resources: { memory: 3Gi, cpu: \"2\" }\n    stages:\n      test: { resources: { memory: 6Gi } }\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := func(id string) Resources { return *p.Step(id).Resources }
+	if r := got("ci/build"); r.CPU != "1" || r.Memory != "3Gi" {
+		t.Errorf("a stage's own cpu wins and the plan's memory fills: %+v", r)
+	}
+	if r := got("ci/test"); r.Memory != "6Gi" || r.CPU != "2" {
+		t.Errorf("the stage setting wins over the plan's: %+v", r)
+	}
+	if r := got("ci/ship"); r.Memory != "3Gi" {
+		t.Errorf("%+v", r)
+	}
+	if _, err := expand("    stages: { nope: { resources: { memory: 1Gi } } }\n"); err == nil || !strings.Contains(err.Error(), "has no stage") {
+		t.Errorf("an unknown stage must be named: %v", err)
+	}
+	if _, err := expand("    resources: { memory: 1Gi, memory_limit: 512Mi }\n"); err == nil {
+		t.Errorf("a limit below the promise is refused")
 	}
 }

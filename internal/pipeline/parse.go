@@ -357,15 +357,15 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 }
 
 // topKeys are the keys of a pipeline file.
-var topKeys = []string{"pipeline", "on", "supersede", "libraries", "containers", "defaults", "steps", "inputs", "runner", "timeout", "lane", "workspace", "uses", "with", "skip", "extend", "replace"}
+var topKeys = []string{"pipeline", "on", "supersede", "libraries", "containers", "defaults", "steps", "inputs", "runner", "timeout", "lane", "workspace", "uses", "with", "skip", "extend", "replace", "stages", "resources"}
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace", "artifacts", "fetch", "deployment", "resources", "on_failure", "cache", "approvers", "runner"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace", "stages", "artifacts", "fetch", "deployment", "resources", "services", "on_failure", "cache", "approvers", "runner"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message", "approvers"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure", "cache", "runner"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "services", "on_failure", "cache", "runner"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -540,6 +540,9 @@ func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, ke
 	}
 	if strings.TrimSpace(s.Run) == "" {
 		ps.add(k, at+".run", "a script to run is required")
+	}
+	if n := keys["services"]; n != nil && ps.tmpl == nil {
+		ps.checkServices(n, at+".services", s, p)
 	}
 	if secretsNode != nil && secretsNode.Kind == yaml.MappingNode {
 		for i := 0; i < len(secretsNode.Content); i += 2 {

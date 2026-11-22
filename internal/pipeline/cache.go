@@ -110,6 +110,7 @@ func (ps *parser) cachePaths(v *yaml.Node, where, part string, scalar func(*yaml
 	if v.Kind == yaml.SequenceNode {
 		items = v.Content
 	}
+	items = ps.spliceListParams(items, where)
 	if len(items) == 0 {
 		ps.add(v, where, "list at least one file or glob, such as paths: [.cache/pip]")
 		return nil
@@ -151,6 +152,7 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 			if vv.Kind == yaml.SequenceNode {
 				items = vv.Content
 			}
+			items = ps.spliceListParams(items, w)
 			if len(items) == 0 {
 				ps.add(vv, w, "list at least one file or glob, such as files: [requirements.txt], or leave files out")
 			}

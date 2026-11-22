@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -148,4 +149,64 @@ func (s *Step) ResourceAmount() (resources.Amount, error) {
 		return a, fmt.Errorf("step %s: resources: %w", s.ID, err)
 	}
 	return a, nil
+}
+
+// parseServices reads a step's services: a list of the names of the service
+// containers it needs ([] for none), or the word all, which is what a step
+// that says nothing gets. It returns the names and whether the step listed
+// them.
+func (ps *parser) parseServices(n *yaml.Node, at string) ([]string, bool) {
+	if n.Kind == yaml.ScalarNode && n.Value == "all" {
+		return nil, false
+	}
+	if n.Kind != yaml.SequenceNode {
+		ps.add(n, at, "list the services the step needs, such as services: [db] (services: [] for none, services: all for every service of the pipeline)")
+		return nil, false
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, c := range n.Content {
+		if c.Kind != yaml.ScalarNode || !containerRe.MatchString(c.Value) {
+			ps.add(c, at, "%q is not the name of a container: list the names of the service containers the step needs, such as services: [db]", clipText(c.Value, 40))
+			continue
+		}
+		if seen[c.Value] {
+			ps.add(c, at, "the service %q is listed twice", c.Value)
+			continue
+		}
+		seen[c.Value] = true
+		out = append(out, c.Value)
+	}
+	return out, true
+}
+
+// checkServices checks that a step's services are service containers of the
+// pipeline.
+func (ps *parser) checkServices(n *yaml.Node, at string, s *Step, p *Pipeline) {
+	for _, name := range s.Services {
+		if msg := serviceProblem(p, name); msg != "" {
+			ps.add(n, at, "%s", msg)
+		}
+	}
+}
+
+// serviceProblem says what is wrong with naming a container as a service of a step; "" if nothing.
+func serviceProblem(p *Pipeline, name string) string {
+	var services []string
+	for _, c := range p.Containers {
+		if c.Service {
+			services = append(services, c.Name)
+		}
+	}
+	switch c := p.Container(name); {
+	case c == nil && len(services) == 0:
+		return fmt.Sprintf("there is no container called %q under containers, and the pipeline has no service at all: declare it as containers: { %s: { image: ..., service: true } }", name, name)
+	case c == nil:
+		return fmt.Sprintf("there is no container called %q under containers; the services are %s", name, strings.Join(services, ", "))
+	case !c.Service && len(services) == 0:
+		return fmt.Sprintf("%q is not a service (service: true): steps run in it, it does not run beside them; add service: true to it if it should", name)
+	case !c.Service:
+		return fmt.Sprintf("%q is not a service (service: true): steps run in it, it does not run beside them; the services are %s", name, strings.Join(services, ", "))
+	}
+	return ""
 }

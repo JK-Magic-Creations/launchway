@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
+
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // Offline expansion: the templates of a pipeline read from library
@@ -78,18 +81,30 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Vari
 				Message: fmt.Sprintf("%s has no %s directory: --library %s=DIRECTORY takes the root of a library, the directory that holds templates/", dir, strings.TrimSuffix(templatesDir, "/"), l.Name)})
 			continue
 		}
-		l.Commit, l.RefKind = OfflineCommit, "directory"
+		l.Commit, l.RefKind, l.Dir = OfflineCommit, "directory", dir
+		problems = append(problems, requireOffline(l, dirs, 0, []string{dir})...)
 	}
 	for name := range dirs {
-		if p.Library(name) == nil {
-			problems = append(problems, Problem{Message: fmt.Sprintf("--library %s: the pipeline has no library called %s", name, name)})
+		if p.Library(name) == nil && !requiredName(p, name) {
+			problems = append(problems, Problem{Message: fmt.Sprintf("--library %s: the pipeline has no library called %s, and none of its libraries requires one", name, name)})
 		}
 	}
 	if len(problems) > 0 {
 		return nil, problems
 	}
 	out, _, err := ExpandWith(p, func(l *Library, name string) ([]byte, error) {
-		b, err := os.ReadFile(filepath.Join(dirs[l.Name], TemplatePath(name)))
+		dir := l.Dir
+		if dir == "" {
+			if _, given := dirs[l.Name]; !given && l.Repo == starters.Name {
+				// A library's template may use the starters that ship with Launchway, with no directory for them.
+				if b, ok := starters.Template(name); ok {
+					return b, nil
+				}
+				return nil, ErrNoTemplate
+			}
+			dir = dirs[l.Name]
+		}
+		b, err := os.ReadFile(filepath.Join(dir, TemplatePath(name)))
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, ErrNoTemplate
 		}
@@ -108,4 +123,61 @@ func knownDirs(dirs map[string]string) string {
 	}
 	sort.Strings(names)
 	return " (given so far: " + strings.Join(names, ", ") + ")"
+}
+
+// requireOffline reads the library.yaml of a library read from a directory and resolves what it requires to the
+// directories given for those libraries, and theirs in turn, to the depth templates may be used. A library that
+// requires one already on the way down is a circle.
+func requireOffline(l *Library, dirs map[string]string, depth int, stack []string) Problems {
+	data, err := os.ReadFile(filepath.Join(l.Dir, LibraryManifestPath))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return Problems{{Message: fmt.Sprintf("reading %s of the library %s: %v", LibraryManifestPath, l.Name, err)}}
+	}
+	reqs, ps := ParseLibraryManifest(data)
+	var out Problems
+	for _, p := range ps {
+		p.File, p.Library = LibraryManifestPath, l.Name
+		out = append(out, p)
+	}
+	if depth >= MaxNesting {
+		return append(out, Problem{Message: fmt.Sprintf("libraries require each other %d deep from %s; at most %d levels are allowed", depth+1, l.Name, MaxNesting)})
+	}
+	for _, d := range RequiredLibraries(l.Name, reqs) {
+		dir, ok := dirs[d.Name]
+		switch {
+		case !ok:
+			out = append(out, Problem{File: LibraryManifestPath, Library: l.Name, Line: d.Line, Message: fmt.Sprintf(
+				"the library %s requires %s (%s, version %s); give its directory with --library %s=DIRECTORY", l.Name, d.Name, d.Repo, d.Version, d.Name)})
+			continue
+		case slices.Contains(stack, dir):
+			out = append(out, Problem{File: LibraryManifestPath, Library: l.Name, Line: d.Line, Message: fmt.Sprintf("libraries require each other in a circle: %s requires %s again", l.Name, d.Name)})
+			continue
+		}
+		d.Commit, d.RefKind, d.Dir = OfflineCommit, "directory", dir
+		out = append(out, requireOffline(d, dirs, depth+1, append(slices.Clone(stack), dir))...)
+		l.Requires = append(l.Requires, d)
+	}
+	return out
+}
+
+// requiredName says whether any library of the pipeline requires a library under this name.
+func requiredName(p *Pipeline, name string) bool {
+	var walk func(l *Library) bool
+	walk = func(l *Library) bool {
+		for _, d := range l.Requires {
+			if d.Name == name || walk(d) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, l := range p.Libraries {
+		if walk(l) {
+			return true
+		}
+	}
+	return false
 }

@@ -98,7 +98,7 @@ func sampleValue(p *Param) string {
 		return "1"
 	case paramTypeBoolean:
 		return "true"
-	case paramTypeList:
+	case paramTypeList, paramTypeObjects:
 		return "[]"
 	case paramTypeEnvironment:
 		return "dev"

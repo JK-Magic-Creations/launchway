@@ -220,6 +220,7 @@ func (ps *parser) artifactGlobs(v *yaml.Node, where string) []string {
 	if v.Kind == yaml.SequenceNode {
 		items = v.Content
 	}
+	items = ps.spliceListParams(items, where)
 	before := len(ps.problems)
 	switch {
 	case len(items) == 0:

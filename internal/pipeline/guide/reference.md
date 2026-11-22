@@ -89,6 +89,8 @@ steps:
 | `with` | Values for the template's parameters |
 | `for_each` | Repeat the step over lists; with `exclude`, `add` (extra whole combinations), `continue_for` (members that may fail without failing the run), `max_parallel`, `fail_fast` and `serial` (each member waits for the one before it) |
 | `skip`, `extend`, `replace` | On a step that uses a template: leave stages out, add steps before or after a stage (`extend: [{ after: test, steps: { … } }]`), or take a stage over |
+| `stages`, `resources` | On a step that uses a template: `resources` is the CPU and memory of every stage that runs a script and sets none of its own; `stages: { test: { resources: { memory: 6Gi }, services: [db] } }` sets one stage's |
+| `services` | `[db]`: the service containers that run beside the step (`[]` none, `all` every one, the default) |
 | `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 
@@ -282,7 +284,7 @@ A step that uses a template takes only `uses`, `with`, `description`, `needs`, `
 List a library's templates and their parameters before writing a `uses` step.
 
 A template file (`templates/<name>.yaml` in the library) has `template`, `description`, `params`
-(`name: { type: string|number|boolean|list, default, description, options, from }`), `containers`,
+(`name: { type: string|number|boolean|list|objects, default, description, options, from, fields }`; `objects` is a list of records, each with a `name`, that a step or a list entry of the template repeats for with `for_each: { app: { param: apps } }` and `{ each: app, field: dockerfile }`), `containers`,
 `steps` and `outputs` (`key: { from: step.key }`). In a template, `{ param: name }` (with `format:`
 for text around it) stands for a parameter's value, and `if: { param: name }` or
 `if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).

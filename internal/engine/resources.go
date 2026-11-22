@@ -484,7 +484,44 @@ func (c *cmd) runContainers() []pipeline.Container {
 		c.e.log.Error("reading the step resources configuration", "err", err)
 		return cs
 	}
-	return sizeContainers(c.st.Pipeline, cs, pol)
+	return c.learnedForRun(sizeContainers(c.st.Pipeline, cs, pol), pol)
+}
+
+// learnedForRun applies what is learned about each step to the containers a runner that makes one pod for the
+// whole run builds once (kubernetes.pod: per-run): a container's memory request and limit are the largest of
+// what its steps would each get (declared, learned or raised, as stepContainer works them out). A runner that
+// makes a pod for each step ignores these and uses the step's own container (Job.StepContainer), so nothing
+// changes for it. A step whose memory is declared, or that has no learned figure, leaves the container as
+// sizeContainers made it.
+func (c *cmd) learnedForRun(cs []pipeline.Container, pol resourcePolicy) []pipeline.Container {
+	for i := range cs {
+		if cs[i].Service {
+			continue
+		}
+		var req, limit int64
+		for _, def := range c.st.Pipeline.Steps {
+			if def.ResourceKind() == "" || c.st.Pipeline.ContainerFor(def) != cs[i].Name {
+				continue
+			}
+			ct, sz := c.stepContainer(def)
+			if ct == nil || sz == nil || (sz.Source != SizingLearned && sz.Source != SizingRaised) {
+				continue
+			}
+			if r, err := resources.ParseMemory(ct.Memory); err == nil {
+				req = max(req, r)
+			}
+			if l, err := resources.ParseMemory(ct.MemoryLimit); err == nil {
+				limit = max(limit, l)
+			}
+		}
+		if cur, err := resources.ParseMemory(cs[i].Memory); err == nil && req > cur {
+			cs[i].Memory = resources.FormatMemory(req)
+		}
+		if cur, err := resources.ParseMemory(cs[i].MemoryLimit); err == nil && limit > cur || cs[i].MemoryLimit == "" && limit > 0 {
+			cs[i].MemoryLimit = resources.FormatMemory(limit)
+		}
+	}
+	return cs
 }
 
 // stepContainer is the step's own container, sized for this step alone: what
@@ -493,22 +530,28 @@ func (c *cmd) runContainers() []pipeline.Container {
 // image (runContainers). It is nil when the step runs in no container, when
 // the server does not size containers, or when the policy cannot be read; the
 // runner then uses the run's container as it always did.
-func (c *cmd) stepContainer(def *pipeline.Step) *pipeline.Container {
+func (c *cmd) stepContainer(def *pipeline.Step) (*pipeline.Container, *Sizing) {
 	name := c.st.Pipeline.ContainerFor(def)
 	if name == "" || !c.e.knows(schemaResources) {
-		return nil
+		return nil, nil
 	}
 	pol, err := c.e.loadPolicy(c.tx)
 	if err != nil {
-		return nil // runContainers has logged it
+		return nil, nil // runContainers has logged it
 	}
 	for _, ct := range c.st.Pipeline.RunContainers() {
 		if ct.Name == name && !ct.Service {
+			orig := ct
 			sized := sizeContainer(c.st.Pipeline, &ct, []*pipeline.Step{def}, pol)
-			return &sized
+			var sz *Sizing
+			if def.ResourceKind() != "" {
+				s := c.autoSize(def, &sized, &orig, pol)
+				sz = &s
+			}
+			return &sized, sz
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourcePolicy) []pipeline.Container {

@@ -337,6 +337,9 @@ func (c *cmd) emitFailure(p *Payload, res Result, retrying bool) {
 // failAttempt records a failed attempt and, if the step's retry allows it,
 // queues the step again.
 func (c *cmd) failAttempt(stepID string, s *StepState, p *Payload, res Result, cause string, refused bool) {
+	if !refused && c.memoryRetry(stepID, s, p, res) {
+		return
+	}
 	retry, wait := c.retryDue(c.st.Pipeline.Step(stepID), s, cause, refused)
 	c.emitFailure(p, res, retry)
 	if retry {

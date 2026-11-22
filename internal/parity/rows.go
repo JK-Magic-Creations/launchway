@@ -171,6 +171,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/runs/{id}/findings", MCP: "get_security_findings", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no findings command yet"},
 	{Route: "GET /api/v1/projects/{name}/security", MCP: "get_security_findings", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no findings command yet"},
 	{Route: "GET /api/v1/components", MCP: "", CLI: "", Terraform: "", Status: Gap, Reason: "the component inventory is UI only so far"},
+	{Route: "GET /api/v1/runs/{id}/usage", MCP: "get_run_usage", CLI: "runs usage", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/runs/{id}/images", MCP: "list_images", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no images command yet"},
 	{Route: "GET /api/v1/images", MCP: "list_images", CLI: "", Terraform: "", Status: Gap, Reason: "launchway has no images command yet"},
 	{Route: "GET /api/v1/policies", MCP: "list_config (kind policies)", CLI: "policy list", Terraform: "launchway_policy", Status: Equal, Reason: ""},

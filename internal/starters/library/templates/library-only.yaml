@@ -32,6 +32,7 @@ steps:
     description: Format and vet the Go code
     if: { param: language, equals: go }
     container: go
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: go
         paths: [.cache/go-mod, .cache/go-build]
@@ -55,6 +56,7 @@ steps:
     description: Install dependencies and lint
     if: { param: language, equals: python }
     container: python
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: python
         paths: [.cache/pip, .cache/uv]
@@ -80,6 +82,7 @@ steps:
     description: Install dependencies and run the checks
     if: { param: language, equals: node }
     container: node
+    services: []   # a database declared under containers: starts only for the test stage
     cache:
       - name: node
         paths: [.cache/npm, .cache/pnpm, .cache/yarn]

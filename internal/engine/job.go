@@ -15,9 +15,15 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	if w := st.Pipeline.Workspace; w != nil {
 		exclude = w.Exclude
 	}
+	stepContainer, sizing := c.stepContainer(def)
+	runServices, runScoped := pipeline.ServicesOfRun(st.Pipeline)
+	c.keepSizing(stepID, s.Attempt, sizing)
 	return &Job{
+		Sizing:         sizing,
+		ScopedServices: def.ServicesSet, Services: def.Services,
+		RunScopedServices: runScoped, RunServices: runServices,
 		WorkspaceExclude: exclude,
-		Container:        st.Pipeline.ContainerFor(def), Containers: c.runContainers(), StepContainer: c.stepContainer(def), ResourcesAsked: def.Resources != nil,
+		Container:        st.Pipeline.ContainerFor(def), Containers: c.runContainers(), StepContainer: stepContainer, ResourcesAsked: def.Resources != nil,
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		// advance fails a draft's step that asks for secrets it may not

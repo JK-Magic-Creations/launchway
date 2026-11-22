@@ -407,11 +407,9 @@ func (ps *parser) parseVerifyMetrics(n *yaml.Node, where string, vf *Verify) {
 	if len(n.Content) > MaxVerifyMetrics {
 		ps.add(n, where, "at most %d metrics", MaxVerifyMetrics)
 	}
-	for i, m := range n.Content {
-		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
-			vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, fmt.Sprintf("%s[%d]", where, i)))
-		}
-	}
+	ps.eachEntry(n.Content, where, func(m *yaml.Node, at string) {
+		vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, at))
+	})
 }
 
 // parseVerifyLogs reads a verify step's log queries.
@@ -423,11 +421,9 @@ func (ps *parser) parseVerifyLogs(n *yaml.Node, where string, vf *Verify) {
 	if len(n.Content) > MaxVerifyLogs {
 		ps.add(n, where, "at most %d log queries", MaxVerifyLogs)
 	}
-	for i, m := range n.Content {
-		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
-			vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
-		}
-	}
+	ps.eachEntry(n.Content, where, func(m *yaml.Node, at string) {
+		vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, at))
+	})
 }
 
 // verifyKnown are the keys of a verify step; a template's may carry if.

@@ -94,7 +94,7 @@ func TestParseProblems(t *testing.T) {
 		{"no name", "steps:\n  a: {image: x, run: y}\n", "a name is required"},
 		{"bad name", "pipeline: My_App\nsteps:\n  a: {image: x, run: y}\n", "not a valid name"},
 		{"no steps", "pipeline: a\n", "at least one step"},
-		{"unknown top key", "pipeline: a\nstages: {}\nsteps:\n  a: {image: x, run: y}\n", `unknown key "stages"`},
+		{"unknown top key", "pipeline: a\nstagez: {}\nsteps:\n  a: {image: x, run: y}\n", `unknown key "stagez"`},
 		{"unknown step key", "pipeline: a\nsteps:\n  a: {image: x, run: y, script: z}\n", `unknown key "script"`},
 		{"not yet", "pipeline: a\nsteps:\n  a: {image: x, run: y, matrix: {}}\n", `there is no key called "matrix" here`},
 		{"uses with run", "pipeline: a\nlibraries:\n  lib: {repo: r, version: v1}\nsteps:\n  a: {image: x, run: y, uses: lib/t}\n", "takes no image"},

@@ -331,6 +331,7 @@ func (ps *parser) reportGlobs(v *yaml.Node, where, example string) []string {
 	if v.Kind == yaml.SequenceNode {
 		items = v.Content
 	}
+	items = ps.spliceListParams(items, where)
 	before := len(ps.problems)
 	switch {
 	case len(items) == 0:

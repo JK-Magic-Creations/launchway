@@ -120,8 +120,10 @@ func (ps *parser) parseUseStep(at string, s *Step, keys map[string]*yaml.Node) {
 	lib, name, cross := strings.Cut(s.Uses, "/")
 	switch {
 	case ps.tmpl != nil && cross:
-		ps.add(keys["uses"], at+".uses", "a template can use templates of its own library only, written by name alone (uses: %s); "+
-			"using a template of another library from a template is not supported yet", clipText(name, 60))
+		if !libNameRe.MatchString(lib) || !templateNameRe.MatchString(name) {
+			ps.add(keys["uses"], at+".uses", "write uses: template for a template of this library, or uses: library/template for one of the library launchway (the starters) "+
+				"or of a library this one requires in library.yaml; %q is neither", clipText(s.Uses, 60))
+		}
 	case ps.tmpl != nil:
 		if !templateNameRe.MatchString(s.Uses) {
 			ps.add(keys["uses"], at+".uses", "%q is not a template name", clipText(s.Uses, 60))
@@ -188,17 +190,12 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 		}
 	case emptyNode != nil:
 		switch {
-		case p.Type != paramTypeList && p.Type != paramTypeString:
-			ps.add(emptyNode, at+".empty", "%s is a %s; empty: is for a list or a text parameter", name, p.Type)
+		case p.Type != paramTypeList && p.Type != paramTypeObjects && p.Type != paramTypeString:
+			ps.add(emptyNode, at+".empty", "%s is a %s; empty: is for a list, a list of objects or a text parameter", name, p.Type)
 		case empty != "true" && empty != "false":
 			ps.add(emptyNode, at+".empty", "write empty: true (keep the step when the list is empty) or empty: false (keep it when the list has something)")
 		default:
-			isEmpty := strings.TrimSpace(ps.tmpl.values[name]) == ""
-			if p.Type == paramTypeList {
-				items, _ := ParseList(ps.tmpl.values[name])
-				isEmpty = len(items) == 0
-			}
-			t.keep = isEmpty == (empty == "true")
+			t.keep = paramEmpty(p, ps.tmpl.values[name]) == (empty == "true")
 		}
 	case equalsNode == nil && p.Type != paramTypeBoolean:
 		ps.add(n, at, "%s is a %s, not true or false: say which value keeps the step, with equals:", name, p.Type)
@@ -261,6 +258,9 @@ func (ps *parser) scalar(n *yaml.Node, at string) string {
 func (ps *parser) valueList(n *yaml.Node, at string) []string {
 	switch n.Kind {
 	case yaml.MappingNode:
+		if items, ok := ps.listParam(n, at); ok {
+			return items
+		}
 		if v := ps.scalar(n, at); v != "" {
 			return []string{v}
 		}
@@ -270,7 +270,11 @@ func (ps *parser) valueList(n *yaml.Node, at string) []string {
 		for _, c := range n.Content {
 			switch {
 			case c.Kind == yaml.MappingNode:
-				out = append(out, ps.scalar(c, at))
+				if items, ok := ps.listParam(c, at); ok {
+					out = append(out, items...)
+				} else {
+					out = append(out, ps.scalar(c, at))
+				}
 			case c.Kind != yaml.ScalarNode:
 				ps.add(c, at, "expected a list of values")
 			default:
@@ -280,6 +284,51 @@ func (ps *parser) valueList(n *yaml.Node, at string) []string {
 		return out
 	}
 	return ps.strList(n, at)
+}
+
+// spliceListParams replaces, in the items of a list of patterns, each { param: name } that stands for a parameter of
+// type list by one item for each of the list's values, so that a list parameter is a list of patterns wherever one is
+// accepted, not one pattern that reads ["a","b"].
+func (ps *parser) spliceListParams(items []*yaml.Node, at string) []*yaml.Node {
+	if ps.tmpl == nil {
+		return items
+	}
+	var out []*yaml.Node
+	for _, it := range items {
+		list, ok := ps.listParam(it, at)
+		if !ok {
+			out = append(out, it)
+			continue
+		}
+		for _, v := range list {
+			out = append(out, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: v, Line: it.Line, Column: it.Column})
+		}
+	}
+	return out
+}
+
+// listParam reads { param: name } where name is a parameter of type list: its items, as many as the list has,
+// each a value of the list the reference stands in. ok is false for anything else, which the caller reads as a
+// single value.
+func (ps *parser) listParam(n *yaml.Node, at string) ([]string, bool) {
+	if ps.tmpl == nil || n.Kind != yaml.MappingNode || !hasKey(n, "param") || hasKey(n, "format") {
+		return nil, false
+	}
+	var name string
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == "param" {
+			name = n.Content[i+1].Value
+		}
+	}
+	p := ps.tmpl.params[name]
+	if p == nil || p.Type != paramTypeList || len(n.Content) != 2 {
+		return nil, false
+	}
+	items := ListItems(ps.tmpl.values[name])
+	if items == nil {
+		items = []string{}
+	}
+	return items, true
 }
 
 func (ps *parser) unknownParam(name string) string {
@@ -331,4 +380,16 @@ func clipText(s string, n int) string {
 		n--
 	}
 	return s[:n] + "…"
+}
+
+// paramEmpty says whether a parameter's value has nothing in it: no text, no items, no records.
+func paramEmpty(p *Param, v string) bool {
+	switch p.Type {
+	case paramTypeList:
+		items, _ := ParseList(v)
+		return len(items) == 0
+	case paramTypeObjects:
+		return len(ObjectItems(v)) == 0
+	}
+	return strings.TrimSpace(v) == ""
 }

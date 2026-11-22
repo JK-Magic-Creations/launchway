@@ -66,7 +66,7 @@ func Detect(files []string, read func(string) string) *Detection {
 			with["go_version"] = m[1]
 		}
 		return pick("go-service", "go-library", "go.mod", with)
-	case has("uv.lock", "poetry.lock", "pyproject.toml", "requirements.txt", "setup.py", "Pipfile") != "":
+	case has("uv.lock", "poetry.lock", "pdm.lock", "pyproject.toml", "requirements.txt", "setup.py", "Pipfile") != "":
 		with := map[string]string{}
 		if v := strings.TrimSpace(read(".python-version")); pyVersionRe.MatchString(v) {
 			with["python_version"] = pyVersionRe.FindString(v)

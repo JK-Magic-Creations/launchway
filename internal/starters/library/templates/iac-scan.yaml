@@ -7,6 +7,7 @@ params:
   image: { type: string, default: "docker.io/aquasec/trivy:0.58.1", description: "An image with trivy, pinned" }
   severity: { type: string, default: "HIGH,CRITICAL", description: "The severities reported" }
   mode: { type: string, default: "report", options: ["report", "enforce"], description: "report records findings; enforce fails the run" }
+  check_updates: { type: boolean, default: false, description: "Download the newest checks first; off, the scanner uses its own, written for its version (the newest may need a newer scanner)" }
 containers:
   trivy: { image: { param: image } }
 steps:
@@ -14,7 +15,4 @@ steps:
     description: Scan the definitions
     container: trivy
     reports: { findings: [".launchway/scan/iac.sarif"] }
-    run: |
-      mkdir -p .launchway/scan
-      ec=0; [ "$PARAM_MODE" = enforce ] && ec=1
-      trivy config --format sarif --output .launchway/scan/iac.sarif --severity "$PARAM_SEVERITY" --exit-code "$ec" .
+    run: "$LAUNCHWAY_LIB/scripts/iac-scan.sh"

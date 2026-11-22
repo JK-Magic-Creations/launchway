@@ -248,9 +248,9 @@ type Job struct {
 	// a step that asks. Containers are shared by steps, so this is the step's own.
 	ResourcesAsked bool                 `json:"resources_asked,omitempty"`
 	Containers     []pipeline.Container `json:"containers"` // every container the run needs, services included
-	// StepContainer is Container sized for this step alone (Containers sizes it for the largest step
-	// that shares its image): what a runner that makes a pod for each step uses; nil: use Containers.
+	// StepContainer is Container sized for this step alone (what a runner with a pod for each step uses); nil: use Containers.
 	StepContainer *pipeline.Container `json:"step_container,omitempty"`
+	JobScope                          // the services the step starts and where its memory came from (jobscope.go)
 	// WorkspaceExclude is the pipeline's workspace.exclude: paths a runner that carries the workspace leaves out.
 	WorkspaceExclude []string `json:"workspace_exclude,omitempty"`
 	// Workspace names the run's workspace on this runner: the same for every

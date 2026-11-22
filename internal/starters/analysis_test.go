@@ -28,7 +28,7 @@ func analysisProject(t *testing.T) (proj, bin, log string) {
 	}
 	root := t.TempDir()
 	scripts := filepath.Join(root, "scripts")
-	for src, dst := range map[string]string{"python/analysis.sh": "python/analysis.sh", "common.sh": "common.sh"} {
+	for src, dst := range map[string]string{"python/analysis.sh": "python/analysis.sh", "common.sh": "common.sh", "python/lib.sh": "python/lib.sh", "python/project_deps.py": "python/project_deps.py"} {
 		b, err := fs_readFile(src)
 		if err != nil {
 			t.Fatal(err)

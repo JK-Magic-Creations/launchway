@@ -85,6 +85,9 @@ type ForEach struct {
 type LoopList struct {
 	Values []string `json:"values,omitempty"`
 	Input  string   `json:"input,omitempty"`
+	// Objects are the records of a list taken from a parameter of type objects, by name (their values are
+	// the names): { each: key, field: f } reads a field of the member's record.
+	Objects map[string]Object `json:"objects,omitempty"`
 }
 
 // Loop is a repeated step after expansion.
@@ -156,6 +159,10 @@ type eachRef struct {
 	key    string // the loop key
 	format string // text with one %s, or ""
 	line   int
+	// attr is the field of the member's record to take (for a list of objects), and def what to take when
+	// the record has none; hasDef says def was written.
+	attr, def string
+	hasDef    bool
 }
 
 var loopKeys = []string{"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial"}
@@ -219,8 +226,16 @@ func (ps *parser) parseForEach(n *yaml.Node, at string) *ForEach {
 			switch {
 			case p == nil:
 				ps.add(v, where+".param", "%s", ps.unknownParam(name))
+			case p.Type == paramTypeObjects:
+				items := ObjectItems(ps.tmpl.values[name])
+				list.Values, list.Objects = []string{}, map[string]Object{}
+				for _, o := range items {
+					list.Values = append(list.Values, o[objectNameField])
+					list.Objects[o[objectNameField]] = o
+				}
+				ps.checkLoopValues(v, where, list.Values)
 			case p.Type != paramTypeList:
-				ps.add(v, where+".param", "%s is a %s; a loop needs a parameter of type list", name, p.Type)
+				ps.add(v, where+".param", "%s is a %s; a loop needs a parameter of type list or objects", name, p.Type)
 			default:
 				list.Values = ListItems(ps.tmpl.values[name])
 				if list.Values == nil {
@@ -352,19 +367,31 @@ func (ps *parser) eachValue(n *yaml.Node, at string) string {
 	}
 	r := eachRef{field: ps.curField, name: ps.curName, line: n.Line}
 	var formatNode *yaml.Node
-	ps.eachKey(n, at, []string{"each", "format"}, func(k, v *yaml.Node) {
-		if k.Value == "each" {
+	var fieldNode *yaml.Node
+	ps.eachKey(n, at, []string{"each", "format", "field", "default"}, func(k, v *yaml.Node) {
+		switch k.Value {
+		case "each":
 			r.key = ps.str(v, at+".each")
-		} else {
+		case "field":
+			r.attr, fieldNode = ps.str(v, at+".field"), v
+		case "default":
+			r.def, r.hasDef = ps.str(v, at+".default"), true
+		default:
 			r.format, formatNode = ps.str(v, at+".format"), v
 		}
 	})
+	if r.hasDef && fieldNode == nil {
+		ps.add(n, at+".default", "default is for a field of a record: { each: key, field: name, default: text }")
+	}
 	if formatNode != nil && (strings.Count(r.format, "%s") != 1 || strings.Count(r.format, "%") != 1) {
 		ps.add(formatNode, at+".format", "a format has exactly one %%s, where the value goes, and no other %%")
 		r.format = ""
 	}
 	ps.cur.eachRefs = append(ps.cur.eachRefs, r)
 	placeholder := "{" + r.key + "}"
+	if r.attr != "" {
+		placeholder = "{" + r.key + "." + r.attr + "}"
+	}
 	if r.format != "" {
 		return strings.Replace(r.format, "%s", placeholder, 1)
 	}
@@ -408,16 +435,18 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 				known = false
 				continue
 			}
-			for j, v := range vals {
-				if m := loopValueProblem(v); m != "" {
-					problems = append(problems, Problem{Line: f.Line, Path: at + "." + f.Keys[i], Message: m})
-					known = false
-				} else if slices.Contains(vals[:j], v) {
-					problems = append(problems, Problem{Line: f.Line, Path: at + "." + f.Keys[i], Message: fmt.Sprintf("%q is in the list twice", v)})
-					known = false
-				}
-			}
+			vp := loopValueProblems(vals, f.Line, at+"."+f.Keys[i])
+			problems = append(problems, vp...)
+			known = known && len(vp) == 0
 			lists[i] = vals
+		}
+		if !known {
+			replace[s.ID] = s.Needs
+			continue
+		}
+		if ps := s.fieldProblems(f, lists); len(ps) > 0 {
+			problems = append(problems, ps...)
+			known = false
 		}
 		if !known {
 			replace[s.ID] = s.Needs
@@ -463,7 +492,7 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 			}
 			envNames[env] = id
 			allowed := f.toleratesFailure(combo)
-			m := member(s, id, combo, allowed)
+			m := member(s, f, id, combo, allowed)
 			for _, ca := range m.Cache {
 				for _, msg := range CacheProblems(ca) {
 					problems = append(problems, Problem{Line: ca.Line, Path: "steps." + s.ID + ".cache", Message: "for " + id + ": " + msg})
@@ -525,7 +554,7 @@ func rewriteNeeds(needs []string, replace map[string][]string) []string {
 }
 
 // member makes one member of a looped step.
-func member(s *Step, id string, each map[string]string, allowed bool) *Step {
+func member(s *Step, f *ForEach, id string, each map[string]string, allowed bool) *Step {
 	c := *s
 	c.ID, c.ForEach, c.Each = id, nil, each
 	c.Env = cloneMap(s.Env)
@@ -534,6 +563,9 @@ func member(s *Step, id string, each map[string]string, allowed bool) *Step {
 	c.Cache = cloneCaches(s.Cache)
 	for _, r := range s.eachRefs {
 		v := each[r.key]
+		if r.attr != "" {
+			v, _ = objectEach(f.list(r.key), v, r.attr, r.def, r.hasDef)
+		}
 		if r.format != "" {
 			v = strings.Replace(r.format, "%s", v, 1)
 		}
@@ -629,4 +661,42 @@ func emptyWhy(f *ForEach, lists [][]string) string {
 		}
 	}
 	return "exclude leaves out every combination"
+}
+
+// list is the list of a loop key.
+func (f *ForEach) list(key string) LoopList {
+	if i := slices.Index(f.Keys, key); i >= 0 && i < len(f.Lists) {
+		return f.Lists[i]
+	}
+	return LoopList{}
+}
+
+// fieldProblems says which of a loop's records lack a field a step takes from them with { each: key, field: f }.
+func (s *Step) fieldProblems(f *ForEach, lists [][]string) Problems {
+	for _, r := range s.eachRefs {
+		if r.attr == "" {
+			continue
+		}
+		l := f.list(r.key)
+		for _, name := range lists[slices.Index(f.Keys, r.key)] {
+			if _, ok := objectEach(l, name, r.attr, r.def, r.hasDef); !ok {
+				return Problems{{Line: r.line, Path: "steps." + s.ID, Message: fmt.Sprintf(
+					"{ each: %s, field: %s }: the record %q has no field %s; give it one, or write default: in the reference", r.key, r.attr, name, r.attr)}}
+			}
+		}
+	}
+	return nil
+}
+
+// loopValueProblems says which values of a loop list cannot be part of a step's ID, or are in it twice.
+func loopValueProblems(vals []string, line int, path string) Problems {
+	var out Problems
+	for j, v := range vals {
+		if m := loopValueProblem(v); m != "" {
+			out = append(out, Problem{Line: line, Path: path, Message: m})
+		} else if slices.Contains(vals[:j], v) {
+			out = append(out, Problem{Line: line, Path: path, Message: fmt.Sprintf("%q is in the list twice", v)})
+		}
+	}
+	return out
 }

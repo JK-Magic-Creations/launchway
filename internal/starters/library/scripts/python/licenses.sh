@@ -3,9 +3,10 @@
 # PARAM_LICENSE_DENY (comma separated license names, such as "GPL-3.0,AGPL-3.0").
 set -e
 . "$(dirname "$0")/../common.sh"
+. "$(dirname "$0")/lib.sh"
 enter
 . "$(venv_dir)/bin/activate"
-command -v pip-licenses >/dev/null 2>&1 || run pip install --quiet pip-licenses
+command -v pip-licenses >/dev/null 2>&1 || py_install pip-licenses
 run pip-licenses --format=plain --summary
 if [ -n "${PARAM_LICENSE_DENY:-}" ]; then
   run pip-licenses --fail-on="$(printf '%s' "$PARAM_LICENSE_DENY" | tr ',' ';')"

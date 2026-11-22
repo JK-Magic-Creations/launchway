@@ -72,6 +72,8 @@ func (ps *parser) parseStepKey(s *Step, sc *stepScan, k2, v2 *yaml.Node, where s
 	case "resources":
 		s.Resources = ps.parseResources(v2, where)
 		s.resourcesLine = v2.Line
+	case "services":
+		s.Services, s.ServicesSet = ps.parseServices(v2, where)
 	case "artifacts", "cache":
 		ps.parseKept(s, k2.Value, v2, where) // files for the run's later steps, or caches for later runs
 	case "fetch":
@@ -81,7 +83,7 @@ func (ps *parser) parseStepKey(s *Step, sc *stepScan, k2, v2 *yaml.Node, where s
 		s.usesLine = v2.Line
 	case "with":
 		s.With, s.withLines = ps.parseWith(v2, where)
-	case "skip", "extend", "replace":
+	case "skip", "extend", "replace", "stages":
 		ps.parseAdapt(s, k2.Value, v2, where)
 	case "if":
 		s.ifTest = ps.parseIf(v2, where)

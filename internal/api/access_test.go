@@ -594,6 +594,7 @@ var permissionTable = map[string]matrixRow{
 
 	// Images: what a run built; a search over the projects the caller may see.
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/usage":  {"GET", "/api/v1/runs/{pay}/usage", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
 		[6]int{401, 200, 200, 200, 200, 200}},
 

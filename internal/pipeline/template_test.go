@@ -317,7 +317,7 @@ outputs:
 			t.Fatalf("%q: %+v", want, pr)
 		}
 	}
-	inTemplate("the type is string, number, boolean, list, environment, application or output", 3)
+	inTemplate("the type is string, number, boolean, list, objects, environment, application or output", 3)
 	inTemplate(`the default does not fit: b is a number; "lots" is not one`, 4)
 	inTemplate(`the default does not fit: c must be one of "y", "z"`, 5)
 	// The pipeline file says, at the uses step, that the template has problems.
@@ -479,7 +479,7 @@ steps:
 	// Nested templates must be of the same library.
 	tm["outer"] = strings.Replace(outer, "uses: inner\n    needs", "uses: other/inner\n    needs", 1)
 	_, err := expand(t, src, tm)
-	pr := findProblem(t, problemsOf(t, err), "a template can use templates of its own library only")
+	pr := findProblem(t, problemsOf(t, err), "has no requirement called")
 	if pr.File != "templates/outer.yaml" || pr.Line != 8 {
 		t.Fatalf("%+v", pr)
 	}

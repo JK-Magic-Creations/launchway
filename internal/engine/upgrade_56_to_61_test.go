@@ -16,7 +16,7 @@ import (
 // which has existed since schema 33, now carries a value. On SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromSchema56AddsNotificationsAndSigningKeepingEverything(t *testing.T) {
 	ctx := context.Background()
-	if schemaOutside != 56 || schemaNotices != 60 || schemaSigning != 61 || schemaLast != 61 {
+	if schemaOutside != 56 || schemaNotices != 60 || schemaSigning != 61 || schemaLast < 61 {
 		t.Fatalf("the schemas are outside %d, notices %d, signing %d, last %d; this test names 56, 60 and 61", schemaOutside, schemaNotices, schemaSigning, schemaLast)
 	}
 	clk, addr := newClock(), testdb.New(t)
