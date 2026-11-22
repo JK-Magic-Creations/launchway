@@ -2,9 +2,9 @@
 
 Launchway tells the outside how it is doing in three ways. None of them needs an outside server.
 
-- **Insights pages** (Activity, Insights; a Flight's or a Squadron's Insights tab): charts of runs, steps, tests and delivery, worked out from Launchway's own database. They obey permissions: a person sees only the Flights they may read.
+- **Insights pages** (Activity, Insights; a Flight's or a Squadron's Insights tab): charts of Sorties, steps, tests and delivery, worked out from Launchway's own database. They obey permissions: a person sees only the Flights they may read.
 - **Metrics**: counts, gauges and histograms in the text exposition format, for the monitoring system you already run. They are for operators and cover the whole installation.
-- **Traces**: one trace per run and per deploy, sent over OTLP/HTTP to a collector. Off until you set an address.
+- **Traces**: one trace per Sortie and per Launch, sent over OTLP/HTTP to a collector. Off until you set an address.
 
 ## See the Insights pages
 
@@ -53,7 +53,7 @@ Ready dashboards and alert rules for Grafana and Prometheus are in `deploy/dashb
 ## Scale Stations and servers
 
 `runner.autoscaling` and `server.autoscaling` create a HorizontalPodAutoscaler. Resource metrics work with the
-cluster's metrics API. The queue depth is the better signal for Stations; with an adapter that serves
+cluster's metrics API. The depth of the holding pattern (steps waiting for a Station) is the better signal for Stations; with an adapter that serves
 Prometheus metrics to the autoscaler, add it as an external metric:
 
 ```yaml
@@ -95,13 +95,13 @@ The servers send through the same egress rules as every outbound request, so all
 environment variables the chart sets (`LAUNCHWAY_TRACING_ENDPOINT`, `LAUNCHWAY_TRACING_HEADERS`,
 `LAUNCHWAY_TRACING_SAMPLE_RATIO`); they are not behind the server's egress guard.
 
-A run is one trace, whose id is worked out from the run's id: the run's span, a span for each time a step waited,
-a span for each step, and, from the Station, a span for the commands and one for collecting reports. A deploy is
-a trace of its own. Server requests continue the trace a Station sends in a `traceparent` header. The run page
+A Sortie is one trace, whose id is worked out from the Sortie's id: the Sortie's span, a span for each time a step waited,
+a span for each step, and, from the Station, a span for the commands and one for collecting reports. A Launch is
+a trace of its own. Server requests continue the trace a Station sends in a `traceparent` header. The Sortie page
 shows the trace id with a copy button, and a link when `viewerURLTemplate` is set.
 
 A span can carry only the attributes of an allow-list: the step's name, the attempt, the outcome, the pool, the
-route template, the method and the status. A command line, an environment value, a token, a secret or a
+route template, the method and the status. A command line, a variable value, a token, a secret or a
 repository's contents has no place to go. Launchway writes the OTLP/HTTP JSON encoding itself, so it needs no
 tracing library. Not yet separate spans: the pod start and the checkout, which are part of the Station's span of
 the commands.

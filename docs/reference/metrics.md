@@ -3,9 +3,9 @@
 
 # Metrics reference
 
-Every metric the servers, Stations and the deploy runner expose on the metrics address, in the text exposition format. See [Metrics and traces](../howto/metrics-and-traces.md) for how to scrape them.
+Every metric the servers, Stations and the launch Station expose on the metrics address, in the text exposition format. See [Metrics and traces](../howto/metrics-and-traces.md) for how to scrape them.
 
-Labels come from small closed sets. A repository, a branch, a person or a run id is never a label. Every metric holds at most 500 distinct label sets (the Flight metric 300); more are dropped and counted in `launchway_metrics_series_dropped_total`.
+Labels come from small closed sets. A repository, a branch, a person or a Sortie id is never a label. Every metric holds at most 500 distinct label sets (the Flight metric 300); more are dropped and counted in `launchway_metrics_series_dropped_total`.
 
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
@@ -20,8 +20,8 @@ Labels come from small closed sets. A repository, a branch, a person or a run id
 | `launchway_db_pool_wait_seconds_total` | counter | none | Total time queries waited for a free database connection. |
 | `launchway_db_pool_wait_total` | counter | none | Times a query had to wait for a free database connection. |
 | `launchway_db_query_duration_seconds` | histogram | `family` | Database statement durations by statement family: select, insert, update, delete, other. Never the statement text. |
-| `launchway_deploys_total` | counter | `verdict` | Deploys closed, by verdict: deployed, failed, rolled_back, rollback_failed or abandoned. |
-| `launchway_flight_runs_finished_total` | counter | `flight`, `outcome` | Runs finished per Flight. Recorded only when observability.metrics.name_labels is on (default off), and held to 300 series. |
+| `launchway_deploys_total` | counter | `verdict` | Launches closed, by verdict: `deployed`, `failed`, `rolled_back`, `rollback_failed` or `abandoned`. |
+| `launchway_flight_runs_finished_total` | counter | `flight`, `outcome` | Sorties finished per Flight. Recorded only when observability.metrics.name_labels is on (default off), and held to 300 series. |
 | `launchway_git_operation_duration_seconds` | histogram | `operation` | Time a Git operation took, by operation. |
 | `launchway_git_operations_total` | counter | `operation`, `outcome` | Git operations served or made: operation is fetch (served to a client), push (received) or checkout (a Station's clone); outcome is ok or error. |
 | `launchway_git_transferred_bytes_total` | counter | `operation`, `direction` | Bytes moved by Git operations; direction is in (received) or out (sent). |
@@ -33,25 +33,25 @@ Labels come from small closed sets. A repository, a branch, a person or a run id
 | `launchway_leases_active` | gauge | `pool` | Step leases held by Stations now, by pool. |
 | `launchway_metrics_series_dropped_total` | counter | `metric` | Label sets refused because their metric already held its cap of distinct series. |
 | `launchway_migrations_applied_total` | counter | none | Database migrations this process applied while starting. |
-| `launchway_mirror_lag_seconds_max` | gauge | none | The longest time any mirror has gone without a successful synchronisation; 0 when there are none. |
-| `launchway_mirror_syncs_total` | counter | `outcome` | Mirror synchronisations, by outcome (ok or error). |
-| `launchway_queue_depth` | gauge | `pool` | Steps waiting for a Station, by Station pool (the Station's pool name, or default). |
-| `launchway_queue_oldest_wait_seconds` | gauge | `pool` | How long the longest-waiting queued step has waited, by pool; 0 when the queue is empty. |
-| `launchway_queue_wait_seconds` | histogram | `pool` | Time a step waited from being queued until a Station took it, by pool. |
-| `launchway_rollbacks_total` | counter | none | Rollbacks started, automatic or asked for. |
-| `launchway_run_duration_seconds` | histogram | `outcome` | Time from a run starting to it finishing, by outcome. |
-| `launchway_runs_finished_total` | counter | `outcome` | Runs finished, by outcome (succeeded, failed, canceled). |
-| `launchway_runs_started_total` | counter | none | Runs started. |
+| `launchway_mirror_lag_seconds_max` | gauge | none | The longest time any mirror has gone without a successful synchronization; 0 when there are none. |
+| `launchway_mirror_syncs_total` | counter | `outcome` | Mirror synchronizations, by outcome (ok or error). |
+| `launchway_queue_depth` | gauge | `pool` | Steps waiting in the holding pattern for a Station, by Station pool (the pool's name, or default). |
+| `launchway_queue_oldest_wait_seconds` | gauge | `pool` | How long the longest-waiting step has waited in the holding pattern, by pool; 0 when none waits. |
+| `launchway_queue_wait_seconds` | histogram | `pool` | Time a step waited in the holding pattern until a Station took it, by pool. |
+| `launchway_rollbacks_total` | counter | none | Returns to base started, automatic or asked for. |
+| `launchway_run_duration_seconds` | histogram | `outcome` | Time from a Sortie starting to it finishing, by outcome. |
+| `launchway_runs_finished_total` | counter | `outcome` | Sorties finished, by outcome (succeeded, failed, canceled). |
+| `launchway_runs_started_total` | counter | none | Sorties started. |
 | `launchway_schema_version` | gauge | none | The database's schema version. |
 | `launchway_sign_ins_total` | counter | `method`, `outcome` | Sign-in attempts; method is local or oidc; outcome is ok or denied. |
 | `launchway_station_heartbeats_missed_total` | counter | none | Leases that expired because their Station stopped reporting. |
 | `launchway_stations_online` | gauge | `pool` | Stations that reported in recently, by pool. |
 | `launchway_step_duration_seconds` | histogram | `outcome` | Time a step ran, by outcome. |
-| `launchway_step_room_waits_total` | counter | `reason` | Times a Station could not start a step pod for lack of room and the step was queued to try again; reason is quota_full or cluster_full. |
+| `launchway_step_room_waits_total` | counter | `reason` | Times a Station could not start a step pod for lack of room and the step was put back in the holding pattern to try again; reason is quota_full or cluster_full. |
 | `launchway_steps_finished_total` | counter | `outcome` | Steps finished, by outcome (succeeded, failed, canceled, skipped). |
 | `launchway_steps_started_total` | counter | none | Steps (Sorties) started. |
 | `launchway_token_uses_total` | counter | `kind` | Requests authenticated by a token, by kind (session, api, station, service). |
-| `launchway_trace_spans_total` | counter | `outcome` | Trace spans handed to the exporter; outcome is exported or dropped (queue full or the endpoint failed). |
+| `launchway_trace_spans_total` | counter | `outcome` | Trace spans handed to the exporter; outcome is exported or dropped (its buffer was full or the endpoint failed). |
 | `launchway_uptime_seconds` | gauge | none | Seconds since this process started. |
 | `launchway_webhook_deliveries_total` | counter | `direction`, `outcome` | Webhook deliveries; direction is in (received) or out (sent); outcome is accepted, rejected or failed. |
 | `launchway_worker_last_success_timestamp_seconds` | gauge | `worker` | When each background worker last finished a pass without error, as Unix seconds. A worker that stops shows a timestamp that stops moving. |

@@ -39,5 +39,5 @@ checks your answers, and shows what it will create before it creates anything.
 | [Backup, restore, upgrade](backup-restore-upgrade.md) | keeping data safe, and changing versions |
 | [Let Launchway deploy itself](self-deploy.md) | building and deploying its own image, break-glass and Return to base (rollback) |
 | [Monitor Launchway](monitoring.md) | health checks, logs and what to alert on |
-| [Metrics and traces](metrics-and-traces.md) | scrape metrics, scale Stations on the queue, send traces, read the Insights pages |
+| [Metrics and traces](metrics-and-traces.md) | scrape metrics, scale Stations on the holding pattern, send traces, read the Insights pages |
 | [Troubleshooting](troubleshooting.md) | error messages and what to do |

@@ -47,9 +47,9 @@ function Body({ d }: { d: Insights }) {
       <Sheet title="The period at a glance">
         <div className="rel-measures">
           <Tile k={terms().say("{Runs}")} v={String(d.runs)} f={`${d.succeeded} succeeded, ${d.failed} failed, ${d.canceled} canceled`} />
-          <Tile k="Success rate" v={d.succeeded + d.failed > 0 ? pct(d.success_rate) : "none yet"} f="of the runs that finished" />
+          <Tile k="Success rate" v={d.succeeded + d.failed > 0 ? pct(d.success_rate) : "none yet"} f={terms().say("of the {runs} that finished")} />
           <Tile k="Duration" v={secs(d.duration_p50_s)} f={`median; 95th percentile ${secs(d.duration_p95_s)}`} />
-          <Tile k="Queue wait" v={secs(d.queue_wait_p50_s)} f={`median; 95th percentile ${secs(d.queue_wait_p95_s)}`} />
+          <Tile k="Wait in the holding pattern" v={secs(d.queue_wait_p50_s)} f={`median; 95th percentile ${secs(d.queue_wait_p95_s)}`} />
         </div>
       </Sheet>
       {!hasRuns && <p className="rel-hint" style={{ padding: "6px 2px" }}>No {terms().say("{run}")} started in this period{d.branch ? ` on ${d.branch}` : ""}. Choose a longer period.</p>}
@@ -59,7 +59,7 @@ function Body({ d }: { d: Insights }) {
         <InsightChart id="ins-duration" title="Run duration" xs={xs} format={secs} empty="No finished runs in this period."
           series={[{ name: "Median", values: col((p) => (p.duration_p50_s > 0 ? p.duration_p50_s : null)), marker: "circle", color: BLUE },
             { name: "95th percentile", values: col((p) => (p.duration_p95_s > 0 ? p.duration_p95_s : null)), dash: "6 4", marker: "triangle", color: ORANGE }]} />
-        <InsightChart id="ins-wait" title="Queue wait" xs={xs} format={secs} empty="No step waited in this period."
+        <InsightChart id="ins-wait" title="Wait in the holding pattern" xs={xs} format={secs} empty="No step waited in this period."
           series={[{ name: "Median", values: col((p) => (p.queue_wait_p50_s > 0 ? p.queue_wait_p50_s : null)), marker: "circle", color: BLUE },
             { name: "95th percentile", values: col((p) => (p.queue_wait_p95_s > 0 ? p.queue_wait_p95_s : null)), dash: "6 4", marker: "triangle", color: ORANGE }]} />
       </Sheet>
@@ -126,7 +126,7 @@ export function InsightsView({ base, head }: { base: Pick<InsightsAsk, "flight" 
 /** A Flight's Insights. */
 export function FlightInsightsPage({ name }: { name: string }) {
   useCrumbLabel("Insights");
-  return <div className="page page-wide"><InsightsView base={{ flight: name }} head={<ProjectHead name={name} on="insights" title={<>Insights of {name}</>} sentence="How its runs, steps, tests and deliveries are going, from what Launchway already records." />} /></div>;
+  return <div className="page page-wide"><InsightsView base={{ flight: name }} head={<ProjectHead name={name} on="insights" title={<>Insights of {name}</>} sentence="How its {runs}, steps, tests and deliveries are going, from what Launchway already records." />} /></div>;
 }
 
 /** A Squadron's Insights: its Flights you may read. */

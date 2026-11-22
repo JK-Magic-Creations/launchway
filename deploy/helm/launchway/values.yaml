@@ -549,7 +549,7 @@ metrics:
 
 # ---------------------------------------------------------------------------------------------
 # Trace export (off by default). The servers and the Stations send spans over OTLP/HTTP (JSON
-# encoding) to a collector you run. Spans carry no command line, environment value, secret or token.
+# encoding) to a collector you run. Spans carry no command line, variable value, secret or token.
 # The collector's address must be allowed by the installation's egress setting (egress.allow) and by
 # networkPolicy.server.extraEgress.
 # ---------------------------------------------------------------------------------------------
@@ -564,7 +564,7 @@ tracing:
     existingSecretKey: headers
   # -- The share of traces kept, from 0 to 1. Unset: all.
   sampleRatio:
-  # -- An address with {trace_id} in it, such as https://traces.example.com/trace/{trace_id}; the run
+  # -- An address with {trace_id} in it, such as https://traces.example.com/trace/{trace_id}; the Sortie
   # page then links to the trace. Unset: the page shows the id with a copy button.
   viewerURLTemplate: ""
 
@@ -579,7 +579,7 @@ server:
     maxReplicas: 6
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage:
-    # -- More metrics, as HPA v2 metric specs (External or Pods). See docs/howto/metrics-and-traces.md for one on the queue depth.
+    # -- More metrics, as HPA v2 metric specs (External or Pods). See docs/howto/metrics-and-traces.md for one on the holding pattern's depth.
     extraMetrics: []
     # -- The HPA's behavior (scale-down stabilisation and the like).
     behavior: {}
@@ -706,7 +706,7 @@ runner:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage:
-    # -- More metrics, as HPA v2 metric specs. The queue depth is the best signal for Stations: see docs/howto/metrics-and-traces.md.
+    # -- More metrics, as HPA v2 metric specs. The holding pattern's depth is the best signal for Stations: see docs/howto/metrics-and-traces.md.
     extraMetrics: []
     # -- The HPA behavior.
     behavior: {}

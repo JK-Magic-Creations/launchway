@@ -167,7 +167,7 @@ servers of the version before an upgrade can still read it; a key written here w
 | `observability.tracing.endpoint` | address | none | The collector's traces address, such as `https://collector.example.com:4318/v1/traces`. The request goes through `egress.allow` like every outbound request. Required when tracing is on |
 | `observability.tracing.headers_env` | text | none | The environment variable that holds extra request headers as `Name=value,Name2=value2` (an API key). The values are never kept in this file |
 | `observability.tracing.sample_ratio` | number | `1` | The share of traces kept, from 0 to 1 |
-| `observability.tracing.viewer_url_template` | text | none | An address with `{trace_id}` in it, such as `https://traces.example.com/trace/{trace_id}`. When set, the run page links to the trace. Unset: the page shows the id with a copy button |
+| `observability.tracing.viewer_url_template` | text | none | An address with `{trace_id}` in it, such as `https://traces.example.com/trace/{trace_id}`. When set, the Sortie page links to the trace. Unset: the page shows the id with a copy button |
 
 ## Encryption
 

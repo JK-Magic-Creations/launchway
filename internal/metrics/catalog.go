@@ -35,18 +35,18 @@ var (
 		Help: "Bytes moved by Git operations; direction is in (received) or out (sent)."})
 
 	QueueDepth = Default.New(Desc{Name: "launchway_queue_depth", Kind: Gauge, Labels: []string{"pool"},
-		Help: "Steps waiting for a Station, by Station pool (the Station's pool name, or default)."})
+		Help: "Steps waiting in the holding pattern for a Station, by Station pool (the pool's name, or default)."})
 	QueueWait = Default.New(Desc{Name: "launchway_queue_wait_seconds", Kind: Histogram, Labels: []string{"pool"}, Buckets: waitBuckets,
-		Help: "Time a step waited from being queued until a Station took it, by pool."})
+		Help: "Time a step waited in the holding pattern until a Station took it, by pool."})
 	QueueOldest = Default.New(Desc{Name: "launchway_queue_oldest_wait_seconds", Kind: Gauge, Labels: []string{"pool"},
-		Help: "How long the longest-waiting queued step has waited, by pool; 0 when the queue is empty."})
+		Help: "How long the longest-waiting step has waited in the holding pattern, by pool; 0 when none waits."})
 
 	RunsStarted = Default.New(Desc{Name: "launchway_runs_started_total", Kind: Counter,
-		Help: "Runs started."})
+		Help: "Sorties started."})
 	RunsFinished = Default.New(Desc{Name: "launchway_runs_finished_total", Kind: Counter, Labels: []string{"outcome"},
-		Help: "Runs finished, by outcome (succeeded, failed, canceled)."})
+		Help: "Sorties finished, by outcome (succeeded, failed, canceled)."})
 	RunDuration = Default.New(Desc{Name: "launchway_run_duration_seconds", Kind: Histogram, Labels: []string{"outcome"}, Buckets: durationBuckets,
-		Help: "Time from a run starting to it finishing, by outcome."})
+		Help: "Time from a Sortie starting to it finishing, by outcome."})
 	StepsStarted = Default.New(Desc{Name: "launchway_steps_started_total", Kind: Counter,
 		Help: "Steps (Sorties) started."})
 	StepsFinished = Default.New(Desc{Name: "launchway_steps_finished_total", Kind: Counter, Labels: []string{"outcome"},
@@ -54,7 +54,7 @@ var (
 	StepDuration = Default.New(Desc{Name: "launchway_step_duration_seconds", Kind: Histogram, Labels: []string{"outcome"}, Buckets: durationBuckets,
 		Help: "Time a step ran, by outcome."})
 	FlightRuns = Default.New(Desc{Name: "launchway_flight_runs_finished_total", Kind: Counter, Labels: []string{"flight", "outcome"}, Cap: 300,
-		Help: "Runs finished per Flight. Recorded only when observability.metrics.name_labels is on (default off), and held to 300 series."})
+		Help: "Sorties finished per Flight. Recorded only when observability.metrics.name_labels is on (default off), and held to 300 series."})
 
 	StationsOnline = Default.New(Desc{Name: "launchway_stations_online", Kind: Gauge, Labels: []string{"pool"},
 		Help: "Stations that reported in recently, by pool."})
@@ -63,7 +63,7 @@ var (
 	HeartbeatsMissed = Default.New(Desc{Name: "launchway_station_heartbeats_missed_total", Kind: Counter,
 		Help: "Leases that expired because their Station stopped reporting."})
 	StepRoomWaits = Default.New(Desc{Name: "launchway_step_room_waits_total", Kind: Counter, Labels: []string{"reason"},
-		Help: "Times a Station could not start a step pod for lack of room and the step was queued to try again; reason is quota_full or cluster_full."})
+		Help: "Times a Station could not start a step pod for lack of room and the step was put back in the holding pattern to try again; reason is quota_full or cluster_full."})
 
 	CacheLookups = Default.New(Desc{Name: "launchway_cache_lookups_total", Kind: Counter, Labels: []string{"result"},
 		Help: "Build cache lookups; result is hit or miss."})
@@ -73,14 +73,14 @@ var (
 	WebhookDeliveries = Default.New(Desc{Name: "launchway_webhook_deliveries_total", Kind: Counter, Labels: []string{"direction", "outcome"},
 		Help: "Webhook deliveries; direction is in (received) or out (sent); outcome is accepted, rejected or failed."})
 	MirrorSyncs = Default.New(Desc{Name: "launchway_mirror_syncs_total", Kind: Counter, Labels: []string{"outcome"},
-		Help: "Mirror synchronisations, by outcome (ok or error)."})
+		Help: "Mirror synchronizations, by outcome (ok or error)."})
 	MirrorLag = Default.New(Desc{Name: "launchway_mirror_lag_seconds_max", Kind: Gauge,
-		Help: "The longest time any mirror has gone without a successful synchronisation; 0 when there are none."})
+		Help: "The longest time any mirror has gone without a successful synchronization; 0 when there are none."})
 
 	Deploys = Default.New(Desc{Name: "launchway_deploys_total", Kind: Counter, Labels: []string{"verdict"},
-		Help: "Deploys closed, by verdict: deployed, failed, rolled_back, rollback_failed or abandoned."})
+		Help: "Launches closed, by verdict: `deployed`, `failed`, `rolled_back`, `rollback_failed` or `abandoned`."})
 	Rollbacks = Default.New(Desc{Name: "launchway_rollbacks_total", Kind: Counter,
-		Help: "Rollbacks started, automatic or asked for."})
+		Help: "Returns to base started, automatic or asked for."})
 	ApprovalsWaiting = Default.New(Desc{Name: "launchway_approvals_waiting", Kind: Gauge,
 		Help: "Approvals waiting for a decision now."})
 	ApprovalOldest = Default.New(Desc{Name: "launchway_approval_oldest_age_seconds", Kind: Gauge,
@@ -112,7 +112,7 @@ var (
 		Help: "Size in bytes of the volume holding the server's data directory."})
 
 	Spans = Default.New(Desc{Name: "launchway_trace_spans_total", Kind: Counter, Labels: []string{"outcome"},
-		Help: "Trace spans handed to the exporter; outcome is exported or dropped (queue full or the endpoint failed)."})
+		Help: "Trace spans handed to the exporter; outcome is exported or dropped (its buffer was full or the endpoint failed)."})
 
 	BuildInfo = Default.New(Desc{Name: "launchway_build_info", Kind: Gauge, Labels: []string{"version", "go_version"},
 		Help: "Always 1; the version and Go version are its labels."})

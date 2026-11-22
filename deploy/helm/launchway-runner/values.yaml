@@ -73,7 +73,7 @@ runner:
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage:
-    # -- More metrics, as HPA v2 metric specs (the queue depth, from an adapter).
+    # -- More metrics, as HPA v2 metric specs (the holding pattern's depth, from an adapter).
     extraMetrics: []
     # -- The HPA behavior.
     behavior: {}

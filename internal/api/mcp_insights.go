@@ -11,7 +11,7 @@ import (
 // addInsightsTools registers the Insights tool: the same numbers as the Insights pages, for the Flights the caller may read.
 func addInsightsTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_insights", Annotations: readOnly("Get Insights"),
-		Description: "How delivery is going over a period, for one Flight, one Squadron or every Flight you may see: run success rate and duration (median and 95th percentile) over time, queue wait, the slowest and flakiest steps, test totals and failures, deploy frequency, lead time from merge to deploy, change failure rate and time to restore. Counts only Flights you may read."},
+		Description: "How delivery is going over a period, for one Flight, one Squadron or every Flight you may see: Sortie success rate and duration (median and 95th percentile) over time, time spent in the holding pattern, the slowest and flakiest steps, test totals and failures, Launch frequency, lead time from merge to Launch, change failure rate and time to restore. Counts only Flights you may read."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			Flight   string `json:"flight,omitempty" jsonschema:"one Flight's name"`
 			Squadron string `json:"squadron,omitempty" jsonschema:"one Squadron's name (not together with flight)"`

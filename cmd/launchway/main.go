@@ -85,7 +85,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway debrief  show|summary|export <run-id>   the report of a run's tests: read it, or export it as html, pdf, json or junit
-  launchway insights [--flight F|--squadron S]    run success, duration, queue wait, slowest and flakiest steps, tests, delivery measures
+  launchway insights [--flight F|--squadron S]    {run} success, duration, holding pattern time, slowest and flakiest steps, tests, delivery measures
   launchway tests    flaky|timings|split <Flight>   flaky tests, typical durations, and a balanced split of tests for N shards
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry

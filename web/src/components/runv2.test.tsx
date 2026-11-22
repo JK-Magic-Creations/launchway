@@ -122,8 +122,8 @@ describe("the run header and its density", () => {
     expect(d).toHaveTextContent("took");
   });
   it("shows the trace id with a copy button, and a link when the installation has a trace viewer", () => {
-    const withTrace = (over: Partial<RunDetail>) => (
-      <RunHeader run={detail([s("test", { status: "failed", exit_code: 1 })], { status: "failed", started_at: 1000, finished_at: 5000, ...over })} now={NOW} done live density="summary"
+    const withTrace = (over: Partial<RunDetail> & { trace_id?: string; trace_url?: string }) => (
+      <RunHeader run={detail([s("test", { status: "failed", exit_code: 1 })], { status: "failed", started_at: 1000, finished_at: 5000, ...over } as Partial<RunDetail>)} now={NOW} done live density="summary"
         onDensity={() => {}} select={() => {}} setTab={() => {}} actions={null} />
     );
     const { unmount } = render(withTrace({}));

@@ -17,7 +17,7 @@ var insightsUsage = themed(`Usage:
                      [--bucket hour|day|week|month] [--csv FILE] [--json]
 
 The same numbers as the Insights pages, for the {projects} you may read: run success rate and
-duration (median and 95th percentile), queue wait, the slowest and flakiest steps, test totals,
+duration (median and 95th percentile), time spent in the holding pattern, the slowest and flakiest steps, test totals,
 and the four delivery measures. With neither --flight nor --squadron it counts every {project}
 you may read. --csv FILE writes the series as a spreadsheet file.
 `)
@@ -70,7 +70,7 @@ func printInsights(out io.Writer, raw, in map[string]any) error {
 	span := func(k string) string { return time.UnixMilli(int64(num(in[k]))).UTC().Format("2006-01-02") }
 	fmt.Fprintf(out, "Insights for %s, %s to %s\n", scope, span("from"), span("to"))
 	fmt.Fprintf(out, "runs %v: %v succeeded, %v failed, %v canceled; success rate %.0f%%\n", in["runs"], in["succeeded"], in["failed"], in["canceled"], num(in["success_rate"])*100)
-	fmt.Fprintf(out, "duration: median %.0f s, 95th percentile %.0f s; queue wait: median %.0f s, 95th percentile %.0f s\n",
+	fmt.Fprintf(out, "duration: median %.0f s, 95th percentile %.0f s; holding pattern: median %.0f s, 95th percentile %.0f s\n",
 		num(in["duration_p50_s"]), num(in["duration_p95_s"]), num(in["queue_wait_p50_s"]), num(in["queue_wait_p95_s"]))
 	fmt.Fprintf(out, "tests: %v run, %v failed, %v flaky\n", in["tests_total"], in["tests_failed"], in["tests_flaky"])
 	for _, kind := range []struct{ key, title string }{{"slowest_steps", "slowest steps"}, {"flakiest_steps", "flakiest steps"}} {
