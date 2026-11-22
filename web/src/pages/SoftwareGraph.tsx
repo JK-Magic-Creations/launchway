@@ -13,6 +13,7 @@ import {
 import { bool, oneOf, useUrlState } from "../urlState";
 import { requirementsYaml } from "../softgraph/needsYaml";
 import { prose } from "../prose";
+import { LabelField, PSub, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.SoftwareGraph");
 
 const Canvas = lazy(() => import("../softgraph/Canvas"));
@@ -99,9 +100,9 @@ export function GraphPage() {
       <PageHead title="Graph" sentence="One graph from code to what is built from it to what it needs and where it runs. Search for anything you may read, then follow what depends on it, what it affects and where it runs." />
       <ErrorBox error={error} />
       {summary && (
-        <p className="sub" role="status">
+        <PSub role="status">
           {total === 0 ? P.t8 : <>It holds {total} nodes and {summary.edges} relations you may read: {KINDS.filter((k) => summary.nodes[k]).map((k) => `${summary.nodes[k]} ${KIND_WORDS[k].toLowerCase()}${summary.nodes[k] === 1 ? "" : "s"}`).join(", ")}.</>}
-        </p>
+        </PSub>
       )}
       <Workspace />
     </div>
@@ -122,7 +123,7 @@ function Workspace({ repo, initial }: { repo?: string; initial?: string }) {
       {!repo && <Finder onPick={(r) => { setFocus(r); setView("explore"); }} />}
       {focus && (
         <>
-          <p className="sub">Focus: <Mono>{focus}</Mono></p>
+          <PSub>Focus: <Mono>{focus}</Mono></PSub>
           <nav className="tabs" aria-label="Views of the graph">
             {VIEWS.map((v) => (
               <button key={v.id} type="button" className={"tab" + (view === v.id ? " tab-on" : "")} aria-current={view === v.id ? "page" : undefined} onClick={() => setView(v.id)}>{v.label}</button>
@@ -150,9 +151,9 @@ function Finder({ onPick }: { onPick: (ref: string) => void }) {
   return (
     <Sheet title="Find something" pad>
       <form className="sg-find" aria-label="Find something in the graph" onSubmit={(e) => { e.preventDefault(); graphApi.search(text, kind || undefined).then((r) => { setFound(r); setError(null); }).catch(setError); }}>
-        <label className="field"><span>Name contains</span><input value={text} onChange={(e) => setText(e.target.value)} /></label>
-        <label className="field"><span>Kind</span>
-          <select value={kind} onChange={(e) => setKind(e.target.value)}><option value="">Any</option>{KINDS.map((k) => <option key={k} value={k}>{KIND_WORDS[k]}</option>)}</select></label>
+        <LabelField><span>Name contains</span><input value={text} onChange={(e) => setText(e.target.value)} /></LabelField>
+        <LabelField><span>Kind</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value)}><option value="">Any</option>{KINDS.map((k) => <option key={k} value={k}>{KIND_WORDS[k]}</option>)}</select></LabelField>
         <Button kind="pri" type="submit" disabled={text.trim() === ""}>Search</Button>
       </form>
       <ErrorBox error={error} />
@@ -163,7 +164,7 @@ function Finder({ onPick }: { onPick: (ref: string) => void }) {
               <li key={refText(n)}><Mono>{n.kind}:{n.key}</Mono> <Button sm onClick={() => onPick(refText(n))} aria-label={`Show ${n.kind} ${n.key}`}>Show</Button></li>
             ))}
           </ul>
-          {found.more && <p className="sub" role="status">{P.t10}</p>}
+          {found.more && <PSub role="status">{P.t10}</PSub>}
         </>
       ))}
     </Sheet>
@@ -249,7 +250,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
             <label key={k} className="check"><input type="checkbox" checked={kinds.has(k)} onChange={() => setKinds((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; })} /> {KIND_WORDS[k]}</label>
           ))}
         </fieldset>
-        <p className="sub" role="status">{busy ? "Reading the graph…" : `${shown.length} of ${all.length} nodes shown. Expand a row to read what is next to it.`}</p>
+        <PSub role="status">{busy ? "Reading the graph…" : `${shown.length} of ${all.length} nodes shown. Expand a row to read what is next to it.`}</PSub>
         <Truncated t={truncated} />
         <Button aria-pressed={picture} onClick={() => setPicture(!picture)}>{picture ? "Hide the picture" : "Show as a picture"}</Button>
       </Sheet>
@@ -258,19 +259,19 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
           <Suspense fallback={<p className="faint" role="status">Loading the picture…</p>}>
             <Canvas nodes={lnodes} edges={ledges} focus={focus} highlight={highlight} selected={selected} onSelect={setSelected} />
           </Suspense>
-          {selected && <p className="sub" role="status">Selected: <Mono>{selected}</Mono> <Button sm onClick={() => onFocus(selected)}>Make it the focus</Button></p>}
+          {selected && <PSub role="status">Selected: <Mono>{selected}</Mono> <Button sm onClick={() => onFocus(selected)}>Make it the focus</Button></PSub>}
         </Sheet>
       )}
       <Sheet title={`The same things as a table (${shown.length})`}>
         <ScrollTable cls="sg-table">
           <caption className="sr-only">Nodes around {focus}</caption>
-          <thead><tr><th scope="col">Name</th><th scope="col">Kind</th><th scope="col">Next to it</th><th scope="col">Where it came from</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><ThCol>Name</ThCol><ThCol>Kind</ThCol><ThCol>Next to it</ThCol><ThCol>Where it came from</ThCol><ThCol>Actions</ThCol></tr></thead>
           <tbody>
             {shown.map((n) => {
               const r = refText(n);
               return (
                 <tr key={r} className={highlight.has(r) ? "on" : undefined} aria-selected={r === selected ? true : undefined}>
-                  <th scope="row"><Mono>{n.key}</Mono>{n.name && n.name !== n.key && <><br /><small className="faint">{n.name}</small></>}</th>
+                  <ThRow><Mono>{n.key}</Mono>{n.name && n.name !== n.key && <><br /><small className="faint">{n.name}</small></>}</ThRow>
                   <td>{KIND_WORDS[n.kind] ?? n.kind}</td>
                   <td>{r === focus ? "The focus" : relationOf(focus, n, edges)}</td>
                   <td><small>{n.confidence ?? ""}{n.origin ? `, read by ${n.origin}` : ""}</small></td>
@@ -289,7 +290,7 @@ function Explore({ focus, onFocus }: { focus: string; onFocus: (r: string) => vo
       {path && (
         <Sheet title="Path" pad>
           {path.found
-            ? <><p className="sub" role="status">{path.way === "affects" ? P.t13 : P.t14}</p><WhyList steps={path.steps} /></>
+            ? <><PSub role="status">{path.way === "affects" ? P.t13 : P.t14}</PSub><WhyList steps={path.steps} /></>
             : <p className="faint" role="status">{P.t15}</p>}
         </Sheet>
       )}
@@ -309,19 +310,19 @@ function ImpactView({ focus }: { focus: string }) {
       {!impact && !error && <p className="faint" role="status">{P.t16}</p>}
       {impact && (
         <>
-          <p className="sub" role="status">
+          <PSub role="status">
             A change to <Mono>{focus}</Mono> reaches {impact.total} {impact.total === 1 ? "thing" : "things"}
             {impact.repositories.length > 0 && <> in {impact.repositories.length} other {impact.repositories.length === 1 ? "repository" : "repositories"}</>}
             {impact.deployments.length > 0 && <>, and {impact.deployments.length} running {impact.deployments.length === 1 ? "deployment" : "deployments"}</>}.
-          </p>
+          </PSub>
           <Truncated t={impact} />
           {impact.deployments.length > 0 && (
             <Sheet title="Running now, affected">
               <ScrollTable>
                 <caption className="sr-only">{P.t17}</caption>
-                <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">Why</th></tr></thead>
+                <thead><tr><ThCol>Airfield</ThCol><ThCol>Deployment</ThCol><ThCol>Digest</ThCol><ThCol>Version</ThCol><ThCol>Why</ThCol></tr></thead>
                 <tbody>{impact.deployments.map((d) => (
-                  <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
+                  <tr key={d.deployment.key}><td>{d.airfield}</td><ThRow><Mono>{d.deployment.key}</Mono></ThRow><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
                     <td><details><summary>The way a change gets there</summary><WhyList steps={d.why} /></details></td></tr>
                 ))}</tbody>
               </ScrollTable>
@@ -337,7 +338,7 @@ function ImpactView({ focus }: { focus: string }) {
                   </li>
                 ))}
               </ul>
-              {g.items.length > 200 && <p className="sub">And {g.items.length - 200} {P.t18}<Mono>launchway graph impact</Mono>.</p>}
+              {g.items.length > 200 && <PSub>And {g.items.length - 200} {P.t18}<Mono>launchway graph impact</Mono>.</PSub>}
             </Sheet>
           ))}
           {impact.total === 0 && <p className="faint">{P.t19}</p>}
@@ -395,9 +396,9 @@ function OrderView({ repo }: { repo?: string }) {
             {order.edges.length === 0 ? <p className="faint pad">No dependencies.</p> : (
               <ScrollTable>
                 <caption className="sr-only">{P.t27}</caption>
-                <thead><tr><th scope="col">Repository</th><th scope="col">Depends on</th><th scope="col">Through</th><th scope="col">Override</th></tr></thead>
+                <thead><tr><ThCol>Repository</ThCol><ThCol>Depends on</ThCol><ThCol>Through</ThCol><ThCol>Override</ThCol></tr></thead>
                 <tbody>{order.edges.map((e) => (
-                  <tr key={e.consumer + e.provider}><th scope="row">{e.consumer}</th><td>{e.provider}</td>
+                  <tr key={e.consumer + e.provider}><ThRow>{e.consumer}</ThRow><td>{e.provider}</td>
                     <td>{e.via.map((v) => <div key={v}><Mono>{v}</Mono></div>)}{e.versions?.length ? <small className="faint">{e.versions.join(", ")}</small> : null}</td>
                     <td>{e.override ? <><strong>{e.override}</strong>: {e.reason}</> : "—"}</td></tr>
                 ))}</tbody>
@@ -420,11 +421,11 @@ function OverridesPanel({ overrides, repos, onChange }: { overrides: Override[];
   const [error, setError] = useState<unknown>(null);
   const ready = from !== "" && to !== "" && from !== to && reason.trim() !== "" && (kind !== "pin" || value.trim() !== "");
   const repoSelect = (v: string, set: (s: string) => void, name: string) => (
-    <label className="field"><span>{name}</span><select value={v} onChange={(e) => set(e.target.value)}><option value="">Choose a repository</option>{repos.map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
+    <LabelField><span>{name}</span><select value={v} onChange={(e) => set(e.target.value)}><option value="">Choose a repository</option>{repos.map((r) => <option key={r} value={r}>{r}</option>)}</select></LabelField>
   );
   return (
     <Sheet title="Your corrections to the order" pad>
-      <p className="sub">{P.t28}</p>
+      <PSub>{P.t28}</PSub>
       {overrides.length === 0 ? <p className="faint">No corrections.</p> : (
         <ul className="plain sg-overrides" aria-label="Corrections">
           {overrides.map((o) => (
@@ -435,16 +436,16 @@ function OverridesPanel({ overrides, repos, onChange }: { overrides: Override[];
       )}
       <ErrorBox error={error} />
       <form className="sg-find" aria-label="Add a correction" onSubmit={(e) => { e.preventDefault(); graphApi.addOverride({ kind, from, to, value: value || undefined, reason }).then(() => { setReason(""); setError(null); onChange(); }).catch(setError); }}>
-        <label className="field"><span>Kind</span>
+        <LabelField><span>Kind</span>
           <select value={kind} onChange={(e) => setKind(e.target.value)}>
             <option value="ignore">{P.t29}</option>
             <option value="before">{P.t30}</option>
             <option value="pin">{P.t31}</option>
-          </select></label>
+          </select></LabelField>
         {repoSelect(from, setFrom, kind === "before" ? "Built first" : "Repository")}
         {repoSelect(to, setTo, kind === "before" ? "Built after it" : "Depends on")}
-        {kind === "pin" && <label className="field"><span>Pinned to version</span><input value={value} onChange={(e) => setValue(e.target.value)} /></label>}
-        <label className="field"><span>Reason (required)</span><input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+        {kind === "pin" && <LabelField><span>Pinned to version</span><input value={value} onChange={(e) => setValue(e.target.value)} /></LabelField>}
+        <LabelField><span>Reason (required)</span><input value={reason} onChange={(e) => setReason(e.target.value)} /></LabelField>
         <Button kind="pri" type="submit" disabled={!ready}>Add the correction</Button>
       </form>
     </Sheet>
@@ -460,9 +461,9 @@ function FactsTable({ facts, name }: { facts: Fact[]; name: string }) {
   return (
     <ScrollTable>
       <caption className="sr-only">What {name} needs</caption>
-      <thead><tr><th scope="col">Needs</th><th scope="col">Value</th><th scope="col">Where from</th></tr></thead>
+      <thead><tr><ThCol>Needs</ThCol><ThCol>Value</ThCol><ThCol>Where from</ThCol></tr></thead>
       <tbody>{facts.map((f) => (
-        <tr key={f.facet + f.value}><th scope="row">{f.facet}</th><td><Mono>{f.value}</Mono></td>
+        <tr key={f.facet + f.value}><ThRow>{f.facet}</ThRow><td><Mono>{f.value}</Mono></td>
           <td><span className={"pill " + (f.source === "declared" ? "pill-ok" : "pill-idle")}>{SOURCE_WORDS[f.source] ?? f.source}</span>{f.evidence && <><br /><small className="faint">{f.evidence}</small></>}</td></tr>
       ))}</tbody>
     </ScrollTable>
@@ -496,26 +497,26 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
       ))}
       {advice.length > 0 && (
         <Sheet title="Advice, not applied" pad>
-          <p className="sub">{P.t34}</p>
+          <PSub>{P.t34}</PSub>
           <ul>{advice.map((a) => <li key={a.facet + a.inferred}>{a.message}</li>)}</ul>
         </Sheet>
       )}
       {repo && (
         <Sheet title="Edit the requirements file" pad>
-          <p className="sub">The file is <Mono>.launchway/requirements.yaml</Mono> {P.t35}</p>
+          <PSub>The file is <Mono>.launchway/requirements.yaml</Mono> {P.t35}</PSub>
           {!editing ? <Button kind="pri" onClick={() => setEditing(true)}>Edit the requirements file</Button> : (
             <form aria-label="Edit the requirements file" onSubmit={(e) => { e.preventDefault(); graphApi.proposeRequirements(repo, text).then((r) => { setPr(r); setError(null); }).catch(setError); }}>
-              <label className="field"><span>Requirements file</span><textarea className="mono" rows={16} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
+              <LabelField><span>Requirements file</span><textarea className="mono" rows={16} value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} /></LabelField>
               <Button kind="pri" type="submit" disabled={text.trim() === ""}>Open a pull request</Button>{" "}
               <Button onClick={() => { setEditing(false); setText(requirementsYaml(needs ?? [])); }}>Cancel</Button>
             </form>
           )}
-          {pr && <p className="sub" role="status">Opened <Link href={`/repositories/${repo}/pulls/${pr.number}`}>pull request #{pr.number}</Link>.</p>}
+          {pr && <PSub role="status">Opened <Link href={`/repositories/${repo}/pulls/${pr.number}`}>pull request #{pr.number}</Link>.</PSub>}
         </Sheet>
       )}
       {(place ?? []).map((p) => (
         <Sheet key={p.component.key} title={`Where ${p.component.name || p.component.key} can run`} pad>
-          <p className="sub" role="status">{p.fits.length} of {p.hosts_considered} {P.t36}</p>
+          <PSub role="status">{p.fits.length} of {p.hosts_considered} {P.t36}</PSub>
           {p.fits.length > 0 && <ul>{p.fits.map((c) => <li key={c.host.key}><strong>Fits:</strong> <Mono>{c.host.kind}:{c.host.key}</Mono></li>)}</ul>}
           {(p.near_misses ?? []).length > 0 && <ul>{p.near_misses!.map((c) => <li key={c.host.key}><strong>Nearly:</strong> <Mono>{c.host.key}</Mono>, but {(c.missing ?? []).map((m) => m.reason).join("; ")}</li>)}</ul>}
           {p.gaps.map((g) => <p key={g.message} className="errorbox" role="alert"><strong>Gap:</strong> {g.message}</p>)}
@@ -523,9 +524,9 @@ function NeedsView({ focus, repo }: { focus: string; repo?: string }) {
       ))}
       {needs && needs.length > 0 && (
         <Sheet title="Machine specification" pad>
-          <p className="sub">{P.t37}</p>
+          <PSub>{P.t37}</PSub>
           <form className="sg-find" aria-label="Make a machine specification" onSubmit={(e) => { e.preventDefault(); graphApi.specification(needs.map((n) => refText(n.component)), Number(headroom) || undefined).then((s) => { setSpec(s); setError(null); }).catch(setError); }}>
-            <label className="field"><span>Headroom, percent</span><input inputMode="numeric" value={headroom} onChange={(e) => setHeadroom(e.target.value.replace(/\D/g, ""))} /></label>
+            <LabelField><span>Headroom, percent</span><input inputMode="numeric" value={headroom} onChange={(e) => setHeadroom(e.target.value.replace(/\D/g, ""))} /></LabelField>
             <Button kind="pri" type="submit">Make the specification</Button>
           </form>
           {spec && (
@@ -555,9 +556,9 @@ function RunningView({ focus }: { focus: string }) {
         <Sheet title={`Running in ${where.airfields.length} ${where.airfields.length === 1 ? "Airfield" : "Airfields"}`}>
           <ScrollTable>
             <caption className="sr-only">Deployments that run {focus}</caption>
-            <thead><tr><th scope="col">Airfield</th><th scope="col">Deployment</th><th scope="col">Digest</th><th scope="col">Version</th><th scope="col">How we know</th></tr></thead>
+            <thead><tr><ThCol>Airfield</ThCol><ThCol>Deployment</ThCol><ThCol>Digest</ThCol><ThCol>Version</ThCol><ThCol>How we know</ThCol></tr></thead>
             <tbody>{where.deployments.map((d) => (
-              <tr key={d.deployment.key}><td>{d.airfield}</td><th scope="row"><Mono>{d.deployment.key}</Mono></th><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
+              <tr key={d.deployment.key}><td>{d.airfield}</td><ThRow><Mono>{d.deployment.key}</Mono></ThRow><td><Mono>{(d.digest ?? "").replace("sha256:", "").slice(0, 12)}</Mono></td><td>{d.version}</td>
                 <td>{d.exact ? P.t39 : P.t40}<details><summary>The way</summary><WhyList steps={d.why} /></details></td></tr>
             ))}</tbody>
           </ScrollTable>

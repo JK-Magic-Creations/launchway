@@ -7,6 +7,7 @@ import "../debrief.css";
 import { terms } from "../terms";
 import { refName } from "../refs";
 import { prose } from "../prose";
+import { DivLoading, PSub, SpanHidden, TdNum, ThCol, ThRow } from "../kit/bits";
 const P = await prose("pages.Debrief");
 
 // The Debrief of a run: what its tests say, in the order a person needs
@@ -27,7 +28,7 @@ export function DebriefView({ runId, version, openCase }: { runId: string; versi
     return () => { alive = false; };
   }, [runId, version]);
   if (error) return <ErrorBox error={error} />;
-  if (!d) return <div className="loading">Loading the Debrief…</div>;
+  if (!d) return <DivLoading>Loading the Debrief…</DivLoading>;
   if (d.summary.total === 0) return <Empty title="No test results to report">{d.notes[0] ?? terms().say(P.t0)}</Empty>;
   return (
     <div className="debrief">
@@ -86,9 +87,9 @@ function ResultBar({ d }: { d: Debrief }) {
       </svg>
       <figcaption>
         <table className="dtable dtable-slim"><caption className="visually-hidden">Results</caption>
-          <thead><tr><th scope="col">Result</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Share</th></tr></thead>
+          <thead><tr><ThCol>Result</ThCol><ThCol className="num">Tests</ThCol><ThCol className="num">Share</ThCol></tr></thead>
           <tbody>{parts.map((p) => (
-            <tr key={p.k}><th scope="row"><span className={"dkey dkey-" + p.k} aria-hidden="true" />{p.label}</th><td className="num">{p.n}</td><td className="num">{pct((p.n * 100) / Math.max(s.total, 1))}</td></tr>
+            <tr key={p.k}><ThRow><span className={"dkey dkey-" + p.k} aria-hidden="true" />{p.label}</ThRow><TdNum>{p.n}</TdNum><TdNum>{pct((p.n * 100) / Math.max(s.total, 1))}</TdNum></tr>
           ))}</tbody></table>
       </figcaption>
     </figure>
@@ -148,8 +149,8 @@ function DiffView({ diff }: { diff: DebriefDiff }) {
   if (!multi) {
     return (
       <div className="ddiff" role="group" aria-label="Expected against actual">
-        <div className="ddiff-del"><span className="op" aria-hidden="true">−</span><span><span className="visually-hidden">Expected: </span>{diff.expected}</span></div>
-        <div className="ddiff-add"><span className="op" aria-hidden="true">+</span><span><span className="visually-hidden">Actual: </span>{diff.actual}</span></div>
+        <div className="ddiff-del"><span className="op" aria-hidden="true">−</span><span><SpanHidden>Expected: </SpanHidden>{diff.expected}</span></div>
+        <div className="ddiff-add"><span className="op" aria-hidden="true">+</span><span><SpanHidden>Actual: </SpanHidden>{diff.actual}</span></div>
       </div>
     );
   }
@@ -158,7 +159,7 @@ function DiffView({ diff }: { diff: DebriefDiff }) {
       {(diff.lines ?? []).map((l, i) => (
         <div key={i} className={l.op === "-" ? "ddiff-del" : l.op === "+" ? "ddiff-add" : ""}>
           <span className="op" aria-hidden="true">{l.op === "-" ? "−" : l.op === "+" ? "+" : " "}</span>
-          {l.op !== " " && <span className="visually-hidden">{l.op === "-" ? "Expected: " : "Actual: "}</span>}{l.text}
+          {l.op !== " " && <SpanHidden>{l.op === "-" ? "Expected: " : "Actual: "}</SpanHidden>}{l.text}
         </div>
       ))}
     </div>
@@ -210,10 +211,10 @@ function Failures({ d, runId, openCase }: { d: Debrief; runId: string; openCase:
   return (
     <section className="card" aria-labelledby="df-h">
       <h2 className="h-sm" id="df-h">Failures {d.failures.length > 0 && <span className="dcount">{d.failures.length}</span>}</h2>
-      {d.failures.length === 0 ? <p className="sub">No test failed.</p> : (
+      {d.failures.length === 0 ? <PSub>No test failed.</PSub> : (
         <>
           <div className="dtools">
-            <label className="search"><span className="visually-hidden">Search the failures</span>
+            <label className="search"><SpanHidden>Search the failures</SpanHidden>
               <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search failures" /></label>
             {newCount > 0 && (
               <div className="chips" role="group" aria-label="Which failures">
@@ -222,7 +223,7 @@ function Failures({ d, runId, openCase }: { d: Debrief; runId: string; openCase:
               </div>
             )}
           </div>
-          {list.length === 0 ? <p className="sub">No failure matches.</p> : list.map((f, i) => <FailureCard key={f.key + f.step} f={f} runId={runId} openCase={openCase} open={i < 5} />)}
+          {list.length === 0 ? <PSub>No failure matches.</PSub> : list.map((f, i) => <FailureCard key={f.key + f.step} f={f} runId={runId} openCase={openCase} open={i < 5} />)}
         </>
       )}
     </section>
@@ -233,13 +234,13 @@ function Flaky({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dfl-h">
       <h2 className="h-sm" id="dfl-h">Flaky tests {d.flaky.length > 0 && <span className="dcount">{d.flaky.length}</span>}</h2>
-      {d.flaky.length === 0 ? <p className="sub">{P.t6}</p> : (
+      {d.flaky.length === 0 ? <PSub>{P.t6}</PSub> : (
         <div className="dscroll"><table className="dtable">
           <caption className="sub small">{P.t7}</caption>
-          <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("In this {run}")}</th><th scope="col" className="num">Score</th><th scope="col">Why</th><th scope="col">First seen</th></tr></thead>
+          <thead><tr><ThCol>Test</ThCol><ThCol>{terms().say("In this {run}")}</ThCol><ThCol className="num">Score</ThCol><ThCol>Why</ThCol><ThCol>First seen</ThCol></tr></thead>
           <tbody>{d.flaky.map((f) => (
-            <tr key={f.key}><th scope="row"><span className="dname">{f.name}</span><span className="dsuite">{f.suite}</span></th>
-              <td><Badge kind="flaky">{f.this_run}</Badge></td><td className="num">{f.score}</td><td>{f.reason}</td><td>{f.first_seen ? ago(f.first_seen) : "—"}</td></tr>
+            <tr key={f.key}><ThRow><span className="dname">{f.name}</span><span className="dsuite">{f.suite}</span></ThRow>
+              <td><Badge kind="flaky">{f.this_run}</Badge></td><TdNum>{f.score}</TdNum><td>{f.reason}</td><td>{f.first_seen ? ago(f.first_seen) : "—"}</td></tr>
           ))}</tbody></table></div>
       )}
       <p className="small"><Link href={`/projects/${encodeURIComponent(d.project)}/tests?view=flaky`}>All flaky tests of {d.project}</Link></p>
@@ -252,11 +253,11 @@ function Quarantined({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dq-h">
       <h2 className="h-sm" id="dq-h">Quarantined tests <span className="dcount">{d.quarantined.length}</span></h2>
-      <p className="sub">{terms().say(P.t8)}</p>
+      <PSub>{terms().say(P.t8)}</PSub>
       <div className="dscroll"><table className="dtable">
-        <thead><tr><th scope="col">Test</th><th scope="col">{terms().say("This {run}")}</th><th scope="col">{terms().say("{Owner}")}</th><th scope="col">Expires</th><th scope="col">Why</th></tr></thead>
+        <thead><tr><ThCol>Test</ThCol><ThCol>{terms().say("This {run}")}</ThCol><ThCol>{terms().say("{Owner}")}</ThCol><ThCol>Expires</ThCol><ThCol>Why</ThCol></tr></thead>
         <tbody>{d.quarantined.map((q) => (
-          <tr key={q.key}><th scope="row"><span className="dname">{q.name}</span><span className="dsuite">{q.suite}</span></th>
+          <tr key={q.key}><ThRow><span className="dname">{q.name}</span><span className="dsuite">{q.suite}</span></ThRow>
             <td><TestIcon status={q.status === "passed" ? "passed" : "failed"} size={14} /> {q.status}</td><td>{q.owner}</td>
             <td>{q.expires}{q.expired && <> <Badge kind="new">expired: counts as a failure</Badge></>}</td><td>{q.reason}</td></tr>
         ))}</tbody></table></div>
@@ -269,12 +270,12 @@ function Slowest({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dsl-h">
       <h2 className="h-sm" id="dsl-h">Slowest tests</h2>
-      {d.slowest.length === 0 ? <p className="sub">No durations were reported.</p> : (
+      {d.slowest.length === 0 ? <PSub>No durations were reported.</PSub> : (
         <div className="dscroll"><table className="dtable">
-          <thead><tr><th scope="col">Test</th><th scope="col" className="num">Took</th><th scope="col" className="num">Usually</th><th scope="col"><span className="visually-hidden">Relative to the slowest</span></th></tr></thead>
+          <thead><tr><ThCol>Test</ThCol><ThCol className="num">Took</ThCol><ThCol className="num">Usually</ThCol><ThCol><SpanHidden>Relative to the slowest</SpanHidden></ThCol></tr></thead>
           <tbody>{d.slowest.map((s) => (
-            <tr key={s.key}><th scope="row"><span className="dname">{s.name}</span><span className="dsuite">{s.suite}</span></th>
-              <td className="num">{testDuration(s.duration_ms)}</td><td className="num">{s.avg_ms ? testDuration(s.avg_ms) : "—"}</td>
+            <tr key={s.key}><ThRow><span className="dname">{s.name}</span><span className="dsuite">{s.suite}</span></ThRow>
+              <TdNum>{testDuration(s.duration_ms)}</TdNum><TdNum>{s.avg_ms ? testDuration(s.avg_ms) : "—"}</TdNum>
               <td><span className="dmeter" aria-hidden="true"><i style={{ width: `${top ? Math.round((s.duration_ms * 100) / top) : 0}%` }} /></span></td></tr>
           ))}</tbody></table></div>
       )}
@@ -290,18 +291,18 @@ function Suites({ d }: { d: Debrief }) {
     <section className="card" aria-labelledby="dsu-h">
       <h2 className="h-sm" id="dsu-h">Suites</h2>
       <div className="dtools">
-        <label className="search"><span className="visually-hidden">Filter suites</span><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter suites" /></label>
+        <label className="search"><SpanHidden>Filter suites</SpanHidden><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter suites" /></label>
         <div className="chips" role="group" aria-label="Which suites">
           <button type="button" className={"chip" + (!failingOnly ? " chip-on" : "")} aria-pressed={!failingOnly} onClick={() => setFailingOnly(false)}>All</button>
           <button type="button" className={"chip" + (failingOnly ? " chip-on" : "")} aria-pressed={failingOnly} onClick={() => setFailingOnly(true)}>With failures</button>
         </div>
       </div>
-      {rows.length === 0 ? <p className="sub">No suite matches.</p> : (
+      {rows.length === 0 ? <PSub>No suite matches.</PSub> : (
         <div className="dscroll"><table className="dtable">
-          <thead><tr><th scope="col">Suite</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Passed</th><th scope="col" className="num">Failed</th><th scope="col" className="num">Skipped</th><th scope="col" className="num">Time</th></tr></thead>
+          <thead><tr><ThCol>Suite</ThCol><ThCol className="num">Tests</ThCol><ThCol className="num">Passed</ThCol><ThCol className="num">Failed</ThCol><ThCol className="num">Skipped</ThCol><ThCol className="num">Time</ThCol></tr></thead>
           <tbody>{rows.map((s) => (
-            <tr key={s.name}><th scope="row" style={{ paddingLeft: 10 + s.depth * 18 }}>{s.name}</th><td className="num">{s.total}</td><td className="num">{s.passed}</td>
-              <td className={"num" + (s.failed > 0 ? " t-bad" : "")}>{s.failed > 0 && <TestIcon status="failed" size={12} />} {s.failed}</td><td className="num">{s.skipped}</td><td className="num">{testDuration(s.duration_ms)}</td></tr>
+            <tr key={s.name}><ThRow style={{ paddingLeft: 10 + s.depth * 18 }}>{s.name}</ThRow><TdNum>{s.total}</TdNum><TdNum>{s.passed}</TdNum>
+              <td className={"num" + (s.failed > 0 ? " t-bad" : "")}>{s.failed > 0 && <TestIcon status="failed" size={12} />} {s.failed}</td><TdNum>{s.skipped}</TdNum><TdNum>{testDuration(s.duration_ms)}</TdNum></tr>
           ))}</tbody></table></div>
       )}
     </section>
@@ -317,10 +318,10 @@ function Matrix({ d }: { d: Debrief }) {
       <h2 className="h-sm" id="dm-h">Combinations</h2>
       <div className="dscroll"><table className="dtable dmatrix">
         <caption className="sub small">{P.t9}</caption>
-        <thead><tr><th scope="col">Test</th>{m.columns.map((c) => <th scope="col" key={c}>{c}</th>)}</tr></thead>
+        <thead><tr><ThCol>Test</ThCol>{m.columns.map((c) => <ThCol key={c}>{c}</ThCol>)}</tr></thead>
         <tbody>{m.rows.map((r) => (
-          <tr key={r.suite + r.name}><th scope="row"><span className="dname">{r.name}</span><span className="dsuite">{r.suite}</span></th>
-            {r.cells.map((c, i) => <td key={i}>{c ? <><TestIcon status={c as "passed"} size={14} /><span className="visually-hidden">{label[c] ?? c}</span></> : <span className="visually-hidden">did not run</span>}</td>)}</tr>
+          <tr key={r.suite + r.name}><ThRow><span className="dname">{r.name}</span><span className="dsuite">{r.suite}</span></ThRow>
+            {r.cells.map((c, i) => <td key={i}>{c ? <><TestIcon status={c as "passed"} size={14} /><SpanHidden>{label[c] ?? c}</SpanHidden></> : <SpanHidden>did not run</SpanHidden>}</td>)}</tr>
         ))}</tbody></table></div>
       {m.cut && <p className="sub small">The grid shows the first {m.rows.length} tests.</p>}
     </section>
@@ -332,7 +333,7 @@ function CoverageSection({ d }: { d: Debrief }) {
   return (
     <section className="card" aria-labelledby="dc-h">
       <h2 className="h-sm" id="dc-h">Coverage</h2>
-      {!c ? <p className="sub">{terms().say(P.t10)}</p> : (
+      {!c ? <PSub>{terms().say(P.t10)}</PSub> : (
         <>
           <dl className="dstats">
             <Stat label="Lines covered" value={pct(Math.round(c.lines.percent * 10) / 10)} />
@@ -359,9 +360,9 @@ function FileTable({ title, files }: { title: string; files: { path: string; cov
   return (
     <div className="dscroll"><table className="dtable">
       <caption className="dcap">{title}</caption>
-      <thead><tr><th scope="col">File</th><th scope="col" className="num">Lines</th><th scope="col" className="num">Covered</th><th scope="col">Not covered</th></tr></thead>
+      <thead><tr><ThCol>File</ThCol><ThCol className="num">Lines</ThCol><ThCol className="num">Covered</ThCol><ThCol>Not covered</ThCol></tr></thead>
       <tbody>{files.map((f) => (
-        <tr key={f.path}><th scope="row" className="dname">{f.path}</th><td className="num">{f.covered}/{f.total}</td><td className="num">{pct(Math.round(f.percent * 10) / 10)}</td><td>{f.missed ?? ""}</td></tr>
+        <tr key={f.path}><ThRow className="dname">{f.path}</ThRow><TdNum>{f.covered}/{f.total}</TdNum><TdNum>{pct(Math.round(f.percent * 10) / 10)}</TdNum><td>{f.missed ?? ""}</td></tr>
       ))}</tbody></table></div>
   );
 }
@@ -374,7 +375,7 @@ function floorOf(t: DebriefTrendPoint[]): number {
 function Trend({ d }: { d: Debrief }) {
   const t = d.trend;
   if (t.length < 2) return (
-    <section className="card" aria-labelledby="dt-h"><h2 className="h-sm" id="dt-h">Trend</h2><p className="sub">{P.t12}</p></section>
+    <section className="card" aria-labelledby="dt-h"><h2 className="h-sm" id="dt-h">Trend</h2><PSub>{P.t12}</PSub></section>
   );
   const W = 640, H = 220, L = 40, R = 16, T = 14, B = 28, lo = floorOf(t);
   const y = (v: number) => T + (H - T - B) * (1 - (v - lo) / (100 - lo));
@@ -401,8 +402,8 @@ function Trend({ d }: { d: Debrief }) {
         <figcaption className="sub small">{terms().say(P.t13)} {lo}{terms().say(P.t14)}</figcaption>
       </figure>
       <details className="dmore"><summary>Show the trend as a table</summary>
-        <div className="dscroll"><table className="dtable"><thead><tr><th scope="col">{terms().say("{Run}")}</th><th scope="col">Commit</th><th scope="col" className="num">Tests</th><th scope="col" className="num">Pass rate</th><th scope="col" className="num">Duration</th><th scope="col" className="num">Flaky</th></tr></thead>
-          <tbody>{t.map((p) => <tr key={p.number}><th scope="row">#{p.number}</th><td>{shortSha(p.sha)}</td><td className="num">{p.total}</td><td className="num">{pct(Math.round(p.pass_rate * 10) / 10)}</td><td className="num">{testDuration(p.duration_ms)}</td><td className="num">{p.flaky}</td></tr>)}</tbody></table></div>
+        <div className="dscroll"><table className="dtable"><thead><tr><ThCol>{terms().say("{Run}")}</ThCol><ThCol>Commit</ThCol><ThCol className="num">Tests</ThCol><ThCol className="num">Pass rate</ThCol><ThCol className="num">Duration</ThCol><ThCol className="num">Flaky</ThCol></tr></thead>
+          <tbody>{t.map((p) => <tr key={p.number}><ThRow>#{p.number}</ThRow><td>{shortSha(p.sha)}</td><TdNum>{p.total}</TdNum><TdNum>{pct(Math.round(p.pass_rate * 10) / 10)}</TdNum><TdNum>{testDuration(p.duration_ms)}</TdNum><TdNum>{p.flaky}</TdNum></tr>)}</tbody></table></div>
       </details>
     </section>
   );
