@@ -31,11 +31,10 @@ func (c *Container) sandboxArgs(s Spec, out Sink) (containerSandbox, error) {
 	if len(s.services()) > 0 {
 		return containerSandbox{}, cannotStart("the custom step %s runs in a sandbox of its own, which cannot share a pod with the run's services; give it no sandbox-breaking dependency, or run the services as steps of their own", sb.Name)
 	}
-	cs := containerSandbox{wsMode: ":ro", envValue: map[string]string{"HOME": "/home/launchway"}, env: []string{"HOME"}}
+	cs := containerSandbox{wsMode: ":ro", envValue: map[string]string{"HOME": "/tmp"}, env: []string{"HOME"}}
 	cs.args = []string{
 		"--read-only",
-		"--tmpfs", "/tmp:rw,mode=1777,size=512m",
-		"--tmpfs", "/home/launchway:rw,mode=0700,size=256m",
+		"--tmpfs", "/tmp:rw,mode=1777,size=768m",
 		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
 		"--pids-limit", "2048",

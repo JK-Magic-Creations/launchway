@@ -38,7 +38,8 @@ func (m *Manifest) Script(self bool) string {
 		}
 		cmd = strings.Join(q, " ")
 	}
-	return fmt.Sprintf("LAUNCHWAY_WORKSPACE=\"$PWD\"; export LAUNCHWAY_WORKSPACE\n"+
+	return fmt.Sprintf("[ -d \"$HOME\" ] || mkdir -m 700 -p \"$HOME\"\n"+
+		"LAUNCHWAY_WORKSPACE=\"$PWD\"; export LAUNCHWAY_WORKSPACE\n"+
 		"LAUNCHWAY_STEP_DIR=%s/%s/%s; export LAUNCHWAY_STEP_DIR\n"+
 		"cd \"$LAUNCHWAY_STEP_DIR\" || { echo \"the step directory %s/%s is not in the workspace\" >&2; exit 1; }\n"+
 		"exec %s\n", base, StepDir, m.Name, StepDir, m.Name, cmd)

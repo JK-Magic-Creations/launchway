@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -30,6 +31,14 @@ func validateOffline(path string, libs []string, resolved bool, facts pipeline.P
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
+	}
+	if _, ok := dirs[pipeline.SelfLibrary]; !ok {
+		// The steps of the repository the pipeline is in: its root is above .launchway.
+		root := filepath.Dir(path)
+		if filepath.Base(root) == ".launchway" {
+			root = filepath.Dir(root)
+		}
+		dirs[pipeline.SelfLibrary] = root
 	}
 	p, err := source.ExpandOffline(data, dirs, pipeline.BindOptions{}, pipeline.WithProjectFacts(vars, facts))
 	if err != nil {
@@ -61,9 +70,22 @@ func validateOffline(path string, libs []string, resolved bool, facts pipeline.P
 		fmt.Println(string(b))
 		return nil
 	}
-	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s), templates expanded from %d library directories\n", path, p.Name, len(p.Steps), len(p.Levels()), len(dirs))
+	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s), templates expanded from %d library directories\n", path, p.Name, len(p.Steps), len(p.Levels()), len(dirs)-1)
+	for _, s := range p.Steps {
+		if s.Custom != nil {
+			fmt.Printf("  custom step %s: %s, from %s\n    %s\n", s.ID, s.Custom.Name, customSource(s.Custom), s.Custom.Permissions())
+		}
+	}
 	for _, w := range append(append(pipeline.OutputWarnings(p), pipeline.DeliveryWarnings(p)...), pipeline.ServiceWarnings(p)...) {
 		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
 	}
 	return nil
+}
+
+// customSource says where a custom step came from, for a person reading validate's output.
+func customSource(c *pipeline.CustomStep) string {
+	if c.Library == pipeline.SelfLibrary {
+		return "this repository (steps/" + c.Name + ")"
+	}
+	return "library " + c.Library
 }

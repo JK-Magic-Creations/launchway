@@ -113,6 +113,7 @@ Usage:
   launchway attention [--json]                          what needs you: the Tower's rule, for a script or an agent
   launchway organize list|folder|move|label|export|import     folders, labels and layouts shared by level
   launchway recent [--limit N] [--clear|--pause|--resume]   what you opened and did lately (yours alone)
+  launchway step     new|test|validate          custom steps: write one in Go, Python, TypeScript or shell, run it as a Station would, check it
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -161,6 +162,7 @@ var commands = map[string]func([]string) error{
 	"bases":            cmdBases,
 	"install":          cmdInstall,
 	"work":             cmdWork,
+	"step":             cmdStep,
 }
 
 func main() {

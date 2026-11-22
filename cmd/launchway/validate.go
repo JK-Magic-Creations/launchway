@@ -39,7 +39,7 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return err
 	}
-	if *project == "" && !p.Expanded() && usesOnlyStarters(p) {
+	if *project == "" && !p.Expanded() && (usesOnlyStarters(p) || usesOwnSteps(p)) {
 		// The starters ship with Launchway, so they can be checked here: a
 		// mistyped starter or input is found now, not by the first run.
 		return validateOffline(path, nil, false, pipeline.ProjectFacts{}, nil)
@@ -175,4 +175,22 @@ func offlineVariables(list []string) pipeline.Variables {
 		out[name] = v
 	}
 	return out
+}
+
+// usesOwnSteps reports whether every template-like step of the pipeline is a
+// step of its own repository (uses: ./steps/NAME) or a starter, which can be
+// expanded here from the files of the repository, with no server.
+func usesOwnSteps(p *pipeline.Pipeline) bool {
+	any := false
+	for _, s := range p.Steps {
+		if !s.IsUse() {
+			continue
+		}
+		if _, _, self := pipeline.SplitUses(s.Uses); self {
+			any = true
+		} else if !strings.HasPrefix(s.Uses, "launchway/") {
+			return false
+		}
+	}
+	return any
 }
