@@ -157,7 +157,7 @@ With `--join`, the Station enrols once: it makes a key that never leaves it (`<d
 | `--k8s-namespace` | the context's namespace | Namespace for step pods. |
 | `--k8s-unrestricted` | off | Run step pods' containers as their images' own users (often root), without the restricted security context. The same as `kubernetes.restricted: false`. |
 | `--secrets-config` | none | A YAML file of secret stores, the same as `runner.secrets` in the server configuration. Replaces `secrets:` from `--config`. |
-| `--health-listen` | none | An address, such as `:8081`, to serve `/healthz` (the process is up) and `/readyz` (the server answered within the last two minutes) on. |
+| `--health-listen` | none | An address, such as `:8081`, to serve `/healthz` (the process is up), `/livez` (the loop that takes work polled within five minutes) and `/readyz` (the server answered within the last two minutes) on. |
 
 A flag wins over the Airfield (environment), which wins over the file, which wins over the default.
 

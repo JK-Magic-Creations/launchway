@@ -286,16 +286,19 @@ keeps retrying.
 
 ## Health checks
 
-With `--health-listen ADDRESS`, a Station serves two endpoints:
+With `--health-listen ADDRESS`, a Station (and a deploy runner) serves three endpoints:
 
 - `/healthz` answers `ok` while the process is up;
-- `/readyz` answers `ok` while the server has answered the Station within the last two minutes.
+- `/livez` answers `ok` while the loop that takes work from the server has polled within the last five minutes. A runner that is up but stuck answers 503 and the reason; a loop waiting for a free place is not stuck while the work that holds the places is within its time. The runner itself logs the stacks of its goroutines at error level and exits with an error when this has lasted, so that its supervisor starts it again;
+- `/readyz` answers `ok` while the server has answered the runner within the last two minutes.
+
+A runner also logs one line every ten minutes (`idle: 12 polls, last work 3m ago (...)`), so that a quiet log is never ambiguous.
 
 ```sh
 curl -s http://127.0.0.1:8081/readyz
 ```
 
-Use them for liveness and readiness probes. A Station that cannot reach the server is not ready, so a
+Use `/livez` and `/readyz` for liveness and readiness probes (the charts do). A Station that cannot reach the server is not ready, so a
 rollout of Stations that cannot work stops instead of replacing working ones.
 
 ## What the network must allow

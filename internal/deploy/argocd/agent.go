@@ -79,13 +79,13 @@ func (a *Agent) cluster(name string) (*Cluster, Target, error) {
 		return nil, t, fmt.Errorf("this runner does not serve target %s", name)
 	}
 	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.clusters == nil {
-		a.clusters = map[string]*Cluster{}
-	}
-	if c := a.clusters[name]; c != nil {
+	c := a.clusters[name]
+	a.mu.Unlock()
+	if c != nil {
 		return c, t, nil
 	}
+	// Connecting is done without the agent's lock: a target whose client takes
+	// long to make must not hold up the others.
 	connect := a.Connect
 	if connect == nil {
 		connect = func(_ string, t Target) (*Cluster, error) { return Connect(t) }
@@ -93,6 +93,14 @@ func (a *Agent) cluster(name string) (*Cluster, Target, error) {
 	c, err := connect(name, t)
 	if err != nil {
 		return nil, t, err
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.clusters == nil {
+		a.clusters = map[string]*Cluster{}
+	}
+	if have := a.clusters[name]; have != nil {
+		return have, t, nil
 	}
 	a.clusters[name] = c
 	return c, t, nil

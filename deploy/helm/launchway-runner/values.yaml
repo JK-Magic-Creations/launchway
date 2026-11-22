@@ -162,13 +162,13 @@ runner:
     # -- The group step containers run as when restricted.
     # Unset: the built-in default, 1000.
     runAsGroup:
-  # -- The port Stations serve /healthz (process up) and /readyz (the server answered within two
-  # minutes) on, for the probes below. It is not exposed outside the pod.
+  # -- The port Stations serve /healthz (process up), /livez (the loop that takes steps polled within
+  # five minutes) and /readyz (the server answered within two minutes) on, for the probes below. It is not exposed outside the pod.
   healthPort: 8081
   livenessProbe:
-    httpGet: { path: /healthz, port: health }
-    periodSeconds: 10
-    timeoutSeconds: 3
+    httpGet: { path: /livez, port: health }
+    periodSeconds: 30
+    timeoutSeconds: 5
     failureThreshold: 3
   # -- A Station that cannot reach the servers is not ready, which holds back a rollout that
   # would replace working Stations with ones that cannot work.
