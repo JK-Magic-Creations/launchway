@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/forge/files"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -149,15 +150,35 @@ func TestCuttingAReleaseMeetsProtectedTags(t *testing.T) {
 	if r.status == 200 || !strings.Contains(string(r.body), "only an administrator of the repository may make a tag like it") {
 		t.Fatalf("an operator published past a protected tag: %d %s", r.status, r.body)
 	}
-	var tags struct{ Items []struct{ Name string } }
+	var tags struct {
+		Items []files.RefInfo `json:"items"`
+	}
 	ada.get(api+"/repositories/acme/hub/tags").json(t, &tags)
 	if len(tags.Items) != 0 {
 		t.Fatalf("a tag appeared: %+v", tags.Items)
 	}
+	// A rule that names the Flight lets the Flight's own deploy credential make the tag (by push); it does not let a
+	// person cut the release past the rule, and the release stays a draft.
+	if r := ada.do("PUT", api+"/repositories/acme/hub/protected-tags", `{"rules":[{"pattern":"v*","pipelines":["hub"]}]}`); r.status != 200 {
+		t.Fatalf("rules: %d %s", r.status, r.body)
+	}
+	if r := otto.do("POST", api+"/projects/hub/releases/0.1.0/publish", `{}`); r.status == 200 || !strings.Contains(string(r.body), "only an administrator of the repository may make a tag like it") {
+		t.Fatalf("a rule naming the Flight opened Cut a release to a person: %d %s", r.status, r.body)
+	}
+	ada.get(api+"/repositories/acme/hub/tags").json(t, &tags)
+	if len(tags.Items) != 0 {
+		t.Fatalf("a tag appeared: %+v", tags.Items)
+	}
+	// A rule that lets operators make the tag is what opens the call to the person.
 	if r := ada.do("PUT", api+"/repositories/acme/hub/protected-tags", `{"rules":[{"pattern":"v*","create_role":"operator"}]}`); r.status != 200 {
 		t.Fatalf("rules: %d %s", r.status, r.body)
 	}
 	if r := otto.do("POST", api+"/projects/hub/releases/0.1.0/publish", `{}`); r.status != 200 {
 		t.Fatalf("the release was not published once operators may make the tag: %d %s", r.status, r.body)
+	}
+	// The tag is made the same way as without a rule: an annotated object at the release's commit that says who made it.
+	ada.get(api+"/repositories/acme/hub/tags").json(t, &tags)
+	if len(tags.Items) != 1 || !tags.Items[0].Annotated || tags.Items[0].Name != "v0.1.0" || tags.Items[0].Tagger == "" || !strings.HasPrefix(tags.Items[0].Message, "Release 0.1.0") {
+		t.Fatalf("tags: %+v", tags.Items)
 	}
 }
