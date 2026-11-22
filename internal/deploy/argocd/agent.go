@@ -437,13 +437,7 @@ func (a *Agent) requestSync(ctx context.Context, job *engine.Job, commit string,
 		}
 		seen := st.Contains != nil && *st.Contains
 		if !seen && t.asksRefresh(d.Sync) {
-			if n, denied, rerr := a.refresh.try(ctx, cl, refreshKey, d.Application, a.refreshFirst()); !saidRefresh && (denied || rerr != nil) {
-				saidRefresh = true
-				log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll. To ask now: %s", d.Application, errors.Join(rerr), howToRefresh(d.Application))
-			} else if n == 1 && !saidRefresh {
-				saidRefresh = true
-				log("Asked Argo CD to re-read the repository for %s; it is asked again, with a growing pause, until it shows commit %s", d.Application, short(commit))
-			}
+			saidRefresh = a.askAgain(ctx, cl, refreshKey, d.Application, commit, saidRefresh, log)
 		}
 		busy := st.Operation != nil && (st.Operation.Phase == "Running" || st.Operation.Phase == "Terminating")
 		if seen && st.Sync == "Synced" && len(d.Sync.Resources) == 0 && !busy {
@@ -862,4 +856,20 @@ func (a *Agent) revertPin(ctx context.Context, job *engine.Job, valueFiles []str
 		return "", &HeldError{Msg: fmt.Sprintf("Rolling back could not be finished: after the pin revert the controller cannot render the application (%s). Launchway put the chart pin back (commit %s), so Git again names what is running: the new chart with the reverted values. The previous image runs under the new chart; the deployment needs a person: fix the values for the old chart and roll back again, or deploy forward", bad, short(restored))}
 	}
 	return res.Commit, nil
+}
+
+// askAgain asks for a hard refresh of the application while it has not shown the commit (with the pause and bound of
+// refresh.go) and says, once, what it did or why it could not. It returns whether it has said.
+func (a *Agent) askAgain(ctx context.Context, cl *Cluster, key, app, commit string, said bool, log func(string, ...any)) bool {
+	n, denied, err := a.refresh.try(ctx, cl, key, app, a.refreshFirst())
+	switch {
+	case said:
+	case denied || err != nil:
+		log("Could not ask Argo CD to refresh %s (%v); it will notice the commit at its next poll. To ask now: %s", app, errors.Join(err), howToRefresh(app))
+		return true
+	case n == 1:
+		log("Asked Argo CD to re-read the repository for %s; it is asked again, with a growing pause, until it shows commit %s", app, short(commit))
+		return true
+	}
+	return said
 }

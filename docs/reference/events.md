@@ -435,6 +435,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `archive.import` | `POST /api/v1/repositories/{owner}/{name}/archive/issues` (also `launchway repos import-archive`); the target is the repository, the detail the counts of issues and comments stored |
 | `ssh_key.add` | `POST /api/v1/user/ssh-keys`; the target is the person, the detail the key's name and fingerprint |
 | `ssh_key.delete` | `DELETE /api/v1/user/ssh-keys/{id}` |
+| `signing_key.add` | `POST /api/v1/user/signing-keys`; the target is the person, the detail the key's name and fingerprint |
+| `signing_key.delete` | `DELETE /api/v1/user/signing-keys/{id}` |
+| `signing_key.revoke` | `POST /api/v1/user/signing-keys/{id}/revoke`; what the key signed before stays verified |
+| `mail.test` | `POST /api/v1/mail/test`; an administrator sends a test message to their own address |
+| `notices.mute` | `POST /notices/unsubscribe`; the mute link of a message, used by the person it was made for (no sign-in) |
 | `deploy_key.add` | `POST /api/v1/repositories/{owner}/{name}/deploy-keys`; the detail is the key's name, fingerprint and whether it may push |
 | `deploy_key.delete` | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` |
 | `repository.protect` | `PUT /api/v1/repositories/{owner}/{name}/protected-branches`; the detail lists the patterns |

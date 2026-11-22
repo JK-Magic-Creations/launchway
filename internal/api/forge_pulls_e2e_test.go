@@ -185,7 +185,7 @@ func TestPullRequestThroughTheAPI(t *testing.T) {
 	if r := ada.do("PUT", api+"/merge-rules", `{"rules":[{"pattern":"main","required_approvals":1,"no_self_approval":true,"allow_admin_bypass":false}]}`); r.status != 200 {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
-	// The rules answer says what each person may do with them, and never offers signed commits.
+	// The rules answer says what each person may do with them, and offers the two rules about verified commits (signed commits, verified pushes) only to those who may edit rules, where the server has verified commits on.
 	for who, want := range map[*browser]bool{ada: true, otto: false} {
 		var rules struct {
 			Actions []struct {
@@ -202,7 +202,7 @@ func TestPullRequestThroughTheAPI(t *testing.T) {
 				t.Errorf("action %s is unavailable without a reason", a.Name)
 			}
 		}
-		if got["edit_rules"] != want || got["edit_settings"] != want || got["require_signed_commits"] {
+		if got["edit_rules"] != want || got["edit_settings"] != want || got["require_signed_commits"] != want || got["require_verified_push"] != want {
 			t.Errorf("rule actions: %v, want edit %v", got, want)
 		}
 	}
