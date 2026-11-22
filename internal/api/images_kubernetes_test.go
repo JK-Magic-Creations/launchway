@@ -215,7 +215,7 @@ steps:
 		}
 		t.Fatalf("run %s\n%s", d.Status, logs)
 	}
-	if !strings.Contains(logs, "Copied the build context app out of the run's pod") {
+	if !strings.Contains(logs, "Using the build context app from the run's workspace on the Station") {
 		t.Fatalf("the context did not come from the pod:\n%s", logs)
 	}
 	imgs, err := e.eng.RunImages(id)

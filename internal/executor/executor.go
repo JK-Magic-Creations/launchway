@@ -21,6 +21,9 @@ import (
 // Spec is one step attempt to execute.
 type Spec struct {
 	RunID      string            // the run it belongs to
+	StepID     string            // the step within the run (empty for a caller that has none)
+	Attempt    int               // which attempt of the step this is
+	LeaseID    string            // the lease this attempt runs under
 	Containers []ContainerSpec   // every container the run needs, services included
 	Container  string            // which of Containers this step runs in
 	Name       string            // unique, safe for a container name
@@ -45,6 +48,11 @@ type Spec struct {
 	// another step that runs in the same container may ask while this one
 	// does not.
 	AsksResources bool
+	// Cache, if set, says which paths of the workspace the step's caches own (see CacheScope). Exclude lists
+	// workspace paths (globs as for artifacts) that an executor which carries the workspace from step to
+	// step through the Station leaves out: what the step makes there stays in the step.
+	Cache   *CacheScope
+	Exclude []string
 	// Usage, if set, is filled by an executor that can read what the step
 	// used (see usage.go); the caller reads it after Run returns.
 	Usage *Usage
@@ -191,6 +199,9 @@ func Auto() Executor {
 type Options struct {
 	Kubernetes KubernetesOptions
 	RunnerID   string
+	// DataDir is the runner's data directory; the Kubernetes executor keeps its copies of workspaces in a
+	// directory of it unless kubernetes.work_dir says otherwise.
+	DataDir string
 }
 
 // ByName returns the executor with the given name: auto, container, podman,
@@ -198,6 +209,9 @@ type Options struct {
 func ByName(name string, o Options) (Executor, error) {
 	switch name {
 	case "kubernetes", "k8s":
+		if o.Kubernetes.WorkDir == "" && o.DataDir != "" {
+			o.Kubernetes.WorkDir = filepath.Join(o.DataDir, "kubernetes")
+		}
 		return NewKubernetes(o.Kubernetes, o.RunnerID)
 	}
 	ex, err := byNameLocal(name)
@@ -368,4 +382,28 @@ func exitCode(err error) (int, error) {
 		return ee.ExitCode(), nil
 	}
 	return -1, err
+}
+
+// CacheScope is the part of a step's workspace that its caches own. An executor that carries the workspace
+// from one step to the next through the Station does not carry these paths with it: the cache is restored into
+// the step's own pod and saved from there (Back), so a cache of gigabytes does not also travel with the
+// workspace. The runner fills it in before the step runs.
+type CacheScope struct {
+	Paths []string // every cache path of the step, as declared (globs as for artifacts)
+	Back  []string // the paths of the caches that are saved after the step: what the step left there is handed back
+}
+
+// under reports whether a workspace path is one of the globs or below one.
+func under(globs []string, name string) bool {
+	for _, g := range globs {
+		if matchArtifact(g, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// apart says that a workspace path does not travel with the workspace: it is a cache's, or the pipeline left it out.
+func (s Spec) apart(name string) bool {
+	return (s.Cache != nil && under(s.Cache.Paths, name)) || under(s.Exclude, name)
 }

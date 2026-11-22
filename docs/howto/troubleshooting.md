@@ -365,6 +365,32 @@ This run builds images, so all its steps wait for a runner that can build them, 
 No connected Station has `images.builders` in its configuration. Configure one; see
 [Build and sign an image](../tutorials/build-and-sign-image.md).
 
+## A step is waiting for room {#a-step-is-waiting-for-room}
+
+```text
+waiting for room in the step namespace: this Sortie's steps test hold 8Gi memory across 1 pod, and release it when they end; the namespace allows 16Gi memory and 15Gi memory is reserved in all; this pod needs 4Gi memory more, so 3Gi memory must be released first. This is what is reserved by the pods, not what a step uses: nothing ran out of memory
+```
+
+On Kubernetes each step has a pod of its own, and the pod exists only while the step runs. Read the message from the
+start:
+
+- **"this Sortie's steps ... hold ..."** names the steps of this same Sortie that are running and hold room. They are
+  progressing and release it when they end; the step starts then. It is not a deadlock.
+- **"the namespace allows ... and ... is reserved in all"** is the step namespace's quota, and what every pod in it
+  has reserved (requests, not use). Other Sorties hold the rest. `kubectl -n <step namespace> get pods -l
+  launchway.dev/pod=step` lists the step pods; the annotation `launchway.dev/step` says which step each is.
+- **"this pod needs ... more"** is the step's own container plus the helper and any services, so a step with a
+  service asks for more than its `resources:` says.
+- **"nothing ran out of memory"**: this is a wait for reserved room, not a kill. A step killed for memory says
+  so in its own failure ("killed because it used more memory than its limit").
+- **"can never start"** is a step whose pod is larger than the whole quota. It fails at once; ask for less or raise the quota.
+- A pod of this Sortie's that no step runs in (an attempt whose lease was lost, or a Station that stopped) is removed
+  before a retry makes its pod; the step's log says `Released pod ... no longer holds a lease`. If the room is still
+  held, wait for the pod's own Station (it removes its pods when they are no longer used) or for `max_pod_age`.
+
+The wait ends by itself when room appears, or fails after `queues.max_wait` (see
+[Holding patterns](../guide/queues.md)).
+
 ## A tool says "No user exists for uid 1000"
 
 The OpenSSH client (and so `git` over ssh), and some other tools and language runtimes, look the current user up in

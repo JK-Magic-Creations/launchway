@@ -52,6 +52,9 @@ func (k *Kubernetes) ExplainExit(ctx context.Context, s Spec, code int) string {
 	if code != 137 {
 		return ""
 	}
+	if k.perStep() {
+		return k.takeNote(s.Name) // the step's pod is gone; the note was made before it was deleted
+	}
 	k.mu.Lock()
 	rp := k.pods[s.RunID]
 	k.mu.Unlock()

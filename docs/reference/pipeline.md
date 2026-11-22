@@ -101,6 +101,7 @@ lists every variable a step receives.
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `defaults` | mapping | none | What every script step takes unless it says otherwise: image, Airfield (environment), timeout, retry, caches; see [Defaults](#defaults) |
 | `runner` | mapping | none | Which Stations (runners) may run the pipeline's steps; see [Station](#runner) |
+| `workspace` | mapping | none | Hints about the [workspace](#workspace): paths a Station that carries the workspace from step to step leaves out of it |
 | `lane` | mapping | none | Makes runs of the Flight (codebase) take turns, and says what a Sortie that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
 | `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A Sortie past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a Sortie's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display. Not with `uses` |
@@ -359,7 +360,15 @@ See [Templates](#template-files) and [Reuse steps with library templates](../tut
 
 `containers` names images once, so steps can use them by name, and declares services that run
 beside the steps for the whole Sortie (a database for tests, say). All of a Sortie's containers share the
-workspace; on Kubernetes they share one pod, so services are reachable at `localhost`.
+workspace; on Kubernetes a step's pod holds its own container and the services, so services are reachable at `localhost`
+and start with each step's pod (a service's state does not carry on to the next step).
+
+**A service for more than one step.** Where each step has a pod of its own, a service is started afresh with every
+step, so a database that one step migrated is empty for the next. `launchway validate` warns (code `service-per-step`)
+about a pipeline that has a service and more than one step that runs in a container, and names the steps. What to do:
+make the state in the step that needs it (migrate, then test, in one step, or have each step load its own fixtures); or
+carry what the later steps need as [Cargo](../guide/artifacts.md) or [outputs](#outputs). Other executors, and a Station set to
+`kubernetes.pod: per-run`, keep one service for the whole Sortie, so the warning is about where the pipeline may run, not a mistake in it.
 
 Names match `^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`. `workspace` and names starting with `image-`
 are reserved.
@@ -1254,8 +1263,9 @@ steps:
 ```
 
 **Defaults.** A new installation starts with these for kind `step`, and an administrator changes
-them without a restart; a change applies to the next pod a Sortie starts (a Sortie's pod is made once, for
-its first step, and kept for its other steps). The values live in the database, so every server of
+them without a restart; a change applies to the next step that starts, on a Kubernetes Station that makes a pod
+for each step (with `pod: per-run`, to the next pod a Sortie starts: its pod is made once, for its first step, and kept
+for the others). The values live in the database, so every server of
 an installation agrees.
 
 **Upgrading does not change your pipelines.** An installation that is upgraded from a release before
@@ -1315,6 +1325,26 @@ and `cpu.stat`, or the v1 equivalents), the same for every language. The Sortie 
 each step (`reserved 4.0Gi, used 1.1Gi peak`), `launchway runs show` and the API's `usage` field give
 it, and the step's log ends with it. Nothing is read from the cluster's metrics API, so no extra
 permission is needed on Kubernetes. A step that could not be measured says `use not measured` and why.
+
+## Workspace {#workspace}
+
+On Kubernetes a step runs in a pod of its own, and the Station carries the Sortie's workspace from one step's pod to the
+next's. A step's declared [caches](../guide/build-caches.md) are never carried that way: each is restored into the step's
+own pod from the cache store and saved from there, so a cache of gigabytes does not also travel with the workspace. A
+tree that is not a cache and that no later step needs from the earlier one (a dependency directory the step that needs it
+installs itself, a build output nothing downstream reads) can be left out with `workspace.exclude`: what a step makes
+there stays in that step's pod and is gone with it. Other executors ignore the hint, because their steps share one
+directory anyway. A path left out is never in a later step's workspace, so list only what later steps do not read.
+
+```yaml
+workspace:
+  exclude: [web/node_modules, docs/node_modules, backend/dist]
+```
+
+<!-- keys: workspace -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `exclude` | list of paths | none | Paths, globs as for [Cargo (artifacts)](../guide/artifacts.md) paths (a path names itself and everything under it), relative to the repository root, left out of the workspace that is carried between steps. At most 50, each at most 200 characters, no `..`, not absolute, not `!`, and not everything (`.`, `*`, `**`) |
 
 ## Lane
 

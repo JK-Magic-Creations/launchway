@@ -336,7 +336,12 @@ func Place(ctx context.Context, ex Executor, s Spec, files []PlacedFile, out Sin
 	if fp, ok := ex.(FilePlacer); ok {
 		return fp.PlaceFiles(ctx, s, files, out)
 	}
-	root, err := os.OpenRoot(s.Workspace)
+	return placeLocal(ctx, s.Workspace, files)
+}
+
+// placeLocal puts files in a workspace directory on this machine.
+func placeLocal(ctx context.Context, workspace string, files []PlacedFile) error {
+	root, err := os.OpenRoot(workspace)
 	if err != nil {
 		return fmt.Errorf("opening the workspace: %w", err)
 	}

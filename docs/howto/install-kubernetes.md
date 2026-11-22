@@ -58,12 +58,12 @@ flowchart LR
   r1 & r2 --> api["Kubernetes API"]
   api --> pods
   subgraph steps["Namespace launchway-steps (restricted)"]
-    pods["Step pods, one per run"]
+    pods["Step pods, one per step"]
   end
 ```
 
-All of a Sortie's steps go to the Station that took its first step, because they share the workspace in
-that run's pod. If that Station goes away, another Station takes the run over in a fresh pod.
+All of a Sortie's steps go to the Station that took its first step, because it keeps the Sortie's
+workspace and fills each step's pod from it. If that Station goes away, another Station takes the run over in a fresh checkout.
 
 ## Build the image
 
@@ -257,25 +257,27 @@ kubectl -n launchway-steps get pods
 ```
 
 ```text
-NAME                                            READY   STATUS    RESTARTS   AGE
-launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50   2/2     Running   0          5s
+NAME                           READY   STATUS    RESTARTS   AGE
+launchway-hello-a1-3f9c01d2ab   2/2     Running   0          5s
 ```
 
-The Sortie's pod holds a helper container with the workspace and the step's container. The second
-step's log shows that it ran in the same pod and read the file the first step wrote:
+Each step has a pod of its own, which exists only while the step runs: a helper container with the
+workspace and the step's container. The second step runs in another pod and reads the file the first step
+wrote, which the Station handed on from the first step's pod to the second's:
 
 ```text
 Runner launchway-runner-68b4f8f7bd-cnkks, executor kubernetes (launchway-steps)
-Using the run's workspace from an earlier step
 Image docker.io/library/busybox:1.37
-written by hello in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
-output and file received; running in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
+Starting pod launchway-steps/launchway-show-a1-77ab12c4de for this step: image-1
+Copied the workspace into the pod in 140ms
+written by hello in pod launchway-hello-a1-3f9c01d2ab
+output and file received; running in pod launchway-show-a1-77ab12c4de
+Copied what the step changed back in 70ms
 ```
 
-The pod is removed when the Sortie ends, whether it succeeded, failed (at any step, including an image
-step), was canceled or timed out, because a running pod holds the step namespace's quota. A resume
-makes a new pod from the Station's checkout of the Sortie; see
-[What happens to a Sortie's pod](../reference/runner-config.md#what-happens-to-a-runs-pod).
+A step's pod is removed when the step ends, whether it succeeded, failed, was canceled or timed out, because
+a running pod holds the step namespace's quota. See
+[One pod for each step](../reference/runner-config.md#one-pod-for-each-step).
 
 > [!NOTE]
 > The command line (`launchway runs start`) needs an API token, and tokens can only be made by

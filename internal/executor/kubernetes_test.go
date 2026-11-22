@@ -36,7 +36,7 @@ func kube(t *testing.T) *Kubernetes {
 	if ctxName == "" {
 		t.Skip("set LAUNCHWAY_TEST_KUBE_CONTEXT to run Kubernetes tests")
 	}
-	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: kubeTestNamespace(), StartTimeout: "5m"}, "test-"+t.Name())
+	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: kubeTestNamespace(), StartTimeout: "5m", Pod: PodPerRun}, "test-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestKubernetesUnrestrictedRefusedByRestrictedNamespace(t *testing.T) {
 	k := kube(t)
 	requireRestrictedNamespace(t, k)
 	u, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: kubeTestNamespace(),
-		Restricted: ptr(false)}, "test-"+t.Name())
+		Restricted: ptr(false), Pod: PodPerRun}, "test-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func TestKubernetesUnrestrictedRefusedByRestrictedNamespace(t *testing.T) {
 // not know (it may belong to someone else).
 func TestKubernetesCleanupAcrossRunners(t *testing.T) {
 	a := kube(t)
-	b, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: kubeTestNamespace()}, "test-other-"+t.Name())
+	b, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: kubeTestNamespace(), Pod: PodPerRun}, "test-other-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

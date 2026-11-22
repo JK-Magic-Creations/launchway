@@ -337,8 +337,8 @@ Service port is not 22, `forge.ssh.public_port` to the port people use.
 
 ## Runners
 
-Runners are `launchway runner` with the Kubernetes executor. Each run gets one pod in the step
-namespace, held by one runner. Runners only make outbound connections, to the servers and the
+Runners are `launchway runner` with the Kubernetes executor. Each step gets a pod of its own in the step
+namespace, for as long as the step runs; a Sortie's steps go to one runner, which keeps the Sortie's workspace. Runners only make outbound connections, to the servers and the
 Kubernetes API.
 
 <!-- keys: helm -->
@@ -366,7 +366,10 @@ Kubernetes API.
 | `runner.kubernetes.maxCpu` | string or number | `""` (no cap) | The most CPU one step container may ask for, as a request or a limit; server defaults are lowered to it, an explicit ask above it fails the step. See [`kubernetes.max_cpu`](runner-config.md#kubernetes) |
 | `runner.kubernetes.maxMemory` | string or number | `""` (no cap) | The most memory one step container may ask for; same behavior as `maxCpu` |
 | `runner.kubernetes.imagePullSecrets` | list | `[]` | Secrets in the step namespace for pulling step images |
-| `runner.kubernetes.keepFailed` | string | `""` (`0`) | A grace period before a failed or cancelled run's pod is removed; by default it goes when the run ends. See [What happens to a run's pod](runner-config.md#what-happens-to-a-runs-pod) |
+| `runner.kubernetes.pod` | string | `""` (`per-step`) | `per-step` makes a pod for each step, removed when the step ends; `per-run` is the earlier behavior, one pod for the whole Sortie, kept for one release so that an installation can go back without a downgrade, and then removed. See [One pod for each step](runner-config.md#one-pod-for-each-step) |
+| `runner.kubernetes.maxWorkspace` | string or number | `""` (`4Gi`) | With `per-step`: the most one Sortie's workspace may hold on a Station's disk; a step that grows it past this fails with a plain message. Caches and `workspace.exclude` paths do not count. See [`kubernetes.max_workspace`](runner-config.md#kubernetes) |
+| `runner.kubernetes.maxWorkspaces` | string or number | `""` (`12Gi`) | With `per-step`: the most all of a Station's workspaces and the caches it carries may hold together. Raise it together with `runner.dataVolume.sizeLimit` |
+| `runner.kubernetes.keepFailed` | string | `""` (`0`) | With `per-run`: a grace period before a failed or cancelled run's pod is removed; by default it goes when the run ends. See [What happens to a run's pod](runner-config.md#what-happens-to-a-runs-pod) |
 | `runner.kubernetes.maxPodAge` | string | `""` (`24h`) | The longest a step pod lives unless a step of it is executing; the reaper's bound for pods left by a crashed runner. `0` turns it off |
 | `runner.kubernetes.startTimeout` | string | `""` (`10m`) | How long to wait for a step pod's images and containers |
 | `runner.kubernetes.restricted` | boolean | `true` | Step containers run as `runAsUser`, without privileges, meeting Pod Security `restricted`; see [`kubernetes.restricted`](runner-config.md#kubernetes). Pipelines cannot change it |

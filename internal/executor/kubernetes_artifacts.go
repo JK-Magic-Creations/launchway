@@ -33,6 +33,14 @@ func (k *Kubernetes) podFor(runID string) string {
 
 // StageFiles copies an artifact's files out of the run's pod.
 func (k *Kubernetes) StageFiles(ctx context.Context, s Spec, globs []string, lim StageLimits, dir string) (*Staged, error) {
+	if k.perStep() {
+		if sd := k.scratchDir(s); s.Cache != nil && pathExists(sd) && allIn(s.Cache.Paths, globs) {
+			return stageLocal(ctx, sd, globs, lim, dir) // a cache, as the step left it
+		}
+		ws, unlock := k.readWorkspace(s)
+		defer unlock()
+		return stageLocal(ctx, ws, globs, lim, dir)
+	}
 	pod := k.podFor(s.RunID)
 	p := newPicker(globs)
 	searched := map[string]bool{}
@@ -166,6 +174,32 @@ func (k *Kubernetes) PlaceFiles(ctx context.Context, s Spec, files []PlacedFile,
 	if s.RunID == "" {
 		return errors.New("kubernetes: the step has no run")
 	}
+	if k.perStep() {
+		m, err := k.mirrorFor(s)
+		if err != nil {
+			return infra("preparing the run's workspace on the Station: %v", err)
+		}
+		var cacheFiles, wsFiles []PlacedFile
+		for _, f := range files {
+			if s.Cache != nil && under(s.Cache.Paths, f.Path) {
+				cacheFiles = append(cacheFiles, f)
+			} else {
+				wsFiles = append(wsFiles, f)
+			}
+		}
+		if len(cacheFiles) > 0 { // a cache goes into the pod from the step's own directory, not from the workspace copy
+			sd := k.scratchDir(s)
+			if err := os.MkdirAll(sd, 0o750); err != nil {
+				return infra("preparing the step's caches on the Station: %v", err)
+			}
+			if err := placeLocal(ctx, sd, cacheFiles); err != nil {
+				return err
+			}
+		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		return placeLocal(ctx, m.dir, wsFiles)
+	}
 	rp, err := k.ensurePod(ctx, withDefaultContainer(s), out)
 	if err != nil {
 		return err
@@ -264,6 +298,9 @@ func writePlacedTar(w io.Writer, files []PlacedFile) error {
 // WorkspaceInPod implements WorkspaceStager: the workspace is in the pod
 // once the runner has set it up for the run's workspace.
 func (k *Kubernetes) WorkspaceInPod(s Spec) bool {
+	if k.perStep() {
+		return k.workspaceMirror(s) != nil
+	}
 	k.mu.Lock()
 	rp := k.pods[s.RunID]
 	k.mu.Unlock()

@@ -222,7 +222,7 @@ and forgotten after a day.
 | `container` | Like the above, with Podman or Docker, whichever is installed | You do not mind which. |
 | `auto` (default) | In containers if Podman or Docker is installed, otherwise on the host | Trying it out. Name the executor for real Stations, so a missing Podman fails loudly. |
 | `host` | Directly on the machine, as the Station's user, without containers | Only for pipelines you trust completely: a step can do anything that user can. |
-| `kubernetes` | In a pod per run in a namespace, through the Kubernetes API | The Station is in or near a cluster. |
+| `kubernetes` | In a pod for each step in a namespace, through the Kubernetes API | The Station is in or near a cluster. |
 
 The Kubernetes executor reads the usual kubeconfig, or the in-cluster configuration in a pod. Name
 the context and namespace with `kubernetes.context` and `kubernetes.namespace` in `runner.yaml`, or

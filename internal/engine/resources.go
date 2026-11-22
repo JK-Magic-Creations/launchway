@@ -487,54 +487,85 @@ func (c *cmd) runContainers() []pipeline.Container {
 	return sizeContainers(c.st.Pipeline, cs, pol)
 }
 
+// stepContainer is the step's own container, sized for this step alone: what
+// a runner that makes one pod per step gives the step, as opposed to the
+// run's container, which is sized for the largest of the steps that share its
+// image (runContainers). It is nil when the step runs in no container, when
+// the server does not size containers, or when the policy cannot be read; the
+// runner then uses the run's container as it always did.
+func (c *cmd) stepContainer(def *pipeline.Step) *pipeline.Container {
+	name := c.st.Pipeline.ContainerFor(def)
+	if name == "" || !c.e.knows(schemaResources) {
+		return nil
+	}
+	pol, err := c.e.loadPolicy(c.tx)
+	if err != nil {
+		return nil // runContainers has logged it
+	}
+	for _, ct := range c.st.Pipeline.RunContainers() {
+		if ct.Name == name && !ct.Service {
+			sized := sizeContainer(c.st.Pipeline, &ct, []*pipeline.Step{def}, pol)
+			return &sized
+		}
+	}
+	return nil
+}
+
 func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourcePolicy) []pipeline.Container {
 	for i := range cs {
-		ct := &cs[i]
-		if ct.Service {
+		if cs[i].Service {
 			continue
 		}
-		legacy, _ := resources.Request{CPU: ct.CPU, Memory: ct.Memory}.Parse()
-		if legacy.Memory > 0 {
-			legacy.MemoryLimit = legacy.Memory // as it was: what is asked for is also the cap
-		}
-		var folded resources.Amount
-		declaredAny, any := false, false
-		// What the container's CPU and memory come from: asked for by a
-		// step or by the container's own cpu and memory, or the defaults.
-		askedCPU, askedMemory := legacy.CPU > 0, legacy.Memory > 0
-		for _, s := range p.Steps {
-			kind := s.ResourceKind()
-			if kind == "" || p.ContainerFor(s) != ct.Name {
-				continue
-			}
-			any = true
-			declared, err := s.ResourceAmount()
-			if err != nil {
-				continue
-			}
-			base := pol.defaults[kind]
-			if !legacy.IsZero() {
-				base = legacy
-			}
-			if s.Resources != nil {
-				declaredAny = true
-				askedCPU = askedCPU || declared.CPU > 0 || declared.CPULimit > 0
-				askedMemory = askedMemory || declared.Memory > 0 || declared.MemoryLimit > 0
-			}
-			folded = resources.Max(folded, resources.Merge(declared, base))
-		}
-		switch {
-		case !any || (!legacy.IsZero() && !declaredAny):
-			folded = legacy
-		default:
-			folded = resources.Max(folded, legacy)
-		}
-		r := folded.Request()
-		ct.CPU, ct.CPULimit, ct.Memory, ct.MemoryLimit = r.CPU, r.CPULimit, r.Memory, r.MemoryLimit
-		ct.Threads = resources.Threads(folded.CPULimit, folded.MemoryLimit, pol.limits.MemoryPerThread)
-		ct.ExplicitCPU, ct.ExplicitMemory = askedCPU, askedMemory
+		cs[i] = sizeContainer(p, &cs[i], p.Steps, pol)
 	}
 	return cs
+}
+
+// sizeContainer sizes one container for the given steps (the ones of them
+// that run in it): the largest of what they ask for.
+func sizeContainer(p *pipeline.Pipeline, in *pipeline.Container, steps []*pipeline.Step, pol resourcePolicy) pipeline.Container {
+	ct := in
+	legacy, _ := resources.Request{CPU: ct.CPU, Memory: ct.Memory}.Parse()
+	if legacy.Memory > 0 {
+		legacy.MemoryLimit = legacy.Memory // as it was: what is asked for is also the cap
+	}
+	var folded resources.Amount
+	declaredAny, any := false, false
+	// What the container's CPU and memory come from: asked for by a
+	// step or by the container's own cpu and memory, or the defaults.
+	askedCPU, askedMemory := legacy.CPU > 0, legacy.Memory > 0
+	for _, s := range steps {
+		kind := s.ResourceKind()
+		if kind == "" || p.ContainerFor(s) != ct.Name {
+			continue
+		}
+		any = true
+		declared, err := s.ResourceAmount()
+		if err != nil {
+			continue
+		}
+		base := pol.defaults[kind]
+		if !legacy.IsZero() {
+			base = legacy
+		}
+		if s.Resources != nil {
+			declaredAny = true
+			askedCPU = askedCPU || declared.CPU > 0 || declared.CPULimit > 0
+			askedMemory = askedMemory || declared.Memory > 0 || declared.MemoryLimit > 0
+		}
+		folded = resources.Max(folded, resources.Merge(declared, base))
+	}
+	switch {
+	case !any || (!legacy.IsZero() && !declaredAny):
+		folded = legacy
+	default:
+		folded = resources.Max(folded, legacy)
+	}
+	r := folded.Request()
+	ct.CPU, ct.CPULimit, ct.Memory, ct.MemoryLimit = r.CPU, r.CPULimit, r.Memory, r.MemoryLimit
+	ct.Threads = resources.Threads(folded.CPULimit, folded.MemoryLimit, pol.limits.MemoryPerThread)
+	ct.ExplicitCPU, ct.ExplicitMemory = askedCPU, askedMemory
+	return *ct
 }
 
 // stepLimits turns limits written as text into numbers and the canonical

@@ -110,7 +110,7 @@ reports:
 | `data` | directory | `launchway-runner` | Where runs' workspaces are cloned |
 | `concurrency` | whole number | `2` | Steps it runs at once. All of a Sortie's steps go to the Station that took its first step, so a Sortie's parallel steps share this |
 | `ai` | boolean | `false` | Whether this Station may call the AI models the server lists, for `ai` steps (and, on a launch Station, to explain verifications). Keys come from the Station's own secret stores and never enter a step's container. See [AI models](../guide/ai.md) |
-| `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod per Sortie (run)) |
+| `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod for each step) |
 | `spool.max_mib` | whole number | `256` | While the server cannot be reached (no answer, or `503`), the Station keeps executing the step and keeps its log lines and its result on its own disk, under `<data>/spool`, and delivers them in order when the server answers. This is how many MiB of log lines it keeps per step; when it is full the oldest lines are dropped and one line in the log says how many. The result is never dropped. Nothing is written to disk until the first failure |
 | `spool.max_age` | duration | `15m` | How old a kept log line may be before it is dropped, with the same marker. A Station that restarts during an outage delivers what it finds. The step's log shows a line such as "The server could not be reached from 14:02:10 to 14:03:40; nothing was lost." |
 
@@ -183,8 +183,9 @@ accept:
 
 ## Kubernetes
 
-Settings of the `kubernetes` executor: each Sortie gets one pod in `namespace`, with a helper container
-holding the workspace and a container per image or toolbox.
+Settings of the `kubernetes` executor: each step attempt gets a pod of its own in `namespace`, with the step's
+container, a helper container holding the workspace and the Sortie's services, made when the step starts and removed
+when it ends (see [One pod for each step](#one-pod-for-each-step)).
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
@@ -202,7 +203,11 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.max_cpu` | quantity | none (no cap) | The most CPU one container may ask for, as a request or a limit. A default the server chose (the installation's step resource defaults) is lowered to this, and the log says so; a step or container that explicitly asks for more fails before the pod is made, naming this setting |
 | `kubernetes.max_memory` | quantity | none (no cap) | The most memory one container may ask for, as a request or a limit. Server defaults are lowered to it; an explicit ask above it fails the step, naming this setting |
 | `kubernetes.image_pull_secrets` | list | none | Secrets in the namespace for pulling step images |
-| `kubernetes.keep_failed` | duration | `0` | A grace period before a failed or cancelled run's pod is removed. The default removes it as soon as the Sortie ends: a running pod holds namespace quota, and a resume does not need it (see [What happens to a Sortie's pod](#what-happens-to-a-runs-pod)) |
+| `kubernetes.pod` | text | `per-step` | How much of a Sortie one pod holds: `per-step` makes a pod for each step attempt; `per-run` is the earlier behavior, one pod for the whole Sortie. `per-run` exists for one release so that an installation can go back without a downgrade, and will be removed (see [One pod for each step](#one-pod-for-each-step)) |
+| `kubernetes.work_dir` | path | `kubernetes` in the Station's data directory | With `per-step`: where the Station keeps its copy of each running Sortie's workspace, which the steps' pods are filled from and hand their files back to. It needs room for the workspaces of the Sorties running on this Station (the chart's `runner.dataVolume.sizeLimit`) |
+| `kubernetes.max_workspace` | quantity | `4Gi` | With `per-step`: the most one Sortie's workspace may hold on the Station's disk. A step that grows it past this fails with a message that names the setting, and so does a checkout larger than it. Caches and paths left out with [`workspace.exclude`](pipeline.md#workspace) do not count, because they do not travel with the workspace |
+| `kubernetes.max_workspaces` | quantity | `12Gi` | With `per-step`: the most all the workspace copies and the caches in transit on this Station may hold together; a step that would go past it fails with a message that says so. Each step's log says what the Station holds and the limits. Raise it together with the Station's data volume (`runner.dataVolume.sizeLimit` in the chart), which is where the copies live |
+| `kubernetes.keep_failed` | duration | `0` | With `per-run`: a grace period before a failed or cancelled run's pod is removed. The default removes it as soon as the Sortie ends: a running pod holds namespace quota, and a resume does not need it (see [What happens to a Sortie's pod](#what-happens-to-a-runs-pod)). With `per-step` a step's pod goes when its step ends and nothing is kept |
 | `kubernetes.max_pod_age` | duration | `24h` | The longest a step pod lives, whatever the server says about its Sortie, unless a step of it is executing on this Station. Bounds what a crashed Station or a forgotten run can leave behind. `0` turns the bound off |
 | `kubernetes.start_timeout` | duration | `10m` | How long to wait for a pod's images to be pulled and its containers to start |
 | `kubernetes.restricted` | boolean | `true` | Every container, services included, runs as `run_as_user` with no privilege escalation, no capabilities and the `RuntimeDefault` seccomp profile, so step pods meet Pod Security `restricted`. `HOME` is `/home/launchway/user`, a directory only the step's user can read or write (mode 0700). `false` runs images as their own users, often root, and needs a namespace that allows it. Pipelines cannot change this |
@@ -222,11 +227,85 @@ shell-less case to support; services are untouched and keep their own account fi
 the step fails with a message that names the image and the setting. The container executor (`podman` or `docker`) runs
 the image's own user, which the image's account files already describe, so it needs nothing.
 
+### One pod for each step {#one-pod-for-each-step}
+
+With `kubernetes.pod: per-step` (the default) a step attempt has a pod of its own. The pod holds the
+step's own container (its image, with the requests and limits the server worked out for that step alone),
+the helper container that holds the workspace, and the Sortie's service containers, and nothing else. It
+is made when the step starts and removed when the step ends, however it ends: succeeded, failed, canceled,
+timed out, or its lease lost. The step namespace's quota is therefore held only while a step runs, and two steps that use one
+image, even at the same time, have a pod and a memory limit each: one cannot take the other's memory or get it killed.
+The pod's name is `launchway-<step>-a<attempt>-<hash>`, a valid DNS label, different for every attempt.
+
+What it costs, and what it changes:
+
+- **A pod start for each step.** Seconds on a node that already has the image (the rehearsal on a small
+  cluster measured about 3 seconds for a step that does nothing, most of it Kubernetes starting the pod), plus
+  the image pull on a node that does not. A Sortie of many tiny steps is slower than before; a Sortie of
+  steps that take a minute or more is not noticeably so. Slower builds are chosen over an unstable platform.
+- **The workspace goes through the Station.** A pod's workspace goes with the pod, so the Station keeps the
+  Sortie's workspace in a copy on its own disk (`kubernetes.work_dir`; the checkout itself is never written
+  to). A step's pod is filled from the copy when it starts: a pod starts empty, so what it lacks is the
+  workspace. When the step ends, before its pod is removed, what the step **changed** comes back: the Station
+  remembers what it sent (from the archive's headers, so no file is read twice or hashed), the pod lists its files
+  with the time each last changed (a time that tools restoring file times from an archive cannot set back), and
+  only the files changed since the pod was filled, the new directories and the names of what was removed are
+  taken. Files another step of the Sortie wrote meanwhile are not touched. A step therefore sees what the
+  steps before it left, as before. Reports, Cargo and image build contexts are read from the copy after the step, so a
+  failed step's reports are still there. Steps of one stage that run at the same time each start from the
+  workspace as it was and each hand back what they changed: they no longer share one filesystem live, so a step
+  cannot read a file a parallel step is still writing. A step that needs another's files must `needs:` it, as it always had to.
+- **Caches do not travel with the workspace.** The paths of a step's declared [caches](../guide/build-caches.md)
+  are left out of the copy and of what is sent into the pod and read back. A cache is restored from the cache
+  store into the step's own pod and, when it is saved after the step, what the step changed there is read back into a
+  directory of that step (not the Sortie's copy) that the cache feature saves from; the directory is removed
+  afterwards. A cache of gigabytes therefore moves as it always did, store to pod and pod to store, and not also
+  through the workspace in both directions for every step. For other large trees that later steps do not need,
+  [`workspace.exclude`](pipeline.md#workspace) in the pipeline leaves them out too. Nothing is left out by
+  name: only caches and `workspace.exclude` change what travels.
+- **The Station's disk is bounded.** `kubernetes.max_workspace` limits one Sortie's copy and
+  `kubernetes.max_workspaces` everything the Station holds (copies and caches in transit). A step that goes past one
+  fails with a plain message that names the setting; each step's log says what the Station holds. The copy is
+  removed when the Sortie ends (or after `max_pod_age`), and a cache directory when the step's caches are saved (or an hour
+  after the step). The copy is on the Station's data volume (the chart's `runner.dataVolume`), which must be large
+  enough.
+- **Tool caches under `HOME` do not carry on.** A step's `HOME` (the Go build cache, the package managers' caches) is
+  in its own pod and goes with it, so a later step starts with them cold. Declare what should carry on as a
+  [`cache:`](../guide/build-caches.md), which is restored into the workspace.
+- **Services start with each step's pod.** The Sortie's service containers (`service: true`, a database for
+  tests) are part of every step's pod and start with it, so each step gets its own fresh service; a
+  service's state does not carry from one step to the next. Services count against the quota of every step pod
+  that holds them.
+- **A restart of a Station does not adopt a running step.** The step's lease is lost, the pod it made is
+  removed by the restarted Station (see below), and the step runs again once on a lease of its own. Steps
+  that already finished are kept.
+- **Quota.** The check is made for the step's pod: its own container, the helper and any services. A step
+  whose pod can never fit the namespace's quota fails at once, with both numbers. A step that does not fit
+  now waits (see [Holding patterns](../guide/queues.md)), and the message names the steps of the same Sortie
+  that hold room, so you can tell a wait for room from a step that ran out of memory. Before it makes a pod, a
+  Station removes the pods of its own for the Sortie that no step of its process runs in (an attempt whose lease was lost, a
+  process that stopped), so a Sortie never waits for room that its own abandoned pod holds. It says so in the step's log.
+
+**When to use `pod: per-run`.** Only to go back to the earlier behavior, for one release, for example if a
+Sortie depends on a service keeping its state between steps, or on one step reading what a parallel step is still writing, and you cannot change
+that yet. It keeps one pod for the whole Sortie, with a container per image sized for the largest step that uses it, so same-image steps
+share one memory limit and a Sortie holds quota for as long as it runs. `per-run` will be removed. Switch by changing the setting (the chart's
+`runner.kubernetes.pod`) and restarting the Stations; no upgrade or downgrade is needed, and pods of the other kind
+that a Station finds are removed as described next.
+
 ### What happens to a Sortie's pod {#what-happens-to-a-runs-pod}
 
-On Kubernetes each run has one step pod, which holds the Sortie's workspace and its containers. A
+With `per-step` a pod holds one step and goes with it. This section is about the pods the reaper
+removes: with `per-step` the pod of a step that ended without removing it (the Station was stopped
+or could not reach the API), and with `per-run` the Sortie's pod. A
 running pod holds CPU and memory in the step namespace's quota for as long as it exists, so the
 Station does not keep one for a Sortie that has ended.
+
+With `per-step`, the reaper removes a step's pod when this Station made it and no step of this process runs
+in it (the attempt no longer holds a lease: the process that made it stopped, or the step was taken
+away), when it is another Station's and its Sortie ended, or when it is older than `kubernetes.max_pod_age`.
+A pod with a step executing on this Station is never removed. It also removes the copies of the workspaces of
+Sorties that ended. What follows describes `per-run`.
 
 The Station's reaper removes a pod when any of these holds:
 
@@ -254,7 +333,7 @@ waits for room (see [Holding patterns](../guide/queues.md)). Its message says wh
 across how many pods, what the namespace allows and how much must be released first; it is a
 reservation limit, not a step that ran out of memory.
 
-**What a resume keeps.** The Sortie's workspace is the Station's checkout of the commit, on the
+**What a resume keeps (`per-run`).** The Sortie's workspace is the Station's checkout of the commit, on the
 Station's disk under its data directory (kept 24 hours after it was last used), not the pod. A
 resume, or a re-run from a step, makes a new pod and fills it from that checkout, so it still
 starts from the same commit and the same libraries. The trade-off: files that earlier steps wrote
@@ -337,14 +416,14 @@ in the root of the context. Its patterns work as the builder's do, so an allow-l
 kept, because the builder reads them from the context and applies the same rules again.
 
 `images.max_context_mib` and the limit of 1,000,000 files apply to **what the ignore file keeps**, never to what it
-leaves out. On Kubernetes the workspace is in the Sortie's pod, so the Station lists the context's
+leaves out. On Kubernetes with `pod: per-step` the workspace is the Station's copy of it, a directory on its
+disk, so the Station checks the limits on the files the rules keep and sends the builder what they keep, copying nothing.
+With `pod: per-run` the workspace is in the Sortie's pod, so the Station lists the context's
 files there with their sizes, applies the rules itself, and reads out of the pod only the files that are
 kept (a directory the rules leave out, such as `node_modules` or a build cache, is not even walked, unless a `!`
 rule could bring something in it back). The context is copied out of the pod as files, directories
 and symbolic links; a link is copied as a link and never followed, a context that is itself a link
-leading outside the workspace is refused, and nothing outside the context is read. A Station on
-a machine with the workspace on its own disk checks the same limits on the same files, though it copies
-nothing: the builder is sent what the rules keep. Empty directories are not copied on Kubernetes. The
+leading outside the workspace is refused, and nothing outside the context is read. Empty directories are not copied from a pod. The
 helper image needs `find`, `stat` and `tar` (the default does).
 
 When a context is over a limit, the step fails with a message that says how much was kept and in how

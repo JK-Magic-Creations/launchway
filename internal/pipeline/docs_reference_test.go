@@ -207,6 +207,7 @@ containers:
   db: { image: postgres:17, service: true, ready: { http: { path: /health, port: 8080 }, every: 2s, within: 60s } }
 runner: { pool: gpu, labels: [cuda] }
 lane: { name: probe, per: [ref], when_busy: wait }
+workspace: { exclude: [web/node_modules] }
 defaults: { env: { TZ: UTC } }
 steps:
   build:
@@ -392,6 +393,7 @@ var probes = []probe{
 	{table: "runner", path: []any{"runner"}},
 	{table: "step-runner", path: []any{"steps", "build", "runner"}},
 	{table: "lane", path: []any{"lane"}},
+	{table: "workspace", path: []any{"workspace"}},
 	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},

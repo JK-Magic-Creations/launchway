@@ -65,8 +65,11 @@ sequenceDiagram
   commits, the inputs, and who or what started it.
 - A step whose Station stops sending heartbeats for the lease period (90 seconds by default; a heartbeat goes every 15 seconds, so a slow server costs the step nothing) is
   marked lost and queued again; a step is never recorded as finished twice.
-- All of a Sortie's steps go to the Station that took its first step, because they share a workspace.
-  If that Station disappears for three lease periods, another Station takes the Sortie over in a fresh
+- All of a Sortie's steps go to the Station that took its first step, because it keeps the Sortie's
+  workspace. On Kubernetes each step then runs in a pod of its own, made when the step starts and removed
+  when it ends: the Station fills the pod from its copy of the workspace and reads the files back before
+  the pod goes, so the step namespace's quota is held only while a step runs and every step has the limits of its
+  own container. If that Station disappears for three lease periods, another Station takes the Sortie over in a fresh
   checkout.
 
 ## The event-sourced engine

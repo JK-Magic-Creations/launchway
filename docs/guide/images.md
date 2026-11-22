@@ -60,7 +60,7 @@ steps:
 **What is sent as the build context.** The ignore file is `<Dockerfile>.dockerignore` beside the
 Dockerfile if there is one, else `.dockerignore` in the context, with the builder's own pattern
 rules: an allow-list that starts with `*` and re-includes with `!` works. On Kubernetes the
-Station reads only the files the ignore file keeps out of the Sortie's pod, so caches and
+Station reads only the files the ignore file keeps out of the Sortie's workspace, so caches and
 `node_modules` that the file leaves out are neither copied nor counted against the limit; the Dockerfile and the ignore
 files are always kept. A context that is still over the limit fails with a message that says how much was kept, how much the
 ignore file left out, and the three largest directories kept. See
@@ -73,7 +73,7 @@ as `{ output: image.digest }`. A deploy change with `digest:` instead of `tag:` 
 to the image as `repository@sha256:…`, which nobody can move; references already pinned are moved
 to the new digest. A tag cannot move a reference pinned by digest, and says so.
 
-An image step runs no script and has no container in the Sortie's pod: the Station builds it. It may
+An image step runs no script and has no container and no pod of its own: the Station builds it. It may
 `fetch` Cargo into the workspace first, is retried with `retry`, may be in a template, and
 cannot be repeated by `for_each` yet. A run with image steps runs, from its first step, on a Station
 that can build images, since its steps share that Station's workspace.
@@ -83,7 +83,7 @@ Station's operator runs apart from the steps, rootless (see
 [deploy/buildkit/README.md](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/buildkit/README.md): nothing that builds a Dockerfile runs under
 Pod Security "restricted", so the daemon has a namespace of its own with exactly two relaxations,
 and step pods stay restricted). The Station is the daemon's client, over mutual TLS: it sends the
-build context (on Kubernetes, the files its `.dockerignore` keeps, copied out of the Sortie's pod), answers the daemon's requests for build
+build context (on Kubernetes, the files its `.dockerignore` keeps, read from the Station's copy of the Sortie's workspace), answers the daemon's requests for build
 secrets and Depot credentials over the build's session, and receives the image. For Depots
 that use tokens, an honest daemon asks the Station for a token, which the Station fetches itself, and
 never sees the password; for Depots that take a user name and password directly (basic

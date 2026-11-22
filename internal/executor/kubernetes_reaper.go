@@ -40,6 +40,13 @@ func (k *Kubernetes) holdRun(runID string) func() {
 // until the run ended. A retry that comes back to this runner makes the pod
 // again, which costs a start-up but never a stuck wait.
 func (k *Kubernetes) ReleaseRun(ctx context.Context, runID string) error {
+	if k.perStep() {
+		// The pods of steps executing here stay: they end themselves, and
+		// delete their pods, when their step's context ends. What is left is
+		// the pods of attempts this process no longer runs.
+		k.releaseOwnIdle(ctx, runID, nil)
+		return nil
+	}
 	k.mu.Lock()
 	if k.busy[runID] > 0 {
 		k.mu.Unlock()
@@ -84,6 +91,11 @@ func (k *Kubernetes) orphaned(p *corev1.Pod, mine bool) bool {
 //
 // A pod with a step executing here is never removed.
 func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
+	if k.perStep() {
+		if err := k.cleanMirrors(ctx, lookup); err != nil {
+			return err
+		}
+	}
 	sel := fmt.Sprintf("%s=launchway,%s", labelManaged, labelRun)
 	list, err := k.client.CoreV1().Pods(k.o.Namespace).List(ctx, metav1.ListOptions{LabelSelector: sel})
 	if err != nil || len(list.Items) == 0 {
@@ -105,6 +117,15 @@ func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
 	k.mu.Unlock()
 	for _, p := range list.Items {
 		id := p.Labels[labelRun]
+		if p.Labels[labelKind] == "step" {
+			info, known := infos[id]
+			if k.stepPodRemovable(&p, info, known) {
+				if err := k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, p.Name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))}); err != nil && !apierrors.IsNotFound(err) {
+					return err
+				}
+			}
+			continue
+		}
 		if busy[id] || p.DeletionTimestamp != nil {
 			continue
 		}

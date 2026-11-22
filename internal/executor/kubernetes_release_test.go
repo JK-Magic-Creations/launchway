@@ -92,7 +92,7 @@ func TestCleanupRemovesOrphansOfAnEarlierProcess(t *testing.T) {
 // run has reserved and across how many pods, what the namespace allows, and
 // what must be released; it never reads as a step that ran out of memory.
 func TestQuotaWaitSaysWhatTheRunHoldsAndWhatItWaitsFor(t *testing.T) {
-	k := kubeWith(KubernetesOptions{})
+	k := kubeWith(KubernetesOptions{Pod: PodPerRun})
 	k.owner = "me"
 	k.startWait = time.Second
 	k.pods = map[string]*runPod{}
