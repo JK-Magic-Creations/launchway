@@ -15,6 +15,11 @@ paths = [
   # generic-api-key rule, and every commit that moves a line makes a new fingerprint, so a baseline
   # entry per commit could never keep up. No value in it is a secret.
   '''internal/archtest/arch_test\.go''',
+  # Two tests that plant secret-shaped fake values to prove they are masked or refused: the Ansible report
+  # test (values built from parts now; its first commits wrote them whole) and the starters' own test script
+  # (a private key header written to a file in a throwaway repository). Nothing in them is a secret.
+  '''internal/cac/ansible/report_test\.go''',
+  '''internal/starters/library/tests/run\.sh''',
 ]
 # Test canaries are fake by construction: the tests plant a value that starts with CANARY- to prove
 # it appears nowhere in output. A real secret never starts that way.
