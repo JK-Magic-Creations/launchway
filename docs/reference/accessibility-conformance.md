@@ -35,10 +35,10 @@ Terms: **Supports** means no known problem and tested as far as the remarks say.
 | 1.3.5 Identify Input Purpose | AA | Partially supports | Launchway asks for few personal details, and its fields do not yet carry the autocomplete attribute (gap). |
 | 1.4.1 Use of Color | A | Supports | A status is a shape, a color and a word (test: `src/a11y/kit.a11y.test.tsx`). Links in sentences are underlined, and axe-core's link-in-text-block rule passes in the browser scan. |
 | 1.4.2 Audio Control | A | Not applicable | No audio. |
-| 1.4.3 Contrast (Minimum) | AA | Supports | Computed from the design tokens for 60 color pairs in each theme: the lowest text ratio is 5.29:1 in light and 4.96:1 in dark (4.5:1 needed). Also scanned in the browser, where the browser scan of 60 pages at 1440 and 390 wide in light and dark found 0 violations that are not in the baseline. |
+| 1.4.3 Contrast (Minimum) | AA | Supports | Computed from the design tokens for 60 color pairs in each theme: the lowest text ratio is 5.29:1 in light and 4.96:1 in dark (4.5:1 needed). Also scanned in the browser, where the browser scan of 62 pages at 1440 and 390 wide in light and dark found 0 violations that are not in the baseline. |
 | 1.4.4 Resize Text | AA | Supports | Layout holds at 400 percent zoom, which is the 320 pixel reflow test below. |
 | 1.4.5 Images of Text | AA | Supports | Text is text. The logo is a drawing. |
-| 1.4.10 Reflow | AA | Supports | The browser scan loads every page at 320 pixels wide and fails if the page scrolls sideways (60 pages checked). Tables, code and drawings scroll inside their own region, which can be focused. |
+| 1.4.10 Reflow | AA | Supports | The browser scan loads every page at 320 pixels wide and fails if the page scrolls sideways (62 pages checked). Tables, code and drawings scroll inside their own region, which can be focused. |
 | 1.4.11 Non-text Contrast | AA | Supports | Status marks, control borders (`--control-line`) and the focus ring are computed from the tokens: the lowest is 3.38:1 (3:1 needed), both themes. |
 | 1.4.12 Text Spacing | AA | Partially supports | The browser scan applies the spacing the criterion names and fails if text is cut off. Some lists shorten a long name with an ellipsis (full text in the tooltip and for screen readers). |
 | 1.4.13 Content on Hover or Focus | AA | Partially supports | The help that appears on an area in the top bar is hoverable and appears on focus, but cannot be dismissed with Escape (gap). The same text is always available to screen readers. |
@@ -47,7 +47,7 @@ Terms: **Supports** means no known problem and tested as far as the remarks say.
 
 | Criterion | Level | Conformance | Remarks |
 |---|---|---|---|
-| 2.1.1 Keyboard | A | Supports | Keyboard-only journeys: 10 of 10 pass (skip link, search and read a failed run, decide an approval, start a run, change a variable, Learn, overlays, a session that ends). |
+| 2.1.1 Keyboard | A | Supports | Keyboard-only journeys: 12 of 12 pass (skip link, search and read a failed run, decide an approval, start a run, change a variable, Learn, overlays, a session that ends). |
 | 2.1.2 No Keyboard Trap | A | Supports | A dialog keeps Tab inside on purpose and always closes with Escape (journey: start a run, overlays). |
 | 2.1.4 Character Key Shortcuts | A | Supports | The only single-key shortcut, / for search, is switched off under the user menu. |
 | 2.2.1 Timing Adjustable | A | Partially supports | A session ends after idle time (use keeps it going) and after its lifetime. The end is announced; there is no warning before it and no button to extend it (gap). |

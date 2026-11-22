@@ -111,6 +111,12 @@ func (s *Server) WithCache(ctx context.Context, repo string, fn func(gitDir stri
 // sourceJobFor gives a leased job whose source is a repository hosted here a
 // read-only credential for it, bound to the repository and to the run.
 func (s *Server) sourceJobFor(ctx context.Context, job *engine.Job) {
+	if job != nil && job.Source.Kind == "git" && s.Hosts != nil {
+		if ca, ok, err := s.Hosts.CheckedClone(ctx, job.Project); err == nil && ok && ca.URL != "" {
+			job.Source.Outside = &engine.OutsideAuth{URL: ca.URL, Username: ca.Username, Secret: ca.Secret, Resolve: ca.Resolve}
+			return
+		}
+	}
 	if job == nil || job.Source.Kind != "git" || s.Forge == nil || s.Forge.RunTokens.Key == nil {
 		return
 	}

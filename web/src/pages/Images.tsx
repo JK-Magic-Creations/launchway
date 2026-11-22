@@ -7,6 +7,7 @@ import { Empty, ErrorBox, Link, StatusPill } from "../components/ui";
 import { CopyValue } from "../components/Security";
 import { DIGEST_KEEP, shortDigest } from "../components/Images";
 import { terms } from "../terms";
+import { params, refName } from "../refs";
 
 type By = "digest" | "repository" | "project";
 
@@ -14,7 +15,6 @@ const BY: [By, string][] = [["digest", "Digest"], ["repository", "Repository"], 
 
 interface Asked { by: By; value: string; tag: string }
 
-function params() { return new URLSearchParams(location.search); }
 
 function askedFromURL(): Asked {
   const p = params();
@@ -24,7 +24,6 @@ function askedFromURL(): Asked {
   return { by: "digest", value: "", tag: "" };
 }
 
-function refName(ref: string): string { return ref.replace(/^refs\/(heads|tags)\//, ""); }
 
 // tidy reads what was typed the way people paste it: an image reference
 // host/repo@sha256:… is its digest, host/repo:tag a repository and tag.

@@ -39,7 +39,7 @@ func TestUpgradeFromSchema56KeepsEverythingAndAddsTagsBadgesAndAliases(t *testin
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for v := schemaStandIn57; v <= schemaBadges; v++ {
+	for v := schemaHosts; v <= schemaBadges; v++ {
 		if !strings.Contains(log.String(), fmt.Sprintf("applied a database migration\" schema=%d ", v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}

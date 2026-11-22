@@ -232,9 +232,9 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Every Git host, equally](roadmap/milestone-1.md#every-git-host-equally) | Planned | First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards. |
-| [Self-managed variants of hosts](roadmap/milestone-1.md#self-managed-variants-of-hosts) | Planned | Hosts you run yourself, with their own addresses and certificates, are first-class. |
-| [Hosts without webhooks](roadmap/milestone-1.md#hosts-without-webhooks) | Planned | Hosts that cannot call Launchway are watched through polling or a bridge from their event service. |
+| [Every Git host, equally](roadmap/milestone-1.md#every-git-host-equally) | In progress | First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards. |
+| [Self-managed variants of hosts](roadmap/milestone-1.md#self-managed-variants-of-hosts) | In progress | Hosts you run yourself, with their own addresses and certificates, are first-class. |
+| [Hosts without webhooks](roadmap/milestone-1.md#hosts-without-webhooks) | In progress | Hosts that cannot call Launchway are watched through polling or a bridge from their event service. |
 | [One identity across hosts](roadmap/milestone-1.md#one-identity-across-hosts) | Planned | Map the same person on different hosts to one Launchway user. |
 | [A common provider model](roadmap/milestone-1.md#a-common-provider-model) | Planned | One internal contract every host, including the built-in one, must satisfy. |
 | [Connect your repositories without moving them](roadmap/milestone-1.md#connect-your-repositories-without-moving-them) | Planned | Sign in with your code host account, pick repositories, and Launchway runs pipelines on your own machines and reports checks back to the pull request there. |

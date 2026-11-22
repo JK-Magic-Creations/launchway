@@ -2,12 +2,15 @@ package runner
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
@@ -46,4 +49,33 @@ func gitEnv(ctx context.Context, dir string, env []string, args ...string) error
 		return fmt.Errorf("git %s: %s", args[0], redact.URLs(err.Error()))
 	}
 	return nil
+}
+
+// outsideClone is the settings that carry a run's credential for a repository
+// kept on another Git host to the origin of its address only, as environment
+// for the one git process (never in the workspace's git configuration).
+func outsideClone(a *engine.OutsideAuth) (string, []string) {
+	u, err := url.Parse(a.URL)
+	if err != nil || u.Host == "" {
+		return a.URL, nil
+	}
+	origin := u.Scheme + "://" + u.Host
+	n, _ := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT"))
+	var env []string
+	for i := 0; i < n; i++ {
+		env = append(env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, os.Getenv(fmt.Sprintf("GIT_CONFIG_KEY_%d", i))),
+			fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", i, os.Getenv(fmt.Sprintf("GIT_CONFIG_VALUE_%d", i))))
+	}
+	basic := base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Secret))
+	env = append(env, fmt.Sprintf("GIT_CONFIG_KEY_%d=http.%s/.extraHeader", n, origin),
+		fmt.Sprintf("GIT_CONFIG_VALUE_%d=Authorization: Basic %s", n, basic))
+	n++
+	// The addresses the server's egress check saw (git's http.curloptResolve,
+	// HOST:PORT:ADDRESS[,ADDRESS]): git connects there and does not resolve again.
+	for _, r := range a.Resolve {
+		env = append(env, fmt.Sprintf("GIT_CONFIG_KEY_%d=http.curloptResolve", n), fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", n, r))
+		n++
+	}
+	env = append(env, fmt.Sprintf("GIT_CONFIG_COUNT=%d", n))
+	return a.URL, env
 }

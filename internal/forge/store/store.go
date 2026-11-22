@@ -46,19 +46,31 @@ func (s *Store) SetClock(now func() time.Time) { s.now = now }
 func ms(t time.Time) int64     { return t.UnixMilli() }
 func fromMS(v int64) time.Time { return time.UnixMilli(v).UTC() }
 
-const connCols = `id, name, kind, base_url, cred_env, cred_file, events, enabled, created_at, updated_at`
+const connCols = `id, name, kind, base_url, cred_env, cred_file, events, enabled, created_at, updated_at, auth_kind, app_ref, owners, webhook_env, webhook_file, upload_url`
 
 func scanConnection(sc interface{ Scan(...any) error }) (forge.Connection, error) {
 	var c forge.Connection
 	var kind, events string
 	var enabled int
 	var created, updated int64
-	if err := sc.Scan(&c.ID, &c.Name, &kind, &c.BaseURL, &c.Credential.Env, &c.Credential.File, &events, &enabled, &created, &updated); err != nil {
+	var owners string
+	if err := sc.Scan(&c.ID, &c.Name, &kind, &c.BaseURL, &c.Credential.Env, &c.Credential.File, &events, &enabled, &created, &updated,
+		&c.AuthKind, &c.AppRef, &owners, &c.WebhookSecret.Env, &c.WebhookSecret.File, &c.UploadURL); err != nil {
 		return c, err
+	}
+	if owners != "" {
+		c.Owners = strings.Split(owners, ",")
 	}
 	c.Kind, c.Events, c.Enabled = forge.Kind(kind), forge.EventMode(events), enabled != 0
 	c.CreatedAt, c.UpdatedAt = fromMS(created), fromMS(updated)
 	return c, nil
+}
+
+func authKind(k string) string {
+	if k == "" {
+		return "token"
+	}
+	return k
 }
 
 // CreateConnection validates and stores a connection, giving it an ID.
@@ -69,9 +81,10 @@ func (s *Store) CreateConnection(ctx context.Context, c forge.Connection, by str
 	c.ID = ids.New("con")
 	now := s.now()
 	c.CreatedAt, c.UpdatedAt = now.UTC(), now.UTC()
-	_, err := s.db.Exec(ctx, `INSERT INTO forge_connections(id, name, kind, base_url, cred_env, cred_file, events, enabled, created_at, updated_at, created_by)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, string(c.Kind), c.BaseURL, c.Credential.Env, c.Credential.File, string(c.Events), b2i(c.Enabled), ms(now), ms(now), by)
+	_, err := s.db.Exec(ctx, `INSERT INTO forge_connections(id, name, kind, base_url, cred_env, cred_file, events, enabled, created_at, updated_at, created_by, auth_kind, app_ref, owners, webhook_env, webhook_file, upload_url)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, string(c.Kind), c.BaseURL, c.Credential.Env, c.Credential.File, string(c.Events), b2i(c.Enabled), ms(now), ms(now), by,
+		authKind(c.AuthKind), c.AppRef, strings.Join(c.Owners, ","), c.WebhookSecret.Env, c.WebhookSecret.File, c.UploadURL)
 	if err != nil {
 		if isUnique(err) {
 			return forge.Connection{}, fmt.Errorf("%w: a connection named %q", ErrExists, c.Name)
@@ -407,3 +420,6 @@ func CleanAddress(raw string) (https, ssh string) {
 
 // IsUnique reports whether a database error is a violated uniqueness rule.
 func IsUnique(err error) bool { return isUnique(err) }
+
+// DB returns the database the store works on.
+func (s *Store) DB() DB { return s.db }

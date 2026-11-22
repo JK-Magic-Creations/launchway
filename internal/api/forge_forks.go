@@ -11,6 +11,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/forks"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
+	"github.com/jk-magic-creations/launchway/internal/metrics"
 )
 
 // Forks and template repositories (internal/forge/forks, docs/guide/forks.md,
@@ -187,6 +188,7 @@ func (s *Server) forkRepo(w http.ResponseWriter, r *http.Request) {
 	}
 	setAudit(r, parent.Path, "fork to "+repoSubject(in.Owner, orName(in.Name, parent.Name)))
 	child, err := s.Forge.Forks.Fork(r.Context(), parent, forks.NewFork{Owner: in.Owner, Name: in.Name, Visibility: in.Visibility, By: id.User})
+	countFork("fork", err)
 	if err != nil {
 		s.failFork(w, err)
 		return
@@ -291,6 +293,7 @@ func (s *Server) syncFork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, err := s.Forge.Forks.Sync(r.Context(), fork, in.Branch, in.Upstream, in.Mode, id.User)
+	countFork("sync", err)
 	if err != nil {
 		s.failFork(w, err)
 		return
@@ -363,6 +366,7 @@ func (s *Server) useTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	setAudit(r, tpl.Path, "from template to "+repoSubject(in.Owner, in.Name))
 	child, err := s.Forge.Forks.Use(r.Context(), tpl, forks.NewFromTemplate{Owner: in.Owner, Name: in.Name, Visibility: in.Visibility, Values: in.Values, IncludeBranches: in.IncludeBranches, By: id.User})
+	countFork("template", err)
 	if err != nil {
 		s.failFork(w, err)
 		return
@@ -491,4 +495,13 @@ func (s *Server) syncVerifiedOnly(ctx context.Context, fork forge.Repository, br
 		return "the branch " + branch + " takes only verified commits, and a sync brings the parent's commits without checking them; fetch the parent's commits on your computer and push them signed, or open a pull request"
 	}
 	return ""
+}
+
+// countFork counts a fork operation for the metrics endpoint: the operation and whether it worked, never who or what.
+func countFork(operation string, err error) {
+	outcome := "ok"
+	if err != nil {
+		outcome = "error"
+	}
+	metrics.ForkOperations.Inc(operation, outcome)
 }

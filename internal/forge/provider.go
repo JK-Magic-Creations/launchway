@@ -2,6 +2,7 @@ package forge
 
 import (
 	"context"
+	"io"
 	"net/http"
 )
 
@@ -39,6 +40,9 @@ type Provider interface {
 	// Capabilities says, per feature, native, emulated or none, with the
 	// reason and the workaround in words.
 	Capabilities() Capabilities
+	// Additions is what the host offers that the built-in forge does not, shown
+	// on the Flight "from <host>"; a provider that has none returns nil.
+	Additions() []Addition
 	// Maturity is the label the provider carries until it has passed the
 	// conformance suite against a live service.
 	Maturity() Maturity
@@ -56,6 +60,8 @@ type Provider interface {
 	Rules() Rules
 	Events() Events
 	Access() Access
+	// Releases writes tags, releases, file changes and the summary comment.
+	Releases() Releases
 }
 
 // Identity validates the credential.
@@ -162,4 +168,55 @@ type Access interface {
 	// Credential mints a credential for read (write false) or write access
 	// that expires; "" username and secret means none is needed.
 	Credential(ctx context.Context, repo Repository, write bool) (Credential, error)
+}
+
+// TagSpec is a request to create an annotated tag at a commit.
+type TagSpec struct {
+	Name    string `json:"name"`
+	Commit  string `json:"commit"`
+	Message string `json:"message"`
+}
+
+// ReleaseFile is one file of a release: opened anew for every read.
+type ReleaseFile struct {
+	Name string
+	Size int64
+	Open func(ctx context.Context) (io.ReadCloser, error)
+}
+
+// ReleaseSpec is a release to create or update for an existing tag.
+type ReleaseSpec struct {
+	Tag        string
+	Title      string
+	Notes      string
+	Prerelease bool
+	Files      []ReleaseFile
+}
+
+// FileChange is one file written to a branch. When NewBranch is set the change
+// goes to a new branch cut from Branch (a pull request is opened from it by
+// the caller through Proposals.Create).
+type FileChange struct {
+	Branch    string `json:"branch"`
+	NewBranch string `json:"new_branch,omitempty"`
+	Path      string `json:"path"`
+	Content   []byte `json:"-"`
+	Message   string `json:"message"`
+}
+
+// Releases is the write-back group: what Launchway writes to a repository
+// that lives on a forge. Every method is idempotent where the forge allows.
+type Releases interface {
+	// CreateTag makes an annotated tag at a commit; a tag that already points
+	// at that commit is not an error.
+	CreateTag(ctx context.Context, repo Repository, t TagSpec) (Ref, error)
+	// PublishRelease creates or updates the release of an existing tag and
+	// uploads the files it lacks; it returns the release's address.
+	PublishRelease(ctx context.Context, repo Repository, r ReleaseSpec) (string, error)
+	// CommitFile writes a file to a branch and returns the new commit.
+	CommitFile(ctx context.Context, repo Repository, c FileChange) (string, error)
+	// UpsertSummary posts the one summary comment of a proposal, or updates
+	// it in place when key (an ID the caller kept) names it; it returns the
+	// key to keep.
+	UpsertSummary(ctx context.Context, repo Repository, number int, key, body string) (string, error)
 }

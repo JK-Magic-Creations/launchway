@@ -33,7 +33,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 68", schemaLast, len(migrations))
 	}
 	for i := schemaEncryption; i <= schemaLast; i++ {
-		if strings.TrimSpace(migrations[i-1].sql) == "" && i != schemaStandIn57 { // 57 is held for the outside-hosts branch (schema57.go)
+		if strings.TrimSpace(migrations[i-1].sql) == "" {
 			t.Fatalf("migration %d is an empty stand-in", i)
 		}
 	}

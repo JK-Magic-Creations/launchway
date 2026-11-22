@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 59 available · 15 in progress · 54 planned · 128 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 59 available · 18 in progress · 51 planned · 128 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -53,7 +53,7 @@ flowchart TD
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 5 | 2 | 4 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 8 | 0 | 1 | 7 |
 | [Move your repositories in](#g-move-your-repositories-in) | 5 | 2 | 1 | 2 |
-| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 7 | 0 | 0 | 7 |
+| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 7 | 0 | 3 | 4 |
 | [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 9 | 1 | 3 |
 | [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 8 | 6 | 2 | 0 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 2 | 4 |
@@ -633,25 +633,25 @@ Launchway works with the host you already use. Hosting is optional.
 
 #### Every Git host, equally {#every-git-host-equally}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards. Each host passes the same conformance suite as the built-in one. A host that has not yet passed is labelled so until it does.
+First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards. Each host passes the same conformance suite as the built-in one. A host that has not yet passed is labelled so until it does. The first host, GitHub (the public service and self-managed installs), is built as a connection: choose a repository, run Sorties on it, commit statuses and one updated pull request comment, tags and releases made on the host, file changes by commit or pull request, and a host that says plainly what it cannot do. It passes the suite against a strict fake of the host; the run against the live service is pending, so it is labelled experimental. The other hosts follow on the same contract.
 
 **Depends on:** A common provider model.
 
 
 #### Self-managed variants of hosts {#self-managed-variants-of-hosts}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Hosts you run yourself, with their own addresses and certificates, are first-class. Setup asks for the address and trust, nothing more. Each variant's differences are stated in the wizard.
+Hosts you run yourself, with their own addresses and certificates, are first-class. Setup asks for the address and trust, nothing more. Each variant's differences are stated in the wizard. A self-managed GitHub install connects by its base address; the API and upload addresses follow from it.
 
 **Depends on:** Every Git host, equally.
 
 
 #### Hosts without webhooks {#hosts-without-webhooks}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Hosts that cannot call Launchway are watched through polling or a bridge from their event service. The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature.
 

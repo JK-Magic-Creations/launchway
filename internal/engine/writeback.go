@@ -44,13 +44,20 @@ type WriteBack struct {
 // fails the step with that sentence.
 type WriteBackJob struct {
 	WriteBack
-	Token      string `json:"token,omitempty"`
+	Token string `json:"token,omitempty"`
+	// Outside is set when the repository is kept on another Git host
+	// (write_back.repo is connection:owner/name): Token is then the host's
+	// credential for the push, Username goes with it, and Handle is what the
+	// step shows the server to open and follow its pull request.
+	Outside    bool   `json:"outside,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Handle     string `json:"handle,omitempty"`
 	RepoID     string `json:"repo_id,omitempty"`
 	WorkBranch string `json:"work_branch,omitempty"` // pull_request: where the change is pushed
 	Error      string `json:"error,omitempty"`
 }
 
-var hostedRepoRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$`)
+var hostedRepoRe = regexp.MustCompile(`^([a-z0-9][a-z0-9._-]{0,62}:)?[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$`)
 
 // Write-back modes and merge policies.
 const (
@@ -63,7 +70,7 @@ func checkWriteBack(env string, w *WriteBack) error {
 	case w == nil:
 		return nil
 	case !hostedRepoRe.MatchString(w.Repo):
-		return fmt.Errorf("environment %s: write_back.repo %q: write the hosted repository as owner/name", env, w.Repo)
+		return fmt.Errorf("environment %s: write_back.repo %q: write the hosted repository as owner/name, or a repository on an outside host as connection:owner/name", env, w.Repo)
 	case w.Mode != WriteBackDirect && w.Mode != WriteBackPullRequest:
 		return fmt.Errorf("environment %s: write_back.mode %q: write direct (a rule of the repository admits the pipeline) or pull_request (the step opens a pull request)", env, w.Mode)
 	case w.Merge != "" && w.Mode != WriteBackPullRequest:

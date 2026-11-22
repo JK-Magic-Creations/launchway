@@ -13,6 +13,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 )
@@ -30,6 +31,10 @@ func (s *Server) mintWriteBack(ctx context.Context, job *engine.Job) {
 		return
 	}
 	wb, d := job.Deploy.WriteBack, job.Deploy
+	if _, _, outside := hosts.SplitRepo(wb.Repo); outside {
+		s.mintOutsideWriteBack(ctx, job)
+		return
+	}
 	if s.Forge == nil || s.Forge.Provider == nil || s.Forge.RunTokens.Key == nil {
 		wb.Error = "this Airfield writes back to a repository hosted by Launchway, but this server hosts no repositories"
 		return
@@ -117,6 +122,10 @@ func (s *Server) deployPullRequest(w http.ResponseWriter, r *http.Request) {
 		Body   string `json:"body"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if strings.HasPrefix(in.Token, outsideHandlePrefix) {
+		s.outsideDeployPull(w, r, in.Token, in.Op, in.Number, in.Title, in.Body)
 		return
 	}
 	if !s.pullsOn(w) {

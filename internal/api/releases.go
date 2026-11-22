@@ -512,9 +512,18 @@ func (s *Server) nextVersion(w http.ResponseWriter, r *http.Request) {
 	if ref.Kind == "branch" {
 		branch = ref.Name
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "branch": branch, "highest": hi, "scheme": set.Scheme, "tag_prefix": set.TagPrefix,
+	out := map[string]any{"proposal": p, "source": src, "commit": ref.SHA, "branch": branch, "highest": hi, "scheme": set.Scheme, "tag_prefix": set.TagPrefix,
 		"hosted": s.isHosted(r.Context(), project), "can_tag": s.canTag(r.Context(), project), "build": s.buildAt(project, ref.SHA),
-		"note": "a person confirms or overrides this: pass the version you choose to create a release"})
+		"note": "a person confirms or overrides this: pass the version you choose to create a release"}
+	if out["hosted"] == true {
+		out["kept_in"] = "the repository Launchway hosts; a push mirror copies the tag out like any other ref"
+	}
+	if s.Hosts != nil { // where the releases of a Flight on a host with no release object are kept
+		if n := s.Hosts.ReleaseNote(r.Context(), project); n != "" {
+			out["kept_in"] = n
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) compareReleases(w http.ResponseWriter, r *http.Request) {
@@ -694,10 +703,15 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 		pi.TagObject, pi.TagCreated = ti.Object, false
 	case !s.canTag(r.Context(), rel.Project):
 		return nil, http.StatusConflict, "Launchway cannot write to " + rel.Project + "'s repository (it is not hosted here, and its configuration has no push section), so it cannot create the tag " + tag + ". Create the annotated tag yourself (git tag -a " + tag + " " + rel.SHA[:8] + " && git push origin " + tag + ") and publish again"
-	case s.isHosted(r.Context(), rel.Project):
-		repo, _ := s.hostedRepoOfFlight(r.Context(), rel.Project)
-		obj, err := s.createHostedTag(r, repo, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes))
-		if err != nil {
+	case s.hostedOrOutside(r.Context(), rel.Project):
+		// One path for a repository stored here and one on an outside host: the Releases group of its provider.
+		obj, outside, usable, err := s.createTagThroughGroup(r, rel.Project, tag, rel.SHA, "Release "+rel.Version+"\n\n"+firstParagraph(rel.Notes))
+		switch {
+		case err == nil && !usable:
+			return nil, http.StatusInternalServerError, "this installation's provider for " + rel.Project + "'s repository cannot write tags"
+		case err != nil && outside:
+			return nil, http.StatusBadGateway, "the tag could not be made on the outside host: " + errText(err)
+		case err != nil:
 			return s.refusal(err)
 		}
 		pi.TagObject, pi.TagCreated = obj, true
@@ -715,6 +729,7 @@ func (s *Server) publishCore(r *http.Request, rel *engine.Release, public bool, 
 	}
 	s.Engine.NoticeReleasePublished(got) //nolint:contextcheck // a notification outlives the request
 	s.noticeRelease(context.WithoutCancel(r.Context()), got.Project, got.Version, identityFrom(r).User)
+	s.publishOnOutsideHost(context.WithoutCancel(r.Context()), got, id.User)
 	s.queueOutside(context.WithoutCancel(r.Context()), got)
 	setAudit(r, releaseTarget(got), "published as tag "+got.Tag)
 	return got, http.StatusOK, ""

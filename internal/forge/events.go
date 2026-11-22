@@ -38,4 +38,18 @@ type Event struct {
 	Proposal string    `json:"proposal,omitempty"`
 	Actor    Principal `json:"actor,omitzero"`
 	At       time.Time `json:"at"`
+	// The proposal fields are set for proposal.* events from a forge that
+	// reports them.
+	Number int    `json:"number,omitempty"`
+	Head   string `json:"head,omitempty"`
+	Base   string `json:"base,omitempty"`
+	Title  string `json:"title,omitempty"`
+	Draft  bool   `json:"draft,omitempty"`
+	// Fork says the proposal's source is another repository: its run follows
+	// the restricted pull-request rule.
+	Fork bool `json:"fork,omitempty"`
+	// Author is who opened the proposal (Actor is who caused this event), and
+	// URL is where the host shows it.
+	Author string `json:"author,omitempty"`
+	URL    string `json:"url,omitempty"`
 }

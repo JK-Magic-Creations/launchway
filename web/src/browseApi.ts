@@ -34,7 +34,7 @@ export interface InspectionState {
 
 const enc = encodeURIComponent;
 const base = (path: string) => `/api/v1/repositories/${path.split("/").map(enc).join("/")}`;
-const qs = (o: Record<string, string | number | boolean | undefined>) => {
+export const qs = (o: Record<string, string | number | boolean | undefined>) => {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== "" && v !== false) p.set(k, String(v === true ? 1 : v));
   const s = p.toString();

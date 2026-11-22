@@ -421,6 +421,13 @@ type Trigger struct {
 	Author     string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// The pull request as its host described it (an outside Git host only):
+	// the title, who opened it, whether it is a draft, and where the host
+	// shows it. Fork, below, is set from the same answer.
+	PullRequestTitle  string `json:"pull_request_title,omitempty"`
+	PullRequestAuthor string `json:"pull_request_author,omitempty"`
+	PullRequestURL    string `json:"pull_request_url,omitempty"`
+	PullRequestDraft  bool   `json:"pull_request_draft,omitempty"`
 	// Fork says the pull request is from a repository other than the
 	// project's own; its build caches are isolated (see cacheScopes). The
 	// forge integration sets it.
@@ -481,10 +488,26 @@ type Source struct {
 	// Never stored with the run.
 	Hosted     string `json:"hosted,omitempty"`
 	Credential string `json:"credential,omitempty"`
+	// Outside is set at lease time for a Flight whose repository is kept on
+	// another Git host through a connection: the credential to send to that
+	// host's address only. Never stored with the run, never written to the
+	// workspace's git configuration.
+	Outside *OutsideAuth `json:"outside,omitempty"`
 	// Libraries are the shared libraries the run's templates came from, at
 	// the commits they were expanded from. The runner puts each one's files
 	// in the workspace, at .launchway/lib/<name>.
 	Libraries []LibrarySource `json:"libraries,omitempty"`
+}
+
+// OutsideAuth is a run's credential for a repository on another Git host.
+type OutsideAuth struct {
+	// URL is the clone address; the credential goes to its origin only.
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Secret   string `json:"secret"`
+	// Resolve pins git to the addresses the server's egress check saw, as
+	// http.curloptResolve entries (HOST:PORT:ADDRESS[,ADDRESS]).
+	Resolve []string `json:"resolve,omitempty"`
 }
 
 // LibrarySource is where a runner gets one library's files.

@@ -10,7 +10,7 @@ import (
 
 // The build of schema 56 writes repositories and pull requests; the next build
 // is a pure upgrade from it: one start applies 57 to 65 (57 is main's reserved
-// stand-in, 58 to 62 are main's, 63 custom steps), keeps every row, makes every existing
+// real migration of the outside-host connection, 58 to 62 are main's, 63 custom steps), keeps every row, makes every existing
 // repository a repository that is no fork, follows the default for forks and is
 // no template, and every pull request one that gives maintainers no edit
 // rights. The build of schema 56 still starts against the upgraded database.

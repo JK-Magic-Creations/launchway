@@ -597,6 +597,17 @@ var permissionTable = map[string]matrixRow{
 	"DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}":    {"DELETE", "/api/v1/repositories/o/x/mirrors/mir_x", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync": {"POST", "/api/v1/repositories/o/x/mirrors/mir_x/sync", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories/{owner}/{name}/stop-mirroring":    {"POST", "/api/v1/repositories/o/x/stop-mirroring", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	// Outside Git hosts: connections (admin), a Flight's outside repository (viewer reads, admin changes); with no hosts service all are 404 for an admin.
+	"POST /api/v1/outside-hosts/{name}/webhook":     {"POST", "/api/v1/outside-hosts/gh/webhook", `{}`, [6]int{404, 404, 404, 404, 404, 404}},
+	"GET /api/v1/outside-host-matrix":               {"GET", "/api/v1/outside-host-matrix", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/outside-hosts":                     {"GET", "/api/v1/outside-hosts", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/outside-hosts":                    {"POST", "/api/v1/outside-hosts", `{"name":"gh","kind":"github"}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"DELETE /api/v1/outside-hosts/{name}":           {"DELETE", "/api/v1/outside-hosts/gh", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/outside-hosts/{name}/test":        {"POST", "/api/v1/outside-hosts/gh/test", `{}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/outside-hosts/{name}/repositories": {"GET", "/api/v1/outside-hosts/gh/repositories", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/projects/{name}/outside":           {"GET", "/api/v1/projects/pay-api/outside", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/projects/{name}/outside":           {"PUT", "/api/v1/projects/pay-api/outside", `{}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"DELETE /api/v1/projects/{name}/outside":        {"DELETE", "/api/v1/projects/pay-api/outside", "", [6]int{401, 403, 403, 403, 403, 404}},
 	// Getting repositories in: connections, import and verification (admin; hosting off is 404).
 	"GET /api/v1/connections":           {"GET", "/api/v1/connections", "", [6]int{401, 403, 403, 403, 403, 404}},
 	"POST /api/v1/connections":          {"POST", "/api/v1/connections", `{"name":"old","kind":"gitea"}`, [6]int{401, 403, 403, 403, 403, 404}},
@@ -731,7 +742,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 // an identity (or the runner token).
 var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info", "GET /.well-known/launchway/signing-key.pub", "GET /notices/unsubscribe", "POST /notices/unsubscribe", "GET /public/badges/{name}/status.svg", "GET /public/badges/{name}/release.svg",
 	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate", "GET /api/state/v1/{project}/{workspace}", "POST /api/state/v1/{project}/{workspace}", "PUT /api/state/v1/{project}/{workspace}", "DELETE /api/state/v1/{project}/{workspace}",
-	"LOCK /api/state/v1/{project}/{workspace}/lock", "UNLOCK /api/state/v1/{project}/{workspace}/lock"}
+	"POST /api/v1/outside-hosts/{name}/webhook", "LOCK /api/state/v1/{project}/{workspace}/lock", "UNLOCK /api/state/v1/{project}/{workspace}/lock"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.

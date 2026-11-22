@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"github.com/jk-magic-creations/launchway/internal/forge/signing"
 	"github.com/jk-magic-creations/launchway/internal/mail"
 	"github.com/jk-magic-creations/launchway/internal/notices"
@@ -15,4 +16,7 @@ type personFeatures struct {
 	Mail    *mail.Queue      // the mail queue; nil: no mail server is set
 	// NoticeSettings is the installation's mail section, as EnableNotices was given it.
 	NoticeSettings NoticeOptions
+	// Hosts is the connections to outside Git hosts (internal/forge/hosts); nil: off. It lives here so that
+	// the Server's own file stays within its size limit.
+	Hosts *hosts.Service
 }

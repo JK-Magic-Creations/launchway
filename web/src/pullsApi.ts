@@ -1,6 +1,7 @@
 // Calls for pull requests. They mirror internal/api/forge_pulls*.go.
 
 import { call, type FindingCounts, type PolicyVerdict } from "./api";
+import { qs } from "./browseApi";
 
 export interface Action { name: string; available: boolean; reason?: string; risk?: string; suggestion?: string }
 export interface Check { name: string; status: string; required: boolean; run_id?: string; project?: string; run_number?: number }
@@ -58,13 +59,6 @@ export interface PullSettings {
 
 const enc = encodeURIComponent;
 const base = (path: string) => `/api/v1/repositories/${path.split("/").map(enc).join("/")}`;
-const qs = (o: Record<string, string | number | boolean | undefined>) => {
-  const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== "" && v !== false) p.set(k, String(v === true ? 1 : v));
-  const s = p.toString();
-  return s ? "?" + s : "";
-};
-
 export const pullsApi = {
   list: (path: string, q: { state?: string; author?: string; reviewer?: string; label?: string }) =>
     call<{ items: Pull[]; total: number }>("GET", `${base(path)}/pulls${qs(q)}`),

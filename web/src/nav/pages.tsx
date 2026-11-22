@@ -64,6 +64,8 @@ const KitPage = lz(() => import("../pages/Kit"), "KitPage");
 const ComingPage = lz(() => import("../shell/Coming"), "ComingPage");
 const SettingsPage = lz(() => import("../pages/SettingsHome"), "SettingsHomePage");
 const AccessPage = lz(() => import("../pages/Settings"), "AccessPage");
+const ProjectOutsidePage = lz(() => import("../pages/ProjectOutside"), "ProjectOutsidePage");
+const ConnectionsPage = lz(() => import("../pages/Connections"), "ConnectionsPage");
 const RunnersPage = lz(() => import("../pages/Runners"), "RunnersPage");
 const TokensPage = lz(() => import("../pages/Tokens"), "TokensPage");
 const RepositoryPage = lz(() => import("../pages/Repository"), "RepositoryPage");
@@ -119,6 +121,8 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/insights": return <FlightInsightsPage key={p.name} name={p.name} />;
     case "/units/:name/insights": return <SquadronInsightsPage key={p.name} name={p.name} />;
     case "/activity/insights": return <InstallationInsightsPage />;
+    case "/projects/:name/outside": return <ProjectOutsidePage key={p.name} name={p.name} />;
+    case "/settings/connections": return <ConnectionsPage />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/configuration": return <ProjectConfigurationPage key={p.name} name={p.name} />;
     case "/runs/:id/configuration/:step": return <ConfigReportPage key={p.id + p.step} run={p.id} step={p.step} />;

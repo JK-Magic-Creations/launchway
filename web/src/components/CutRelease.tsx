@@ -101,7 +101,7 @@ export function CutReleaseDialog({ project, onClose }: { project: string; onClos
           <dl className="rel-cut-tag" aria-label="What will be tagged">
             <dt>Tag</dt><dd className="rel-sha">{version.trim() && !problem ? tag : "(set a valid version first)"}</dd>
             <dt>At</dt><dd><span className="rel-sha">{next.commit.slice(0, 8)}</span>{next.branch ? <> on {next.branch}</> : null}</dd>
-            <dt>Kept in</dt><dd>{next.hosted ? "the repository Launchway hosts; a push mirror copies the tag out like any other ref" : "the Flight's repository"}</dd>
+            <dt>Kept in</dt><dd>{next.kept_in ?? "the Flight's repository"}</dd>
           </dl>
         )}
         {next && !next.can_tag && <p className="callout callout-wait" role="alert">Launchway cannot write the tag in this Flight's repository (it is not hosted here and its configuration has no push section). Make the annotated tag yourself and adopt it from New release.</p>}

@@ -422,6 +422,18 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `mirror.delete` | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}`: a push mirror removed |
 | `mirror.sync` | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync`: a mirror run on demand; a failed run is recorded with its redacted error |
 | `mirror.promote` | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` (also `launchway repos mirror stop`): the repository stopped being a mirror and takes pushes; the detail says whether a final sync ran first |
+| `outside_host.create` | `POST /api/v1/outside-hosts` (also `launchway repos host add`): a connection to an outside Git host; the detail says its kind, address, where the credential is read from (never the credential) and the owners allowed |
+| `outside_host.delete` | `DELETE /api/v1/outside-hosts/{name}` |
+| `outside_host.test` | `POST /api/v1/outside-hosts/{name}/test`: the account the credential is and how many permissions it lacks |
+| `project.outside_attach` | `PUT /api/v1/projects/{name}/outside`: a Flight attached to a repository on a connection, or its report switches changed |
+| `project.outside_detach` | `DELETE /api/v1/projects/{name}/outside` |
+| `outside_host.status` | A commit status written to the outside host for a Sortie, by the Sortie (the detail names the status and its state) |
+| `outside_host.release` | A published release made on the outside host of a Flight that keeps its code there (the annotated tag is made there when the release is cut); the detail names the release page or says why it failed |
+| `outside_host.write_back` | The credential for a Launchway write-back to a repository on an outside host handed to a deploy step (the detail names the mode and branch, never the credential) |
+| `outside_host.auto_merge` | A deploy step's write-back pull request on an outside host had the host's own auto-merge switched on (or the host refused, and the step waits for a person) |
+| `outside_host.pull_request` | A deploy step opened a pull request on an outside host for its write-back |
+| `outside_host.comment` | The summary comment of a pull request written or updated on the outside host, by the Sortie |
+| `webhook.outside` | An outside host's webhook: verified, its Flights polled at once (or a refusal, with the caller's address) |
 | `connection.create` | `POST /api/v1/connections` (also `launchway repos connection add`): a server to import from; the detail says its kind, address and where the credential is read from, never the credential |
 | `signin.test_begin` | `POST /api/v1/signin/test` (the setup guide): an administrator started a test sign-in with an identity provider; the target is the provider's address. Nothing about how people sign in changes |
 | `signin.test_result` | the second window's return from the provider (`GET /auth/signin-test`): the detail says whether the test sign-in worked, who the provider said signed in and which groups it sent; recorded for the administrator who started it |

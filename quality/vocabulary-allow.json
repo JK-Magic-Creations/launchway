@@ -906,6 +906,53 @@
     {
       "path": "docs/guide/move-your-pipelines.md",
       "why": "The page names constructs of other systems (their environments, registries, runners, artifacts, projects, runs, canary releases and deploy steps) by the words those systems use, because a person migrating has to recognize them; the importer's own words are used for what Launchway does."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "word:project",
+      "why": "One outside host's own word for a repository: its API paths, access token kinds, roles and webhook settings are named for it, and the guide quotes them exactly. (A Launchway project is a Flight everywhere else in the file.)"
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "users or organizations",
+      "why": "Two outside hosts' own word for the accounts that own repositories."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "organization/project/repository",
+      "why": "An outside host's own word for the top level of its repository path, quoted in the form a connection takes it."
+    },
+    {
+      "path": "docs/guide/outside-host.md",
+      "rule": "level-organization",
+      "contains": "allowed organizations",
+      "why": "An outside host's own word for the accounts that own repositories."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "level-organization",
+      "contains": "owner of a personal access token",
+      "why": "Quoting the providers' declarations: an outside host's own word for the accounts that own repositories. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:deploy/4",
+      "contains": "write_back.merge: auto",
+      "why": "The write-back setting is a configuration key, quoted exactly in a provider's declaration. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:queue/3",
+      "contains": "can queue",
+      "why": "An outside host's own merge queue and merge train, quoted from its provider's declaration. The page is generated."
+    },
+    {
+      "path": "docs/guide/outside-host-matrix.md",
+      "rule": "word:project",
+      "contains": "project",
+      "why": "An outside host's own word for a repository or its settings, quoted from its provider's declaration (a Launchway project is a Flight everywhere else). The page is generated."
     }
   ]
 }

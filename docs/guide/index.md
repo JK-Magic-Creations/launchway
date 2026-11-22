@@ -27,6 +27,8 @@ key and setting see the [reference](../reference/index.md).
 | [Policies](policies.md) | Rules, modes, waivers, policies from Git |
 | [GitOps write-back](gitops-write-back.md) | Several pipelines writing one repository, a tag with its digest, and writing to a repository Launchway hosts: direct or by pull request |
 | [Making a release](releases.md) | Versions, notes, Cargo and image digests, publishing and tags, immutability, public downloads, release branches, pipelines |
+| [Keep your code on another host](outside-host.md) | Connect a Git host Launchway does not host: choose a repository, run Sorties on it, report back, cut releases there, and the permissions to grant |
+| [What each outside host can do](outside-host-matrix.md) | The generated table of which features each host kind provides natively, by emulation or not at all, with the reasons and workarounds |
 | [Cut a release](cut-a-release.md) | One button: the version, the tag, the notes, the files, and a QR code to install the app on a phone |
 | [Promoting a release](promoting-releases.md) | The matrix, promotion with the exact digest, Return to base, Formations |
 | [Release checklists, windows and freezes](release-checklists.md) | What a release must pass for an Airfield, overrides, change windows, freezes, the calendar, who may do what |

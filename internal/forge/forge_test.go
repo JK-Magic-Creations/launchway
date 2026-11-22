@@ -20,7 +20,7 @@ var modelTypes = []any{
 	Connection{}, SecretRef{}, Repository{}, CloneAddresses{}, Ref{}, Result{}, Details{}, TestCounts{},
 	Principal{}, Mergeability{}, Proposal{}, Revision{}, Review{}, Thread{}, Message{}, Commit{}, TreeEntry{},
 	Comparison{}, RefRule{}, Event{}, Whoami{}, NewRepository{}, NewProposal{}, ProposalPatch{}, Credential{},
-	Declaration{}, ErrUnsupported{}, Page[Repository]{}, RefLayout{},
+	Declaration{}, ErrUnsupported{}, Page[Repository]{}, RefLayout{}, TagSpec{}, ReleaseFile{}, ReleaseSpec{}, FileChange{}, PermissionCheck{}, HostReport{}, Addition{},
 }
 
 // properties lists every JSON property name and Go field name reachable from
@@ -296,7 +296,7 @@ func TestRegistry(t *testing.T) {
 	if _, err := r.Open(Connection{Kind: KindGitLab}); err == nil {
 		t.Error("incomplete capabilities accepted")
 	}
-	if len(KnownKinds()) != 9 || !KindGitHub.Valid() || Kind("x").Valid() {
+	if len(KnownKinds()) != 10 || !KindGitHub.Valid() || Kind("x").Valid() {
 		t.Error("KnownKinds")
 	}
 }

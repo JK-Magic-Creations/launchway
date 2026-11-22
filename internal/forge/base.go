@@ -12,7 +12,12 @@ type Base struct {
 	K    Kind
 	Caps Capabilities
 	Mat  Maturity
+	// Adds is what the host offers beyond the built-in forge (see Addition).
+	Adds []Addition
 }
+
+// Additions returns what the host adds.
+func (b Base) Additions() []Addition { return b.Adds }
 
 // Kind returns the kind.
 func (b Base) Kind() Kind { return b.K }
@@ -41,6 +46,7 @@ func (b Base) Land() Land                 { return unLand{b.Caps} }
 func (b Base) Rules() Rules               { return unRules{b.Caps} }
 func (b Base) Events() Events             { return unEvents{b.Caps} }
 func (b Base) Access() Access             { return unAccess{b.Caps} }
+func (b Base) Releases() Releases         { return unReleases{b.Caps} }
 
 // The un* types answer every call of one group with the ErrUnsupported of
 // its capability.
@@ -190,4 +196,19 @@ func unsup(c Capabilities, feat Capability) error {
 	}
 	return &ErrUnsupported{Capability: feat, Reason: "this provider declares the feature but has not implemented it yet",
 		Workaround: "use a provider that implements it"}
+}
+
+type unReleases struct{ c Capabilities }
+
+func (u unReleases) CreateTag(ctx context.Context, repo Repository, t TagSpec) (Ref, error) {
+	return Ref{}, unsup(u.c, CapTags)
+}
+func (u unReleases) PublishRelease(ctx context.Context, repo Repository, r ReleaseSpec) (string, error) {
+	return "", unsup(u.c, CapReleases)
+}
+func (u unReleases) CommitFile(ctx context.Context, repo Repository, c FileChange) (string, error) {
+	return "", unsup(u.c, CapCommitFile)
+}
+func (u unReleases) UpsertSummary(ctx context.Context, repo Repository, number int, key, body string) (string, error) {
+	return "", unsup(u.c, CapProposalNote)
 }

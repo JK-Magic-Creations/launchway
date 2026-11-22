@@ -24,4 +24,3 @@ export function branchLink(url: string, branch: string): string | null {
   return b ? `${b}/tree/${encodeURIComponent(branch).replace(/%2F/g, "/")}` : null;
 }
 
-export function refShort(ref: string): string { return ref.replace(/^refs\/(heads|tags)\//, ""); }

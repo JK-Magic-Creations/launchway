@@ -63,6 +63,7 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersUsage,
 	schemaMarkersNarrow,
 	schemaMarkersOutside,
+	schemaMarkersHosts,
 	schemaMarkersTagRules,
 	schemaMarkersBadges,
 	schemaMarkersNotices,

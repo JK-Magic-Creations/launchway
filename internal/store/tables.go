@@ -103,6 +103,8 @@ var Tables = []Table{
 	{Name: "signing_keys", Class: Pending, Stage: "S2", Why: "owner (a person); fingerprint is unique across the installation"},
 	{Name: "signature_cache", Class: Pending, Stage: "S2", Why: "object name (a hash of the object's content)"},
 	{Name: "signing_installation", Class: Pending, Stage: "S2", Why: "the installation's own key"},
+	{Name: "outside_flights", Class: Pending, Stage: "S2", Why: "project name"},
+	{Name: "outside_comments", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_holders", Class: Pending, Stage: "S2", Why: "project name"},
 	{Name: "lane_waiting", Class: Pending, Stage: "S2", Why: "run"},
 	{Name: "schedule_fires", Class: Pending, Stage: "S2", Why: "project name"},

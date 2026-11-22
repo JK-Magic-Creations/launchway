@@ -7,7 +7,8 @@ import { ProjectTriggers } from "../components/ProjectTriggers";
 import { StartDialog } from "../components/StartRun";
 import { ErrorBox, Mono } from "../components/ui";
 import { ago, shortSha } from "../format";
-import { branchLink, hostBase, hostName, refShort } from "../guided/code";
+import { refName } from "../refs";
+import { branchLink, hostBase, hostName } from "../guided/code";
 import { trendOf } from "../guided/decide";
 import { useInstallation } from "../guided/facts";
 import { useLoad } from "../guided/useLoad";
@@ -85,7 +86,7 @@ export function RepoPage({ name }: { name: string }) {
                   {p.decisions.map((d, i) => (
                     <li key={i}>
                       <StateChip state={d.outcome === "started" ? "ok" : d.outcome === "error" ? "bad" : d.outcome === "waiting" ? "wait" : "skip"}>{d.outcome === "started" ? "Started" : d.outcome === "ignored" ? "Ignored" : d.outcome === "waiting" ? "Waiting" : "Problem"}</StateChip>
-                      <span className="mono">{refShort(d.ref)}</span><span className="mono faint">{shortSha(d.sha)}</span>
+                      <span className="mono">{refName(d.ref)}</span><span className="mono faint">{shortSha(d.sha)}</span>
                       <span className="main">{d.run_id ? <EntityLink kind="run" name={d.detail} id={d.run_id} /> : d.detail}</span>
                       <span className="faint small">{ago(d.at, now)}</span>
                     </li>

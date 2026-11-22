@@ -167,7 +167,9 @@ func (a *Agent) repoWrite(ctx context.Context, job *engine.Job, log func(string,
 		return nil, nil, fmt.Errorf("repository %s is not in this deploy runner's configuration (deploy.repos)", d.Repo)
 	case d.WriteBack != nil && d.WriteBack.Error != "":
 		return nil, nil, errors.New(d.WriteBack.Error)
-	case d.WriteBack != nil && !rc.Hosted:
+	case d.WriteBack != nil && d.WriteBack.Outside && rc.Hosted:
+		return nil, nil, fmt.Errorf("environment %s writes back to %s on an outside host, but this runner's deploy.repos.%s is marked hosted: true; its url must be the outside host's clone address", d.Environment, d.WriteBack.Repo, d.Repo)
+	case d.WriteBack != nil && !rc.Hosted && !d.WriteBack.Outside:
 		return nil, nil, fmt.Errorf("environment %s writes back to the hosted repository %s, but this runner's deploy.repos.%s is not marked hosted: true (its url must then be Launchway's address)", d.Environment, d.WriteBack.Repo, d.Repo)
 	case d.WriteBack == nil && rc.Hosted:
 		return nil, nil, fmt.Errorf("deploy.repos.%s is hosted by Launchway, but environment %s has no write_back: set it (mode direct or pull_request) so the step has a credential of its own", d.Repo, d.Environment)
@@ -179,7 +181,11 @@ func (a *Agent) repoWrite(ctx context.Context, job *engine.Job, log func(string,
 		return nil, nil, err
 	}
 	if d.WriteBack != nil {
-		repo.Auth = &gitops.Auth{Username: "launchway", Password: d.WriteBack.Token}
+		user := "launchway"
+		if d.WriteBack.Username != "" {
+			user = d.WriteBack.Username
+		}
+		repo.Auth = &gitops.Auth{Username: user, Password: d.WriteBack.Token}
 		repo.WorkBranch = d.WriteBack.WorkBranch
 	}
 	return repo, unlock, nil

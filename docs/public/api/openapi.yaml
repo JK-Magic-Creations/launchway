@@ -4474,6 +4474,202 @@ paths:
                 - organize
             x-launchway-access: signed-in
             x-launchway-audit: folder.update
+    /api/v1/outside-host-matrix:
+        get:
+            description: 'What each outside Git host kind can do, generated from the providers'' own declarations (the page [What each outside host can do](../guide/outside-host-matrix.md) is generated from the same data): features (key and title, in a fixed order) and kinds (kind, label, capabilities by feature with support native, emulated or none plus reason and workaround, and additions). Open to any signed-in user because it holds no connection or secret.'
+            operationId: get_api_v1_outside_host_matrix
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What each outside Git host kind can do, generated from the providers'' own declarations (the page [What each outside host can do](../guide/outside-host-matrix.md) is generated from the same data): features (key and title, in a fixed order) and kinds (kind, label, capabilities by feature with support native, emulated or none plus reason and workaround, and additions).'
+            tags:
+                - outside-host-matrix
+            x-launchway-access: signed-in
+    /api/v1/outside-hosts:
+        get:
+            description: 'The connections to outside Git hosts: name, kind, base_url, credential (where it is read from, never the token), webhook_secret (likewise), owners, enabled and capabilities (what the host can and cannot do, each with the reason and what to do instead). 404 feature_off when the server has none.'
+            operationId: get_api_v1_outside_hosts
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The connections to outside Git hosts: name, kind, base_url, credential (where it is read from, never the token), webhook_secret (likewise), owners, enabled and capabilities (what the host can and cannot do, each with the reason and what to do instead).'
+            tags:
+                - outside-hosts
+            x-launchway-access: admin
+        post:
+            description: '{"name", "kind": "github", "base_url", "upload_url", "credential", "webhook_secret", "owners"}. A credential is a reference (env, file or sealed:NAME), never the token. 400 for another kind, an internal address that is not allowed, a credential that does not resolve or a value where a reference belongs.'
+            operationId: post_api_v1_outside_hosts
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"name", "kind": "github", "base_url", "upload_url", "credential", "webhook_secret", "owners"}.'
+            tags:
+                - outside-hosts
+            x-launchway-access: admin
+            x-launchway-audit: outside_host.create
+    /api/v1/outside-hosts/{name}:
+        delete:
+            description: Removes a connection; 400 while a Flight still keeps its code on it.
+            operationId: delete_api_v1_outside_hosts_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a connection; 400 while a Flight still keeps its code on it.
+            tags:
+                - outside-hosts
+            x-launchway-access: admin
+            x-launchway-audit: outside_host.delete
+    /api/v1/outside-hosts/{name}/repositories:
+        get:
+            description: The repositories the credential reaches, narrowed to the allowed owners. ?q= filters by path, ?cursor= is the next of the last page.
+            operationId: get_api_v1_outside_hosts_name_repositories
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The repositories the credential reaches, narrowed to the allowed owners.
+            tags:
+                - outside-hosts
+            x-launchway-access: admin
+    /api/v1/outside-hosts/{name}/test:
+        post:
+            description: Reads only. The account the credential is, the token's expiry when the host says it, and for each feature the permission it needs and whether the token has it (checks). 502 with the host's words when it refuses.
+            operationId: post_api_v1_outside_hosts_name_test
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'POST /api/v1/outside-hosts/{name}/test: Reads only.'
+            tags:
+                - outside-hosts
+            x-launchway-access: admin
+            x-launchway-audit: outside_host.test
+    /api/v1/outside-hosts/{name}/webhook:
+        post:
+            description: The host's webhook. Verified with the connection's webhook secret (HMAC-SHA256 of the body, compared in constant time); a delivery ID seen before is answered 202 and ignored; an unknown connection, no secret and a wrong signature all answer 404. A push, tag push or pull request event makes the Flights attached to that repository poll at once; a pull request from a fork runs under the restricted pull-request rule. Failed calls count against the caller's address, and each connection accepts at most 300 calls a minute (verified or not); the rest answer 429 with Retry-After.
+            operationId: post_api_v1_outside_hosts_name_webhook
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: The host's webhook.
+            tags:
+                - outside-hosts
+            x-launchway-access: public
     /api/v1/owners/{owner}/activity:
         get:
             description: The same feed over every repository of the owner that the caller may read; a repository the caller cannot read adds nothing and is not named. Same parameters.
@@ -5812,6 +6008,101 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/outside:
+        delete:
+            description: Detaches the Flight; its Git address stays.
+            operationId: delete_api_v1_projects_name_outside
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Detaches the Flight; its Git address stays.
+            tags:
+                - projects
+            x-launchway-access: admin
+            x-launchway-audit: project.outside_detach
+        get:
+            description: 'The outside repository of a Flight (connection, repository, report_statuses, report_comment) and unsupported: what its host cannot do, with reason and workaround. 404 when the Flight is not attached.'
+            operationId: get_api_v1_projects_name_outside
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The outside repository of a Flight (connection, repository, report_statuses, report_comment) and unsupported: what its host cannot do, with reason and workaround.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: '{"connection", "repository", "report_statuses", "report_comment"}: attach a Flight to a repository on a connection (it must be visible to the credential and its owner allowed), and set its two report switches; a nil field is left as it is.'
+            operationId: put_api_v1_projects_name_outside
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"connection", "repository", "report_statuses", "report_comment"}: attach a Flight to a repository on a connection (it must be visible to the credential and its owner allowed), and set its two report switches; a nil field is left as it is.'
+            tags:
+                - projects
+            x-launchway-access: admin
+            x-launchway-audit: project.outside_attach
     /api/v1/projects/{name}/pipeline:
         get:
             description: 'The pipeline file at the tip of ?ref= (default: the default branch).'

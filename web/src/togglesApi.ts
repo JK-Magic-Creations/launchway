@@ -68,8 +68,6 @@ export const togglesApi = {
     call<Outcome | { scheduled: Schedule }>("PUT", `${p(project)}/toggles/${k(key)}/environments/${encodeURIComponent(env)}`, body),
   history: (project: string, key: string, background = false) => call<{ changes: Change[] }>("GET", `${p(project)}/toggles/${k(key)}/history`, undefined, { background }),
   usage: (project: string, key: string) => call<{ usage: Usage[]; privacy: string }>("GET", `${p(project)}/toggles/${k(key)}/usage`),
-  tryContext: (project: string, key: string, context: Record<string, unknown>) =>
-    call<{ values: Record<string, { value: unknown; reason: string; rule_id?: string }> }>("POST", `${p(project)}/toggles/${k(key)}/evaluate`, { context }),
   revert: (project: string, id: number, reason: string) => call<Outcome>("POST", `${p(project)}/toggle-changes/${id}/revert`, { reason }),
   decide: (project: string, id: number, what: "approve" | "reject" | "withdraw", comment: string) =>
     call<unknown>("POST", `${p(project)}/toggle-changes/${id}/${what}`, { comment }),

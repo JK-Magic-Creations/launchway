@@ -18,8 +18,10 @@ import (
 	depservice "github.com/jk-magic-creations/launchway/internal/depupdate/service"
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	forgeegress "github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
 	_ "github.com/jk-magic-creations/launchway/internal/forge/storage"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
@@ -44,6 +46,9 @@ func currentGitHead() (branch, ref, sha string) {
 // does nothing when forge.hosting is off.
 func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, log *slog.Logger, srv *api.Server) error {
 	f := cfg.Forge
+	if err := startOutsideHosts(ctx, cfg, eng, log, srv); err != nil {
+		return err
+	}
 	if !f.Hosting {
 		return nil
 	}
@@ -130,4 +135,25 @@ func sshPublicHost(f config.ForgeConfig) string {
 // when it is set, else the port of forge.ssh.listen), never the address the server happens to listen on.
 func sshInfo(f config.ForgeConfig, certificates bool) api.SSHInfo {
 	return api.SSHInfo{Enabled: true, Host: sshPublicHost(f), Port: f.SSH.Port(), Certificates: certificates}
+}
+
+// startOutsideHosts turns on connections to outside Git hosts. They do not
+// need Git hosting: a Flight can keep its code on another host with this off.
+// The connection's address goes through the same egress allow-list as mirrors
+// (forge.mirror_allow).
+func startOutsideHosts(ctx context.Context, cfg *config.Config, eng *engine.Engine, log *slog.Logger, srv *api.Server) error {
+	guard, err := forgeegress.New(cfg.Forge.MirrorAllow)
+	if err != nil {
+		return fmt.Errorf("forge.mirror_allow: %w", err)
+	}
+	srv.Hosts = hosts.New(eng.Database(), eng, guard)
+	srv.Hosts.PublicURL = cfg.Forge.PublicURL
+	if srv.Projects != nil {
+		// A Flight on an outside repository polls and is read through its connection.
+		srv.Projects.SetOutsideSource(srv)
+	}
+	srv.StartOutsideReports(ctx)
+	srv.StartOutsidePolls(ctx)
+	log.Info("connections to outside Git hosts are available")
+	return nil
 }

@@ -599,6 +599,9 @@ func (cl *client) list(args []string) error {
 // showTriggerAndLane prints what started a run apart from its commit, and where
 // it stands in its lane.
 func (cl *client) showTriggerAndLane(r *runView) {
+	if line := pullRequestLine(r); line != "" {
+		fmt.Fprintf(cl.out, "  %s\n", line)
+	}
 	if d := r.TriggerDetail; d != nil {
 		if d.Schedule != "" {
 			fmt.Fprintf(cl.out, "  schedule %s\n", d.Schedule)

@@ -132,6 +132,8 @@ type project struct {
 	// hosted says whether an address is one of this installation's own
 	// repositories, which are then read from its storage (see hosted.go).
 	hosted func() HostedLocal
+	// outside gives the credential of a project kept on another Git host (outside.go).
+	outside func() OutsideSource
 	// The mirror outlives a change of the project's settings: the new
 	// project shares it with the old one.
 	*mirror
@@ -164,8 +166,12 @@ type Manager struct {
 	// forge is the link to the forge's connection and repository rows (see
 	// forgelink.go); empty until Start has recorded the projects.
 	hosted forgeLink
+	// pullNotes is what the outside host said about pull requests (outside.go), under forgeMu.
+	pullNotes map[prKey]PullRequestInfo
 	// hostedPtr reads this installation's own repositories from its storage (hosted.go).
 	hostedPtr atomic.Pointer[hostedHolder]
+	// outsidePtr reads repositories kept on outside Git hosts through their connections (outside.go).
+	outsidePtr atomic.Pointer[outsideHolder]
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
@@ -265,7 +271,7 @@ func (m *Manager) build(projects []Project, libraries []Library, old *catalog) (
 				return nil, err
 			}
 		}
-		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal}
+		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}, hosted: m.hostedLocal, outside: m.outsideSource}
 		if old != nil {
 			if was := old.projects[p.Name]; was != nil && was.URL == p.URL {
 				np.mirror = was.mirror
@@ -581,9 +587,24 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		}
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
-		pipelineAt, restr := p.trustedPipelineSHA(refs, r)
-		num, _ := strconv.Atoi(r.Name)
-		fork := m.forkVerdict(ctx, p, num, r.SHA)
+		n, _ := strconv.Atoi(r.Name)
+		// A host that keeps the project's code says who opened the pull request and
+		// whether it is from a fork; without its answer a pull request does not run.
+		meta, fromHost, merr := m.pullMeta(ctx, p.Name, n, r.SHA)
+		if merr != nil {
+			if err := m.eng.RecordDecision(p.Name, Decision{Ref: r.FullRef(), SHA: r.SHA, Outcome: "waiting",
+				Detail: fmt.Sprintf("waiting: pull request #%d is not run until the host says whether it is from a fork (%s)", n, clipLine(redact.URLs(merr.Error())))}); err != nil {
+				return err
+			}
+			continue
+		}
+		// One restriction for both ways a pull request can be known to come from a fork: a hosted repository's
+		// fork gate and an outside host's own flag. Either way the run takes the default branch's pipeline.
+		fork := m.forkVerdict(ctx, p, n, r.SHA)
+		if fromHost && meta.Fork && !fork.Fork {
+			fork = ForkVerdict{Fork: true, Reason: "pull request from a fork"}
+		}
+		pipelineAt, restr := p.trustedPipelineSHA(refs, r, fork.Fork)
 		if fork.Fork {
 			pipelineAt, restr = p.forkPipelineSHA(refs, r, fork.Reason)
 		}
@@ -625,7 +646,6 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				}
 				continue
 			default:
-				n, _ := strconv.Atoi(r.Name)
 				// The default branch's pipeline says whether to filter by the
 				// branch the pull request targets; only the project's forge
 				// can say which that is, and without it nothing runs.
@@ -651,6 +671,10 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				t.Changed = cs
 				t.PullRequest = n
 				t.Fork = fork.Fork
+				if fromHost {
+					t.PullRequestTitle, t.PullRequestAuthor, t.PullRequestURL = meta.Title, meta.Author, meta.URL
+					t.PullRequestDraft = meta.Draft
+				}
 				t.PullRequestInto = into.Target
 				t.Inputs = vals
 				note := p.note(from)
@@ -737,6 +761,10 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 		p.setErr(err)
 		return err
 	}
+	if done, err := p.fetchOutside(ctx); done {
+		p.setErr(err)
+		return err
+	}
 	env, err := remoteEnv(ctx, p.URL)
 	if err != nil {
 		p.setErr(err)
@@ -797,10 +825,18 @@ func (p *project) refs(ctx context.Context) ([]Ref, error) {
 
 // layout is where the project's host publishes pull request heads.
 func (p *project) layout() forge.RefLayout {
-	if p.PullRefs.IsZero() {
-		return forge.PullRefLayout
+	if !p.PullRefs.IsZero() {
+		return p.PullRefs
 	}
-	return p.PullRefs
+	// A repository on an outside host publishes them the way that host does.
+	if p.outside != nil {
+		if o, ok := p.outside().(PullRefLayouter); ok {
+			if l, ok := o.PullRefLayout(p.Name); ok && !l.IsZero() {
+				return l
+			}
+		}
+	}
+	return forge.PullRefLayout
 }
 
 // pullRefs lists the heads of the repository's pull requests, as the host

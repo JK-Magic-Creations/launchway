@@ -41,8 +41,13 @@ func isAutomation(patterns []string, names ...string) bool {
 // (and one from a fork, where the forge says so) runs the pipeline of the
 // default branch's tip, so it cannot rewrite its own checks; any other pull
 // request runs the pipeline at its own head, as before.
-func (p *project) trustedPipelineSHA(refs []Ref, r Ref) (string, *engine.RestrictedEvent) {
-	if p.UntrustedAllowed || !isAutomation(p.AutomationAccounts, r.Author) {
+func (p *project) trustedPipelineSHA(refs []Ref, r Ref, fork bool) (string, *engine.RestrictedEvent) {
+	if fork {
+		// A pull request from a fork never takes the setting that lets automation accounts run their own pipeline.
+		return p.forkPipelineSHA(refs, r, "pull request from a fork")
+	}
+	auto := isAutomation(p.AutomationAccounts, r.Author)
+	if p.UntrustedAllowed || !auto {
 		return r.SHA, nil
 	}
 	restr := &engine.RestrictedEvent{Code: engine.RestrictAutomation, Reason: "pull request from an automation account (" + r.Author + ")"}
