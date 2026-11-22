@@ -18,8 +18,13 @@ var classHeading = map[Class]string{
 }
 
 func cell(s string) string {
-	s = strings.ReplaceAll(s, "|", "/")
-	return strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(strings.ReplaceAll(s, "|", "/"), "\n", " ")
+	// Text outside code spans must not hold a tag or a template brace: the page is compiled as a template.
+	parts := strings.Split(s, "`")
+	for i := 0; i < len(parts); i += 2 {
+		parts[i] = strings.NewReplacer("<", "&lt;", ">", "&gt;", "{{", "&#123;&#123;", "}}", "&#125;&#125;").Replace(parts[i])
+	}
+	return strings.Join(parts, "`")
 }
 
 // GuideTables writes the tables of the guide from the readers' own
@@ -29,7 +34,7 @@ func GuideTables() string {
 	b.WriteString(GuideStart + "\n\n")
 	for _, f := range formats {
 		fmt.Fprintf(&b, "## %s\n\n", f.Title)
-		fmt.Fprintf(&b, "Where it lives: %s. Import it with `launchway import pipeline --from %s`.\n\n", f.Where, f.ID)
+		fmt.Fprintf(&b, "Where it lives: %s. Import it with `launchway import pipeline --from %s`.\n\n", cell(f.Where), f.ID)
 		n := map[Class]int{}
 		for _, c := range f.Table {
 			n[c.Class]++

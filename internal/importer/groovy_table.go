@@ -36,7 +36,7 @@ var groovyTable = Table{
 	{Code: "groovy.options.retry", Name: "options { retry(n) } and a retry step", Class: Different,
 		Note: "The step is retried as a whole, not just the block it wrapped",
 		Next: "Check that running the whole step again is safe"},
-	{Code: "groovy.options.ignored", Name: "buildDiscarder, timestamps, ansiColor", Class: Different,
+	{Code: "groovy.options.ignored", Name: "`buildDiscarder`, timestamps, ansiColor", Class: Different,
 		Note: "The option %s is not carried: log retention is the server's policy and logs are timestamped by default",
 		Next: "Nothing"},
 	{Code: "groovy.options.concurrent", Name: "disableConcurrentBuilds", Class: Manual,

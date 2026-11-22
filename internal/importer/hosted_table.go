@@ -158,7 +158,7 @@ var hostedTable = Table{
 	{Code: "hosted.uses.buildpush", Name: "docker/build-push-action", Class: Different,
 		Note: "The image build became an image step, which scans and records provenance as well; it pushes to Launchway's built-in registry, not the registry named in the old file",
 		Next: "Check the tags, and name another registry in the step if you push elsewhere"},
-	{Code: "hosted.uses.buildx", Name: "docker/setup-buildx-action, docker/setup-qemu-action", Class: Different,
+	{Code: "hosted.uses.buildx", Name: "`docker/setup-buildx-action`, docker/setup-qemu-action", Class: Different,
 		Note: "Not needed: image steps build with the Station's builder, and platforms are a setting of the image step",
 		Next: "Nothing"},
 	{Code: "hosted.uses.login", Name: "docker/login-action", Class: Manual,

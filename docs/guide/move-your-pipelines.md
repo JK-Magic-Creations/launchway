@@ -95,7 +95,7 @@ Where it lives: a file with a pipeline { ... } block at the top (its name usuall
 | stage with steps | The stage became a step that needs the stage before it | Nothing. |
 | agent { docker 'image' } | The docker image became the step's image | Nothing. |
 | environment { NAME = 'value' } | Variables carry over as the environment of the steps | Nothing. |
-| parameters (string, text, booleanParam, choice) | Parameters became run inputs; steps read them as $LAUNCHWAY_INPUT_<NAME> | Nothing. |
+| parameters (string, text, booleanParam, choice) | Parameters became run inputs; steps read them as $LAUNCHWAY_INPUT_&lt;NAME&gt; | Nothing. |
 | when { branch, tag, changeset, buildingTag, changeRequest, allOf, anyOf } | The condition became a when: filter | Nothing. |
 | parallel stages | Stages in a parallel block run side by side, and the stage after them waits for all | Nothing. |
 | matrix { axes { axis } } | The matrix became for_each; each axis is also an environment variable of the same name | Nothing. |
@@ -114,7 +114,7 @@ Where it lives: a file with a pipeline { ... } block at the top (its name usuall
 | environment { NAME = credentials('id') } and withCredentials | The credential … is read by name from a secret store, as the variable …; no value was copied. If it was a user name and password, the old system also set a _USR and a _PSW variable, which are not set here | Create the secret (or one for the user name and one for the password) in the Station's store |
 | options { timeout(...) } and a timeout step | The time limit applies to each step of the job, instead of to the whole pipeline or the block it wrapped | Check the limit is long enough for one step |
 | options { retry(n) } and a retry step | The step is retried as a whole, not just the block it wrapped | Check that running the whole step again is safe |
-| buildDiscarder, timestamps, ansiColor | The option … is not carried: log retention is the server's policy and logs are timestamped by default | Nothing |
+| `buildDiscarder`, timestamps, ansiColor | The option … is not carried: log retention is the server's policy and logs are timestamped by default | Nothing |
 | triggers { cron('...') } | The cron time … was written as a schedule; an H (spread the time) became 0 because the schedule needs an exact minute | Check the time, which is in UTC unless the file says otherwise |
 | post { always, success, failure, cleanup } | The post section became extra steps that run after the stage (upstream: always or failed); results of junit and archiveArtifacts there became reports of the stage's own step | Check the order and what each extra step needs |
 | input { message ... } and the input step | The question became an approval step; submitter and parameters are not carried | Name the approvers (users or groups) on the approval |
@@ -142,7 +142,7 @@ Where it lives: a file with a pipeline { ... } block at the top (its name usuall
 
 ## Hosted workflow files
 
-Where it lives: .github/workflows/*.yml, and the same layout in a self-hosted forge's own dot-directory (.<forge>/workflows/*.yml). Import it with `launchway import pipeline --from hosted-workflows`.
+Where it lives: .github/workflows/*.yml, and the same layout in a self-hosted forge's own dot-directory (.&lt;forge&gt;/workflows/*.yml). Import it with `launchway import pipeline --from hosted-workflows`.
 
 60 constructs are known: 18 convert exactly, 20 convert with a difference, 22 need a person.
 
@@ -183,15 +183,15 @@ Where it lives: .github/workflows/*.yml, and the same layout in a self-hosted fo
 | environment (deployment target and its protection rules) | The job deploys to the environment …, so it is marked as delivering. The reviewers and wait timers set on that environment in the old system were not read | Add an approval step before it, or protect the Airfield; see the approvals guide |
 | services (containers beside the job) | The service … runs beside the step, but it is reached at localhost, not by its service name | Change the host name your tests use from the service name to localhost |
 | shell: bash, sh | The commands run with sh -e, not … | Check the script for bash-only syntax |
-| $GITHUB_OUTPUT | The file for step outputs was replaced by $LAUNCHWAY_OUTPUTS; later steps of the same job cannot read it, only steps that need this one | Read values in other steps as $LAUNCHWAY_NEEDS_<STEP>_<NAME> |
+| $GITHUB_OUTPUT | The file for step outputs was replaced by $LAUNCHWAY_OUTPUTS; later steps of the same job cannot read it, only steps that need this one | Read values in other steps as $LAUNCHWAY_NEEDS_&lt;STEP&gt;_&lt;NAME&gt; |
 | GITHUB_SHA, GITHUB_REF_NAME and other variables the old system sets | The variable … was replaced by its Launchway counterpart | Check the value: Launchway reports branch and tag separately |
-| ${{ ... }} for matrix, inputs, secrets, env, vars and the commit | Expressions were replaced by shell variables where the value is known: … | Nothing, unless the new value reads differently |
+| $&#123;&#123; ... &#125;&#125; for matrix, inputs, secrets, env, vars and the commit | Expressions were replaced by shell variables where the value is known: … | Nothing, unless the new value reads differently |
 | vars.NAME (configuration variables) | The variable … is set in the old system, not in the file; here it is read from an environment variable of the same name | Create a variable with that name for the Flight (names only; see the variables guide) |
 | actions/checkout with path, ref, fetch-depth, submodules or token | The checkout options … were not carried: Launchway checks out the commit that started the run | Fetch history or submodules in the script (git fetch --unshallow, git submodule update) if needed |
 | A setup action reading the version from a file or a range | The version is written into the image tag (…) instead of being read from a file at run time | Update the tag when the file changes, or keep the image tag in a pipeline variable |
 | actions/cache, cache/restore, cache/save | The cache for … is kept by Launchway between runs, keyed by the files named in the key; where entries can be read follows Launchway's rules for branches and pull requests | Check the key files and paths |
 | docker/build-push-action | The image build became an image step, which scans and records provenance as well; it pushes to Launchway's built-in registry, not the registry named in the old file | Check the tags, and name another registry in the step if you push elsewhere |
-| docker/setup-buildx-action, docker/setup-qemu-action | Not needed: image steps build with the Station's builder, and platforms are a setting of the image step | Nothing |
+| `docker/setup-buildx-action`, docker/setup-qemu-action | Not needed: image steps build with the Station's builder, and platforms are a setting of the image step | Nothing |
 | A third-party action with a known command | The step runs the third-party program …; the command … does the same job and was written in its place | Make sure the command is installed in the step's image |
 
 ### Hosted workflow files: Needs a person
@@ -203,7 +203,7 @@ Where it lives: .github/workflows/*.yml, and the same layout in a self-hosted fo
 | concurrency without cancelling (runs take turns) | The old file made runs wait for each other; the pipeline file was written without a rule for that | Add a lane to the pipeline (see the pipeline reference, Lane) if runs must not overlap |
 | runs-on a Windows or macOS machine | The job asks for …, and Launchway steps run in Linux container images | Run it on a Station with that operating system, or drop it from the pipeline |
 | if: with any other expression | The condition `…` is an expression, and Launchway has no expression language, so the job now always runs | Express it as a when: filter (branch, tag, event, changed, input) or move the test into the script |
-| Job outputs | The job passes values to later jobs through outputs: (…), which has no direct form | Write name=value lines to the file in $LAUNCHWAY_OUTPUTS and read $LAUNCHWAY_NEEDS_<STEP>_<NAME> in the later job |
+| Job outputs | The job passes values to later jobs through outputs: (…), which has no direct form | Write name=value lines to the file in $LAUNCHWAY_OUTPUTS and read $LAUNCHWAY_NEEDS_&lt;STEP&gt;_&lt;NAME&gt; in the later job |
 | container options, volumes, ports, credentials | The container settings … were not carried | Set what you need in the step's container: env, cpu, memory; registry credentials belong in the Station's configuration |
 | matrix include entries that add extra values | An include entry adds the values … to existing combinations, which Launchway cannot express | Write the extra values into the commands, or add the combination as a whole entry with every key |
 | A matrix built from an expression (fromJSON) | The matrix is made at run time by an expression, which Launchway does not evaluate | Write the lists in the file, or make a list input and loop over it |
@@ -213,7 +213,7 @@ Where it lives: .github/workflows/*.yml, and the same layout in a self-hosted fo
 | continue-on-error on a step | The step may fail without failing the job in the old file; here a failing command fails the step | Append // true to the command, or move it to a step of its own that is allowed to fail |
 | timeout-minutes on a step | A time limit on one step is not carried | Use the job's timeout, or the timeout command in the script |
 | Workflow commands and files (GITHUB_ENV, GITHUB_PATH, ::set-output, step summaries) | The script uses …, which only the old system provides | Print messages with echo, export variables and extend PATH inside the same script, and write key=value lines to $LAUNCHWAY_OUTPUTS to pass values to later steps |
-| ${{ ... }} with functions or other contexts | The expression `…` is evaluated by the old system and was left as written, so the script will not run as it is | Replace it with a shell command, an input or a variable |
+| $&#123;&#123; ... &#125;&#125; with functions or other contexts | The expression `…` is evaluated by the old system and was left as written, so the script will not run as it is | Replace it with a shell command, an input or a variable |
 | secrets.GITHUB_TOKEN | The old system made a token for each run, and Launchway does not | Create an access token for the repository and give it to the step as a named secret |
 | Two setup actions in one job | The job sets up … as well as another toolchain, and a Launchway step runs in one image | Use an image that has both, or split the job in two steps |
 | A cache of a directory outside the workspace | The cache path … is outside the workspace, and Launchway keeps only paths below it | Make the tool use a directory below the workspace and cache that |
@@ -251,7 +251,7 @@ Where it lives: a config.yml in a dot-directory at the top of the repository. Im
 |---|---|---|
 | docker (the other images are services) | The image … runs as a service beside the step, reached at localhost, not by its name | Change the host name your tests use to localhost |
 | resource_class | The machine size … is not carried | Set cpu and memory on the step's container if the job needs them |
-| restore_cache and save_cache | The cache for … is kept by Launchway between runs; the key's {{ checksum "file" }} became a file list, and other parts of the key were dropped | Check the key files and paths |
+| restore_cache and save_cache | The cache for … is kept by Launchway between runs; the key's &#123;&#123; checksum "file" &#125;&#125; became a file list, and other parts of the key were dropped | Check the key files and paths |
 | persist_to_workspace and attach_workspace | Files passed to later jobs became cargo that those jobs fetch, kept under the name …, instead of a shared workspace | Check the paths the later jobs read |
 | setup_remote_docker | Not needed: image steps build with the Station's builder | Replace docker build and docker push in the script with an image step |
 | parallelism | The job became a loop of … members, and the old index and total variables are set as environment variables | Check how the tests are split between members |
@@ -382,7 +382,7 @@ Where it lives: a file named *-pipelines.yml at the top of the repository. Impor
 |---|---|---|
 | condition on a job or step | The condition `…` is an expression, which Launchway does not evaluate, so it always runs | Express it as a when: filter (branch, tag, event), or in the script |
 | variable groups and templates | The variable group or template … lives outside this file | Create its variables in Launchway (names only; secrets as secrets) or copy the template's content here |
-| ${{ parameters.name }} and other template expressions | The expression `…` is evaluated when the old file is read, and is left as written | Write the value in place, or use a run input |
+| $&#123;&#123; parameters.name &#125;&#125; and other template expressions | The expression `…` is evaluated when the old file is read, and is left as written | Write the value in place, or use a run input |
 | pwsh, powershell | The step runs PowerShell, which is not in a plain Linux image | Use an image that has pwsh and run the script with it, or rewrite it for sh |
 | A cache of a directory outside the workspace | The cache path … is outside the workspace, and Launchway keeps only paths below it | Make the tool use a directory below the workspace and cache that |
 | template (steps, jobs or stages from another file) | The template … is another file, which is not read here | Import it as well and copy its steps here, or write a Launchway template |
