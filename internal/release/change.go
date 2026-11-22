@@ -14,17 +14,17 @@ type Change struct {
 	// Kind says where it came from: "pull", "commit" or "item".
 	Kind string `json:"kind"`
 	// Ref is the pull request or item number (0 for a commit).
-	Ref     int      `json:"ref,omitempty"`
-	SHA     string   `json:"sha,omitempty"`
-	Title   string   `json:"title"`
-	Body    string   `json:"body,omitempty"`
-	Author  string   `json:"author,omitempty"`
-	Labels  []string `json:"labels,omitempty"`
-	URL     string   `json:"url,omitempty"`
-	Breaks  bool     `json:"breaking,omitempty"`
+	Ref    int      `json:"ref,omitempty"`
+	SHA    string   `json:"sha,omitempty"`
+	Title  string   `json:"title"`
+	Body   string   `json:"body,omitempty"`
+	Author string   `json:"author,omitempty"`
+	Labels []string `json:"labels,omitempty"`
+	URL    string   `json:"url,omitempty"`
+	Breaks bool     `json:"breaking,omitempty"`
 	// Parts are the subjects of the commits a merged pull request brought. They are not listed on their own; they
 	// count when the pull request itself carries no marker (a feature built from `feat:` commits is a feature).
-	Parts []string `json:"parts,omitempty"`
+	Parts   []string `json:"parts,omitempty"`
 	Section string   `json:"section,omitempty"` // filled by Classify
 }
 
