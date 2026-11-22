@@ -353,7 +353,7 @@ const tpl = readFileSync(p('docs/roadmap/template.html'), 'utf8')
 if (!tpl.includes('/*ROADMAP_BODY*/')) fail('template.html has no /*ROADMAP_BODY*/')
 const html = tpl.replace('/*ROADMAP_BODY*/', () => body)
 
-const cell = (s) => String(s).replace(/\|/g, '\\|')
+const cell = (s) => String(s).replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
 const row = (i, m) => `| [${cell(i.title)}](${m ? `roadmap/${pageName(m)}.md#${slug(i.title)}` : '#'}) | ${STATUS[i.status]} | ${cell(i.value)}${i.link ? ` ([docs](${mdHref(i.link)}))` : ''} |`
 const md = `# Roadmap, as a list
 

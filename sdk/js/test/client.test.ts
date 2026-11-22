@@ -5,7 +5,7 @@ import { mkdtempSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
-import { ToggleClient } from "../src/client.js";
+import { ToggleClient, trimTrailingSlashes } from "../src/client.js";
 import { WebClient } from "../src/web.js";
 import type { Ruleset } from "../src/evaluate.js";
 
@@ -160,4 +160,13 @@ test("the browser client asks for values for its context and says when they chan
     assert.equal(w.bool("unknown", true), true);
     assert.equal(w.boolDetail("label", true).reason, "type_mismatch");
   } finally { w.close(); await f.stop(); }
+});
+
+test("trimTrailingSlashes trims in one pass, however long the run", () => {
+  assert.equal(trimTrailingSlashes("https://x.example///"), "https://x.example");
+  assert.equal(trimTrailingSlashes("https://x.example/a"), "https://x.example/a");
+  const long = "https://x.example" + "/".repeat(200000) + "y";
+  const t = Date.now();
+  assert.equal(trimTrailingSlashes(long), long);
+  assert.ok(Date.now() - t < 200);
 });

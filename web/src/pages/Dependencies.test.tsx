@@ -37,7 +37,7 @@ describe.each(["light", "dark"])("dependency pages, %s theme", (theme) => {
   it("shows the dependencies as a table with the vulnerability, the age and the open pull request", async () => {
     render(<main><DependenciesPage path="acme/shop" /></main>);
     const table = await screen.findByRole("table", { name: /Dependencies of acme\/shop/ });
-    const lib = within(table).getByRole("row", { name: /example.com\/lib/ });
+    const lib = within(table).getByRole("row", { name: /example\.com\/lib/ });
     expect(within(lib).getByText(/critical/)).toBeTruthy();
     expect(within(lib).getByText(/fixed in 1.4.2/)).toBeTruthy();
     expect(within(lib).getByRole("link", { name: "#7" }).getAttribute("href")).toBe("/repositories/acme/shop/pulls/7");

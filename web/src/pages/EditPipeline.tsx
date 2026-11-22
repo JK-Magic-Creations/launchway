@@ -59,7 +59,7 @@ function globMatch(pattern: string, name: string): boolean {
     else if (c === "[") {
       const end = pattern.indexOf("]", i + 1);
       if (end < 0) return false;
-      re += "[" + pattern.slice(i + 1, end).replace(/^\^/, "^").replace(/\\/g, "\\\\") + "]";
+      re += "[" + pattern.slice(i + 1, end).replace(/\\/g, "\\\\") + "]";
       i = end;
     } else re += c.replace(/[.+^${}()|\\]/g, "\\$&");
   }

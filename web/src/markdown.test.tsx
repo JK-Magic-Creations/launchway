@@ -17,6 +17,17 @@ describe("Markdown", () => {
     expect(links).toEqual(["https://example.com/a", "mailto:a@b.c"]);
     expect(container.querySelector("a")?.getAttribute("rel")).toContain("noopener");
   });
+  it("accepts a repository context's addresses only when they are on this site", () => {
+    const ctx = { link: (r: string) => r, image: (r: string) => r };
+    const { container } = render(<Markdown ctx={ctx} text={"[a](/code/x) [b](docs/javascript:x) [c](#top) ![p](/raw/p.png)"} />);
+    const hrefs = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/code/x");
+    expect(hrefs).toContain("#top");
+    const evil = { link: () => "javascript:alert(1)", image: () => "//evil.example/p.png" };
+    const r2 = render(<Markdown ctx={evil} text={"[x](a.md) ![p](a.png)"} />);
+    expect(r2.container.querySelector("a")).toBeNull();
+    expect(r2.container.querySelector("img")).toBeNull();
+  });
   it("renders blocks and shows a suggestion as a suggestion", () => {
     const { container } = render(<Markdown text={"# Title\n\n- one\n- two\n\n```suggestion\nnew line\n```\n\n> quoted"} />);
     expect(container.querySelector("h3")?.textContent).toBe("Title");
