@@ -33,10 +33,10 @@ type ArchiveInfo struct {
 
 // Archive streams the files of a ref as a tar.gz or a zip archive, every path under prefix/. It never holds the
 // archive in memory or on disk. The size of the files is read from the tree first and the snapshot is refused with
-// ErrTooLarge when it is more than max bytes (0: no limit), so the refusal comes before any byte is sent; open is
+// ErrTooLarge when it is more than limit bytes (0: no limit), so the refusal comes before any byte is sent; open is
 // called with what was found and returns where the archive goes (and may refuse). The files' own content is what
 // git archive reads, so .gitattributes export-ignore and export-subst are honoured as they are by every Git host.
-func (s *Service) Archive(ctx context.Context, repoID, ref, format, prefix string, max int64, open func(ArchiveInfo) (io.Writer, error)) error {
+func (s *Service) Archive(ctx context.Context, repoID, ref, format, prefix string, limit int64, open func(ArchiveInfo) (io.Writer, error)) error {
 	if format != "tar.gz" && format != "zip" {
 		return invalid("%q is not an archive format: use tar.gz or zip", format)
 	}
@@ -66,8 +66,8 @@ func (s *Service) Archive(ctx context.Context, repoID, ref, format, prefix strin
 					n, _ := strconv.ParseInt(f[3], 10, 64)
 					info.Bytes += n
 					info.Files++
-					if max > 0 && info.Bytes > max {
-						err = fmt.Errorf("%w: %s is more than %d MiB of files, which is the most a snapshot may be; an administrator can raise the limit", ErrTooLarge, ref, max>>20)
+					if limit > 0 && info.Bytes > limit {
+						err = fmt.Errorf("%w: %s is more than %d MiB of files, which is the most a snapshot may be; an administrator can raise the limit", ErrTooLarge, ref, limit>>20)
 						break
 					}
 				}
@@ -90,7 +90,7 @@ func (s *Service) Archive(ctx context.Context, repoID, ref, format, prefix strin
 		if err != nil {
 			return err
 		}
-		var out io.Writer = w
+		out := w
 		var gz *gzip.Writer
 		args := []string{"archive", "--format=zip", "--prefix=" + strings.TrimSuffix(prefix, "/") + "/", commit}
 		if format == "tar.gz" {
@@ -99,8 +99,8 @@ func (s *Service) Archive(ctx context.Context, repoID, ref, format, prefix strin
 			args = []string{"archive", "--format=tar", "--prefix=" + strings.TrimSuffix(prefix, "/") + "/", commit}
 		}
 		// A limit on what is written guards against a tree that grew between the listing and the archive.
-		if max > 0 {
-			out = &limitedWriter{w: out, left: max + max/4 + (1 << 20)}
+		if limit > 0 {
+			out = &limitedWriter{w: out, left: limit + limit/4 + (1 << 20)}
 		}
 		_, err = gitexec.Run(ctx, gitexec.Spec{GitDir: dir, Args: args, Timeout: 30 * time.Minute, IdleTimeout: 2 * time.Minute, Limits: g.limits, Stdout: out})
 		if gz != nil {

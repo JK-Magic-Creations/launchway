@@ -12,7 +12,7 @@ export function BadgeBox({ project, canSwitch }: { project: string; canSwitch: b
   const [b, setB] = useState<Badges | null>(null);
   const [error, setError] = useState<unknown>(null);
   const path = `/api/v1/projects/${encodeURIComponent(project)}/badges`;
-  useEffect(() => { call<Badges>("GET", path).then(setB).catch(setError); }, [path]);
+  useEffect(() => { call<Badges>("GET", path).then((v) => setB(v?.markdown ? v : null)).catch(setError); }, [path]);
   if (!b) return <ErrorBox error={error} />;
   const copy = (what: string, text: string) => {
     void navigator.clipboard?.writeText(text).then(() => announce(`The ${what} badge's Markdown copied.`), () => announce("It could not be copied; select the text and copy it.", "assertive"));

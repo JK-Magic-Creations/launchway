@@ -42,9 +42,9 @@ func (s *Server) downloadSnapshot(w http.ResponseWriter, r *http.Request) {
 		format = "tar.gz"
 	}
 	name := strings.Trim(unsafeNameRe.ReplaceAllString(repo.Name+"-"+ref, "-"), "-.")
-	max := int64(s.hostingSettings().ArchiveMaxMiB) << 20
+	limit := int64(s.hostingSettings().ArchiveMaxMiB) << 20
 	sent := false
-	err := s.filesService().Archive(r.Context(), repo.ID, ref, format, name, max, func(i files.ArchiveInfo) (io.Writer, error) {
+	err := s.filesService().Archive(r.Context(), repo.ID, ref, format, name, limit, func(i files.ArchiveInfo) (io.Writer, error) {
 		sent = true
 		h := w.Header()
 		ct := "application/gzip"

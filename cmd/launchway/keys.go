@@ -396,7 +396,7 @@ func (f *tagRuleFlag) Set(v string) error {
 func (cl *client) protectedTags(args []string) error {
 	fs := flag.NewFlagSet("repos protected-tags", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print as JSON")
-	clear := fs.Bool("clear", false, "remove the protection")
+	removeAll := fs.Bool("clear", false, "remove the protection")
 	var rules tagRuleFlag
 	fs.Var(&rules, "rule", "a protected tag: PATTERN[:create=admin|operator,change=none|admin,pipelines=FLIGHT|FLIGHT] (repeat; replaces the rules)")
 	pos, err := parseArgs(fs, args)
@@ -414,7 +414,7 @@ func (cl *client) protectedTags(args []string) error {
 	var out struct {
 		Rules []tagRuleOut `json:"rules"`
 	}
-	if *clear || len(rules.rules) > 0 {
+	if *removeAll || len(rules.rules) > 0 {
 		body := map[string]any{"rules": rules.rules}
 		if rules.rules == nil {
 			body["rules"] = []tagRuleOut{}

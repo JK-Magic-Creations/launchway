@@ -78,7 +78,7 @@ var allowedImports = map[string][]string{
 	"internal/forge/forgetest":            {"internal/forge"},
 	"internal/forge/githttp":              {"internal/forge", "internal/forge/storage"},
 	"internal/forge/gitssh":               {},
-	"internal/forge/refrules":             {"internal/ids"},
+	"internal/forge/refrules":             {"internal/ids", "internal/store"}, // the protected tags' statements, which the wall keeps in internal/store
 	"internal/forge/pulls":                {"internal/forge/storage", "internal/gitexec", "internal/ids"},
 	"internal/forge/sshkeys":              {"internal/ids"},
 	"internal/forge/webhooks":             {"internal/ids", "internal/verify"},

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // Who may do what to a protected tag, by role.
@@ -87,24 +88,19 @@ func ValidateTagRules(rs []TagRule) error {
 
 // TagRules returns a repository's protected tag rules, in the order they were made.
 func (s *Store) TagRules(ctx context.Context, repoID string) ([]TagRule, error) {
-	rows, err := s.db.Query(ctx, `SELECT pattern, create_role, change_role, pipelines FROM tag_rules WHERE repo_id = ? ORDER BY created_at, pattern`, repoID)
+	rows, err := store.TagRulesOf(ctx, s.db, repoID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	out := []TagRule{}
-	for rows.Next() {
-		var r TagRule
-		var pl string
-		if err := rows.Scan(&r.Pattern, &r.CreateRole, &r.ChangeRole, &pl); err != nil {
-			return nil, err
+	for _, r := range rows {
+		t := TagRule{Pattern: r.Pattern, CreateRole: r.CreateRole, ChangeRole: r.ChangeRole}
+		if json.Unmarshal([]byte(r.Pipelines), &t.Pipelines) != nil || t.Pipelines == nil {
+			t.Pipelines = []string{}
 		}
-		if json.Unmarshal([]byte(pl), &r.Pipelines) != nil || r.Pipelines == nil {
-			r.Pipelines = []string{}
-		}
-		out = append(out, r)
+		out = append(out, t)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // SetTagRules replaces a repository's protected tag rules.
@@ -112,14 +108,14 @@ func (s *Store) SetTagRules(ctx context.Context, repoID string, rs []TagRule, by
 	if err := ValidateTagRules(rs); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec(ctx, `DELETE FROM tag_rules WHERE repo_id = ?`, repoID); err != nil {
+	if err := store.ReplaceTagRules(ctx, s.db, repoID); err != nil {
 		return err
 	}
 	now := s.now().UnixMilli()
 	for i, r := range rs {
 		pl, _ := json.Marshal(r.Pipelines)
-		if _, err := s.db.Exec(ctx, `INSERT INTO tag_rules(id, repo_id, pattern, create_role, change_role, pipelines, created_at, created_by) VALUES(?,?,?,?,?,?,?,?)`,
-			ids.New("tgr"), repoID, r.Pattern, r.CreateRole, r.ChangeRole, string(pl), now+int64(i), by); err != nil {
+		row := store.TagRuleRow{Pattern: r.Pattern, CreateRole: r.CreateRole, ChangeRole: r.ChangeRole, Pipelines: string(pl)}
+		if err := store.AddTagRule(ctx, s.db, ids.New("tgr"), repoID, row, now+int64(i), by); err != nil {
 			return err
 		}
 	}
