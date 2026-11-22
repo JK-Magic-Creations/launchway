@@ -62,6 +62,7 @@ Usage:
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
                                                 (launchway runs, for more)
   launchway service-accounts list|create|update|delete|token  non-person accounts that own tokens for automation
+  launchway account show|sessions|revoke|profile             your account in one answer, your signed-in browsers, a person's public profile
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
   launchway notifications [--limit N]           the log of notifications sent, retried or failed
   launchway deployments options|rollback|review  send a service back after a deployment succeeded ({rollback}); review {emergency_rollbacks}
@@ -161,6 +162,7 @@ var commands = map[string]func([]string) error{
 	"bases":            cmdBases,
 	"install":          cmdInstall,
 	"work":             cmdWork,
+	"account":          cmdAccount,
 }
 
 func main() {

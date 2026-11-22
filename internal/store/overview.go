@@ -109,8 +109,8 @@ type ActivityRow struct {
 }
 
 // AuditActivity returns the audit entries of the given actions that succeeded, on the given targets, at or before
-// `until` (milliseconds, 0 for no limit), newest first.
-func AuditActivity(ctx context.Context, q CtxQueryer, targets, actions []string, until int64, limit int) ([]ActivityRow, error) {
+// `until` (milliseconds, 0 for no limit), newest first; who, when given, keeps the entries of that person.
+func AuditActivity(ctx context.Context, q CtxQueryer, targets, actions []string, who string, until int64, limit int) ([]ActivityRow, error) {
 	if len(targets) == 0 || len(actions) == 0 {
 		return nil, nil
 	}
@@ -127,6 +127,10 @@ func AuditActivity(ctx context.Context, q CtxQueryer, targets, actions []string,
 		return s
 	}
 	text := `SELECT id, at, username, action, target, detail FROM audit WHERE outcome = 'ok' AND target IN (` + in(targets) + `) AND action IN (` + in(actions) + `)`
+	if who != "" {
+		text += ` AND username = ?`
+		args = append(args, who)
+	}
 	if until > 0 {
 		text += ` AND at <= ?`
 		args = append(args, until)
@@ -151,7 +155,7 @@ func AuditActivity(ctx context.Context, q CtxQueryer, targets, actions []string,
 
 // PullActivity returns when pull requests of the repositories were opened, merged and closed (without merging), at
 // or before `until`, newest first.
-func PullActivity(ctx context.Context, q CtxQueryer, repoIDs []string, until int64, limit int) ([]ActivityRow, error) {
+func PullActivity(ctx context.Context, q CtxQueryer, repoIDs []string, actor string, until int64, limit int) ([]ActivityRow, error) {
 	if len(repoIDs) == 0 {
 		return nil, nil
 	}
@@ -167,12 +171,21 @@ func PullActivity(ctx context.Context, q CtxQueryer, repoIDs []string, until int
 	if until == 0 {
 		until = 1<<62 - 1
 	}
-	// One row per event: the three dates of a pull request are three events.
-	text := `SELECT 'pull_opened', repo_id, number, title, author, created_at FROM pull_requests WHERE repo_id IN (` + ph + `) AND created_at > 0 AND created_at <= ?
-		UNION ALL SELECT 'pull_merged', repo_id, number, title, merged_by, merged_at FROM pull_requests WHERE repo_id IN (` + ph + `) AND merged_at > 0 AND merged_at <= ?
-		UNION ALL SELECT 'pull_closed', repo_id, number, title, closed_by, closed_at FROM pull_requests WHERE repo_id IN (` + ph + `) AND closed_at > 0 AND merged_at = 0 AND closed_at <= ?
-		ORDER BY 6 DESC, 3 DESC LIMIT ?`
-	all := append(append(append(append(append(append([]any{}, args...), until), args...), until), args...), until)
+	// One row per event: the three dates of a pull request are three events. who keeps the events a person made.
+	branch := func(kind, who, at, extra string) (string, []any) {
+		text := `SELECT '` + kind + `', repo_id, number, title, ` + who + `, ` + at + ` FROM pull_requests WHERE repo_id IN (` + ph + `) AND ` + at + ` > 0 AND ` + at + ` <= ?` + extra
+		a := append(append([]any{}, args...), until)
+		if actor != "" {
+			text += ` AND ` + who + ` = ?`
+			a = append(a, actor)
+		}
+		return text, a
+	}
+	t1, a1 := branch("pull_opened", "author", "created_at", "")
+	t2, a2 := branch("pull_merged", "merged_by", "merged_at", "")
+	t3, a3 := branch("pull_closed", "closed_by", "closed_at", ` AND merged_at = 0`)
+	text := t1 + ` UNION ALL ` + t2 + ` UNION ALL ` + t3 + ` ORDER BY 6 DESC, 3 DESC LIMIT ?`
+	all := append(append(a1, a2...), a3...)
 	rows, err := q.Query(ctx, text, append(all, limit)...)
 	if err != nil {
 		return nil, err

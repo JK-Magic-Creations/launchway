@@ -92,6 +92,20 @@ every server accepts it and a copy of the database does not contain it. Signing 
 every server, and live streams it opened close within 15 seconds. What the UI fetches by itself,
 such as refreshing a list, does not count as activity for `idle_timeout`.
 
+### Your account in one answer
+
+`GET /api/v1/account/summary` (`launchway account show`, the `get_account_summary` tool) gives your profile, your SSH
+keys, your API tokens with their limits and expiry, the state of your second factor, the browsers you are signed in
+on, and a `features` map of which optional areas this installation has, so that a page links only to what exists.
+`launchway account sessions` lists your browsers by an id that cannot be used to sign in; `launchway account revoke
+ID` ends one, `account revoke --others` ends all but the one you are using (called with a token, which has no session
+of its own, all of them). Both are recorded in the Logbook.
+
+A person's **public profile** (`launchway account profile NAME`) shows their name and what they did lately on
+repositories and Flights *you* may read. It never holds their address, groups, roles, tokens or sign-in times, and a
+private repository you cannot read adds nothing, not even a count. `launchway squadrons team NAME` shows a Squadron's
+members by role, the repositories behind its Flights and its Flights, to those who may see at least one of them.
+
 ## API tokens
 
 Scripts and the [command line](commands.md) use API tokens: `Authorization: Bearer lw_...`. Make one

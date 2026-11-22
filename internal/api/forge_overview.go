@@ -61,6 +61,8 @@ type activityFilter struct {
 	limit   int
 	atBound int64 // 0: no cursor
 	idBound string
+	// actor, when set, keeps what that person did (the public profile uses it).
+	actor string
 }
 
 func parseActivityFilter(r *http.Request) (activityFilter, string) {
@@ -153,10 +155,13 @@ func (s *Server) writeActivity(w http.ResponseWriter, r *http.Request, repos []f
 	if len(items) > f.limit {
 		out.Items = items[:f.limit]
 		last := out.Items[f.limit-1]
-		out.Next = strconv.FormatInt(last.At, 10) + "." + last.ID
+		out.Next = formatCursor(last)
 	}
 	writeJSON(w, http.StatusOK, out)
 }
+
+// formatCursor is the ?before= that follows an item.
+func formatCursor(it activityItem) string { return strconv.FormatInt(it.At, 10) + "." + it.ID }
 
 // refsOfPush picks the references out of a push's audit detail ("name old..new, name old..new", maybe after a note about the credential).
 func refsOfPush(detail string) (refs []string) {
@@ -188,7 +193,7 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 	}
 	var all []activityItem
 	if f.wants("push") || f.wants("tag") {
-		rows, err := s.Engine.AuditActivity(ctx, paths, []string{"git.push", "repository.tag_create"}, until, want)
+		rows, err := s.Engine.AuditActivity(ctx, paths, []string{"git.push", "repository.tag_create"}, f.actor, until, want)
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +220,7 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 		}
 	}
 	if f.wants("pull_opened") || f.wants("pull_merged") || f.wants("pull_closed") {
-		rows, err := s.Engine.PullActivity(ctx, ids, until, want)
+		rows, err := s.Engine.PullActivity(ctx, ids, f.actor, until, want)
 		if err != nil {
 			return nil, err
 		}
@@ -239,6 +244,9 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 						return nil, err
 					}
 					for _, ru := range runs {
+						if f.actor != "" && ru.Actor != f.actor {
+							continue
+						}
 						all = append(all, activityItem{ID: "run-" + ru.ID, Kind: "run", At: ru.CreatedAt, Actor: ru.Actor, Repository: repo.Path, Project: ru.Project,
 							Number: ru.Number, Status: string(ru.Status), Ref: firstOf(ru.Branch, ru.Tag), Title: ru.Pipeline})
 					}
@@ -247,6 +255,9 @@ func (s *Server) activityOf(ctx context.Context, id *identity, repos []forge.Rep
 					rels, err := s.Engine.ListReleases(engine.ReleaseFilter{Project: pr.Name, State: "published", Limit: want})
 					if err == nil {
 						for _, rl := range rels {
+							if f.actor != "" && rl.PublishedBy != f.actor {
+								continue
+							}
 							all = append(all, activityItem{ID: "release-" + rl.ID, Kind: "release", At: rl.PublishedAt, Actor: rl.PublishedBy, Repository: repo.Path, Project: rl.Project, Version: rl.Version, Title: firstOf(rl.Title, rl.Version)})
 						}
 					}

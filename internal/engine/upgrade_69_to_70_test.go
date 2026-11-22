@@ -47,13 +47,19 @@ func TestUpgradeFromSchema69KeepsEverythingAndAddsTheOverviewTables(t *testing.T
 		t.Fatalf("%+v %v", info, err)
 	}
 	// The new statements read the old rows.
-	pulls, err := cur.PullActivity(ctx, []string{"rep1"}, 0, 10)
+	pulls, err := cur.PullActivity(ctx, []string{"rep1"}, "", 0, 10)
 	if err != nil || len(pulls) != 4 || pulls[0].Kind != "pull_closed" || pulls[1].Kind != "pull_merged" || pulls[1].Who != "bob" || pulls[3].Kind != "pull_opened" {
 		t.Fatalf("pull activity: %+v %v", pulls, err)
 	}
-	pushes, err := cur.AuditActivity(ctx, []string{"acme/shop"}, []string{"git.push"}, 0, 10)
+	pushes, err := cur.AuditActivity(ctx, []string{"acme/shop"}, []string{"git.push"}, "", 0, 10)
 	if err != nil || len(pushes) != 1 || pushes[0].Who != "ada" {
 		t.Fatalf("audit activity: %+v %v", pushes, err)
+	}
+	if mine, err := cur.PullActivity(ctx, []string{"rep1"}, "bob", 0, 10); err != nil || len(mine) != 1 || mine[0].Kind != "pull_merged" {
+		t.Fatalf("one person's pull activity: %+v %v", mine, err)
+	}
+	if none, err := cur.AuditActivity(ctx, []string{"acme/shop"}, []string{"git.push"}, "bob", 0, 10); err != nil || len(none) != 0 {
+		t.Fatalf("one person's pushes: %+v %v", none, err)
 	}
 	// The job's rows: a request is new once, a new commit makes a new request, a finished job is kept.
 	need, err := cur.RequestContributors(ctx, "rep1", "90d", "c1@d1")

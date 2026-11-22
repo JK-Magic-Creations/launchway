@@ -79,3 +79,31 @@ func TestWorkTimeCommands(t *testing.T) {
 		t.Error("minutes that are not a number were accepted")
 	}
 }
+
+// The account from the command line: the summary, the browsers, and a profile.
+func TestAccountCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	if err := ada.accountShow(nil); err != nil || !strings.Contains(out.String(), "ada") || !strings.Contains(out.String(), "This server has:") || !strings.Contains(out.String(), "hosting") {
+		t.Fatalf("show: %q %v", out.String(), err)
+	}
+	out.Reset()
+	if err := ada.accountSessions(nil); err != nil {
+		t.Fatalf("sessions: %v", err)
+	}
+	out.Reset()
+	if err := ada.accountProfile([]string{"zz-unknown"}); err == nil {
+		t.Error("the profile of a person who is not there was shown")
+	}
+	if err := ada.accountRevoke([]string{"nonsense-id"}); err == nil {
+		t.Error("an id that is not a session ended something")
+	}
+	if err := ada.accountRevoke(nil); err == nil {
+		t.Error("revoke without saying which")
+	}
+	out.Reset()
+	if err := ada.accountRevoke([]string{"--others"}); err != nil || !strings.Contains(out.String(), "Ended") {
+		t.Fatalf("others: %q %v", out.String(), err)
+	}
+}

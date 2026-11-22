@@ -517,6 +517,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `auth.local.second_factor_added` | `POST /api/v1/account/second-factor/confirm`: the authenticator was proven with a code |
 | `auth.local.second_factor_removed` | `DELETE /api/v1/account/second-factor` |
 | `auth.local.recovery_codes_renewed` | `POST /api/v1/account/recovery-codes`: a new set; the old codes stopped working |
+| `auth.session_end` | `DELETE /api/v1/account/sessions/{id}`: one of a person's sessions ended |
+| `auth.session_end_others` | `POST /api/v1/account/sessions/end-others` |
 | `auth.sign_out_everywhere` | `POST /api/v1/account/sign-out-everywhere` |
 | `user.invite` | `POST /api/v1/users`: an administrator invited a person (the target is the user name; the link is never recorded) |
 | `user.reset` | `POST /api/v1/users/{name}/reset`: a one-time reset link was issued |

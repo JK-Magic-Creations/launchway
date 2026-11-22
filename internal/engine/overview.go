@@ -59,11 +59,11 @@ func (e *Engine) FinishContributors(ctx context.Context, j ContributorsJob, stat
 }
 
 // AuditActivity returns the successful audit entries of the actions on the targets, newest first.
-func (e *Engine) AuditActivity(ctx context.Context, targets, actions []string, until int64, limit int) ([]store.ActivityRow, error) {
-	return store.AuditActivity(ctx, e.Database(), targets, actions, until, limit)
+func (e *Engine) AuditActivity(ctx context.Context, targets, actions []string, who string, until int64, limit int) ([]store.ActivityRow, error) {
+	return store.AuditActivity(ctx, e.Database(), targets, actions, who, until, limit)
 }
 
 // PullActivity returns when the pull requests of the repositories were opened, merged and closed.
-func (e *Engine) PullActivity(ctx context.Context, repoIDs []string, until int64, limit int) ([]store.ActivityRow, error) {
-	return store.PullActivity(ctx, e.Database(), repoIDs, until, limit)
+func (e *Engine) PullActivity(ctx context.Context, repoIDs []string, who string, until int64, limit int) ([]store.ActivityRow, error) {
+	return store.PullActivity(ctx, e.Database(), repoIDs, who, until, limit)
 }

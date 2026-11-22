@@ -60,7 +60,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/second-factor/confirm` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `GET /api/v1/account/sessions` | `list_my_sessions` | `account sessions` | — | equal |
+| `POST /api/v1/account/sessions/end-others` | `end_my_session` | `account revoke` | — | equal |
+| `DELETE /api/v1/account/sessions/{id}` | `end_my_session` | `account revoke` | — | equal |
 | `POST /api/v1/account/sign-out-everywhere` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `GET /api/v1/account/summary` | `get_account_summary` | `account show` | — | equal |
 | `DELETE /api/v1/activity` | — | `recent` | — | exempt: a person's own privacy control (launchway recent --clear); an agent must not erase the person's trail |
 | `GET /api/v1/activity` | `recent` | `recent` | — | equal |
 | `PUT /api/v1/activity` | — | — | — | exempt: the pages note what a person opened, in the background; a token or agent has no pages |
@@ -168,6 +172,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/owners/{owner}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/people/{name}` | `get_person_profile` | `account profile` | — | equal |
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
 | `GET /api/v1/project-candidates` | `list_project_candidates` | `squadrons candidates` | — | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
@@ -526,6 +531,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/units` | `create_unit` | `squadrons create` | `launchway_unit (the same object; no change)` | equal |
 | `GET /api/v1/units/{name}` | `get_unit` | `squadrons show` | — | equal |
 | `POST /api/v1/units/{name}/projects` | `create_project_in_unit` | `squadrons add-flight` | `launchway_project with unit (the same object; no change)` | equal |
+| `GET /api/v1/units/{name}/team` | `get_squadron_team` | `squadrons team` | — | equal |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |

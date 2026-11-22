@@ -1442,6 +1442,88 @@ paths:
                 - account
             x-launchway-access: signed-in
             x-launchway-audit: auth.local.second_factor_added
+    /api/v1/account/sessions:
+        get:
+            description: 'Your signed-in browsers: {items: [{id, created_at, last_seen, expires_at, current}]} (milliseconds). The id is twelve characters of a hash and cannot be used to sign in.'
+            operationId: get_api_v1_account_sessions
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Your signed-in browsers: {items: [{id, created_at, last_seen, expires_at, current}]} (milliseconds).'
+            tags:
+                - account
+            x-launchway-access: signed-in
+    /api/v1/account/sessions/{id}:
+        delete:
+            description: 'Ends one of your sessions by its whole id: {"ended": 1}. 404 for a short prefix, another person''s session or one that is gone. Ending the one you call from signs this browser out.'
+            operationId: delete_api_v1_account_sessions_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Ends one of your sessions by its whole id: {"ended": 1}.'
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.session_end
+    /api/v1/account/sessions/end-others:
+        post:
+            description: 'Ends every session of yours but the one you call from: {"ended": n}. With a token, which has no session, every session ends.'
+            operationId: post_api_v1_account_sessions_end_others
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Ends every session of yours but the one you call from: {"ended": n}.'
+            tags:
+                - account
+            x-launchway-access: signed-in
+            x-launchway-audit: auth.session_end_others
     /api/v1/account/sign-out-everywhere:
         post:
             description: End every session of the caller.
@@ -1468,6 +1550,29 @@ paths:
                 - account
             x-launchway-access: signed-in
             x-launchway-audit: auth.sign_out_everywhere
+    /api/v1/account/summary:
+        get:
+            description: 'The account in one answer: {profile: {user, display_name, email, groups, via, admin}, tokens: {items, max_days, default_days, your_role}, ssh_keys, second_factor: {available, enabled, required, recovery_codes_left}, sessions, features}. features says which optional areas this installation has (hosting, ssh_keys, tokens, sessions, local_accounts, second_factor, pull_requests, registry, graph, toggles, standards, settings, mcp, ai, work); a client shows a link only for a feature that is true, and a part that does not apply is left out (no tokens without sign-in). The second factor is available only for a built-in account.'
+            operationId: get_api_v1_account_summary
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The account in one answer: {profile: {user, display_name, email, groups, via, admin}, tokens: {items, max_days, default_days, your_role}, ssh_keys, second_factor: {available, enabled, required, recovery_codes_left}, sessions, features}.'
+            tags:
+                - account
+            x-launchway-access: signed-in
     /api/v1/activity:
         delete:
             description: Deletes the caller's whole trail.
@@ -4328,6 +4433,37 @@ paths:
                 - owners
             x-launchway-access: admin
             x-launchway-audit: webhook.test
+    /api/v1/people/{name}:
+        get:
+            description: 'A person''s public profile: {name, display_name, activity: {items, next}}. The activity is what that person did (pushes, tags, pull requests, runs, releases) on repositories and Flights the caller may read, in the pages and kinds of GET .../activity. No address, groups, roles, tokens or sign-in times; a repository the caller cannot read adds nothing. 404 for a person who never signed in.'
+            operationId: get_api_v1_people_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A person''s public profile: {name, display_name, activity: {items, next}}.'
+            tags:
+                - people
+            x-launchway-access: signed-in
     /api/v1/policies:
         get:
             description: The rule catalog, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
@@ -16358,6 +16494,37 @@ paths:
                 - units
             x-launchway-access: admin
             x-launchway-audit: project.create_in_unit
+    /api/v1/units/{name}/team:
+        get:
+            description: 'A Squadron''s team: {name, display_name, members: {admin, operator, viewer: [{who, role}]}, repositories: [{path, visibility}], flights}. Members are the people and groups bound at the Squadron; repositories are the hosted ones behind its Flights that the caller may read. For those who see at least one of the Squadron''s Flights (and administrators); 404 otherwise.'
+            operationId: get_api_v1_units_name_team
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A Squadron''s team: {name, display_name, members: {admin, operator, viewer: [{who, role}]}, repositories: [{path, visibility}], flights}.'
+            tags:
+                - units
+            x-launchway-access: signed-in
     /api/v1/user:
         get:
             description: 'The caller: login, username, full_name, email.'
