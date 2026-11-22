@@ -56,15 +56,7 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 	}
 	sshPrefix := ""
 	if f.SSH.On() {
-		host := f.SSH.PublicHost
-		if host == "" {
-			if u, err := url.Parse(f.PublicURL); err == nil {
-				host = u.Hostname()
-			}
-		}
-		if host == "" {
-			host, _ = os.Hostname()
-		}
+		host := sshPublicHost(f)
 		if port := f.SSH.Port(); port == 22 {
 			sshPrefix = "git@" + host + ":"
 		} else {
@@ -110,13 +102,28 @@ func startSSH(ctx context.Context, f config.ForgeConfig, srv *api.Server, log *s
 	}
 	idle, _ := time.ParseDuration(f.SSH.IdleTimeout)
 	life, _ := time.ParseDuration(f.SSH.MaxDuration)
+	srv.Forge.SSH = sshInfo(f, len(cas) > 0)
+	return srv.StartSSH(ctx, api.SSHOptions{Listen: f.SSH.Listen, UserCAs: cas, MaxConns: f.SSH.MaxConnections, MaxPerAddr: f.SSH.MaxPerAddress,
+		IdleTimeout: idle, MaxDuration: life, Ready: func(a net.Addr) { log.Info("Git over SSH is on", "listen", a.String()) }})
+}
+
+// sshPublicHost is the host that clone addresses and `launchway keys host` name: forge.ssh.public_host, else the
+// host of forge.public_url, else this machine's own name.
+func sshPublicHost(f config.ForgeConfig) string {
 	host := f.SSH.PublicHost
 	if host == "" {
 		if u, err := url.Parse(f.PublicURL); err == nil {
 			host = u.Hostname()
 		}
 	}
-	srv.Forge.SSH = api.SSHInfo{Enabled: true, Host: host, Port: f.SSH.Port(), Certificates: len(cas) > 0}
-	return srv.StartSSH(ctx, api.SSHOptions{Listen: f.SSH.Listen, UserCAs: cas, MaxConns: f.SSH.MaxConnections, MaxPerAddr: f.SSH.MaxPerAddress,
-		IdleTimeout: idle, MaxDuration: life, Ready: func(a net.Addr) { log.Info("Git over SSH is on", "listen", a.String()) }})
+	if host == "" {
+		host, _ = os.Hostname()
+	}
+	return host
+}
+
+// sshInfo is what the API tells people about Git over SSH: the public host and the public port (forge.ssh.public_port
+// when it is set, else the port of forge.ssh.listen), never the address the server happens to listen on.
+func sshInfo(f config.ForgeConfig, certificates bool) api.SSHInfo {
+	return api.SSHInfo{Enabled: true, Host: sshPublicHost(f), Port: f.SSH.Port(), Certificates: certificates}
 }
