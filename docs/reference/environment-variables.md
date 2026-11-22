@@ -42,7 +42,7 @@ Secrets are never written in the configuration file. Instead, a setting names a 
 | Setting | Holds |
 |---|---|
 | `auth.oidc.client_secret_env` | the OpenID Connect client secret (or `client_secret_file`) |
-| `runner_pools[].token_env` | a deploy Flight line's token, at least 32 characters (or `token_file`) |
+| `runner_pools[].token_env` | a deploy Ramp's token, at least 32 characters (or `token_file`) |
 | `ai.models[].key` and `health_sources.<name>.auth.secret` | not variables: secret references (`store`, `key`, `field`), read from the Station's own secret stores, where an `env` store reads a variable of the Station |
 | `projects[].git_webhook.secret_env` | the secret a Git host signs its webhook calls with (or `secret_file`) |
 | `projects[].webhooks.<name>.token_env` | the bearer token a webhook trigger's caller must send (or `token_file`) |
@@ -68,8 +68,8 @@ You may not set names that start with `LAUNCHWAY_` in `env:` or `secrets:`: the 
 | `CI` | `true` |
 | `LAUNCHWAY` | `true` |
 | `LAUNCHWAY_RUN_ID` | the Sortie's ID, such as `run_06gzdcazwx897r7gs6m0` |
-| `LAUNCHWAY_RUN_NUMBER` | the Sortie's number within its project: `1`, `2`, … |
-| `LAUNCHWAY_PROJECT` | the project's name (`local` for `launchway run`) |
+| `LAUNCHWAY_RUN_NUMBER` | the Sortie's number within its Flight (codebase): `1`, `2`, … |
+| `LAUNCHWAY_PROJECT` | the Flight's name (`local` for `launchway run`) |
 | `LAUNCHWAY_PIPELINE` | the `pipeline:` name in the pipeline file |
 | `LAUNCHWAY_STEP` | the step's ID; for a looped step it includes the member, such as `show[os=alpine]`; for a step from a template it includes the using step, such as `vars/show` |
 | `LAUNCHWAY_ATTEMPT` | the attempt number, starting at `1`; a retry or a resume adds one |
@@ -81,7 +81,7 @@ You may not set names that start with `LAUNCHWAY_` in `env:` or `secrets:`: the 
 | `LAUNCHWAY_COMMIT_TIME` | the commit's committer time in UTC, RFC 3339 with a Z, such as `2026-11-20T06:12:56Z`; not set when the run has no commit |
 | `SOURCE_DATE_EPOCH` | the same time as Unix seconds, for reproducible builds; not set when the run has no commit |
 | `LAUNCHWAY_PULL_REQUEST` | the pull request's number; only in runs whose event is `pull_request` |
-| `LAUNCHWAY_PULL_REQUEST_INTO` | the branch the pull request targets, as the project's forge said; only in pull-request runs of a pipeline whose `on.pull_request` has `into` |
+| `LAUNCHWAY_PULL_REQUEST_INTO` | the branch the pull request targets, as the Flight's forge said; only in pull-request runs of a pipeline whose `on.pull_request` has `into` |
 | `LAUNCHWAY_OUTPUTS` | the file the step appends `key=value` lines to, to give outputs to the steps that need it (see below) |
 
 `LAUNCHWAY_OUTPUTS` is `/launchway/outputs` in a container step. With the host executor it is a path in the Station's data directory; with the Kubernetes executor it is a path in the pod. Always use the variable, not a fixed path.

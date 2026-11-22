@@ -4,7 +4,7 @@
 #     uses: launchway/tofu-plan
 #     with: { workspace: prod, environment: prod }
 #
-# State needs no bucket and no backend block: the step is given a credential for this project's workspace and nothing else. The plan is read into a report (add, change, destroy, replacements first, sensitive values hidden). The plan file is the artifact launchway-plan, bound to this commit and to the state serial it was made against.
+# State needs no bucket and no backend block: the step is given a credential for this Flight's workspace and nothing else. The plan is read into a report (add, change, destroy, replacements first, sensitive values hidden). The plan file is the artifact launchway-plan, bound to this commit and to the state serial it was made against.
 # OpenTofu is open source (MPL-2.0). Terraform is source-available (BSL): Launchway never bundles it; name an image that has it with tool: terraform. Have your counsel read its licence first.
 template: tofu-plan
 description: "Maneuver: tofu or terraform plan against the built-in state; the plan is reported and kept for the apply"
@@ -12,7 +12,7 @@ params:
   tool: { type: string, default: "tofu", options: ["tofu", "terraform"], description: "The binary: tofu (open, default) or terraform (source-available)" }
   image: { type: string, default: "ghcr.io/opentofu/opentofu:1.10", description: "An image with the tool and a shell; pin it by digest in production" }
   directory: { type: string, default: ".", description: "The directory with the configuration, relative to the repository" }
-  workspace: { type: string, default: "default", description: "The state workspace of this project: lower case letters, digits, - and _" }
+  workspace: { type: string, default: "default", description: "The state workspace of this Flight: lower case letters, digits, - and _" }
   environment: { type: string, default: "", description: "The Airfield this plans for, for the Configuration page" }
   vars: { type: string, default: "{}", description: "Variables as a JSON object: typed inputs and variables by level" }
   var_files: { type: string, default: "", description: "Variable files in the repository, separated by spaces" }

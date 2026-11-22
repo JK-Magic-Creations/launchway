@@ -158,7 +158,7 @@ func (s *Service) EffectiveFor(project string) (*Effective, error) {
 	}
 	unit, ok := lay.ProjectUnit[project]
 	if !ok {
-		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, project)
+		return nil, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, project)
 	}
 	ef := &Effective{Project: project, Unit: unit, Objects: []EffectiveEntry{}, Settings: []EffectiveSetting{}}
 	var pc config.ProjectConfig

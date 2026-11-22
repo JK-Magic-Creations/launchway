@@ -28,7 +28,7 @@ flowchart LR
 | Findings | SARIF from any scanner; new, still there or fixed across runs; secrets that scanners find are never stored. | [Security findings and SBOMs](../guide/security-findings.md) |
 | Provenance | in-toto statements with SLSA provenance v1 predicates: Launchway's own and the builder's. | [Container images](../guide/images.md) |
 | Signing | Signatures of images, provenance and SBOMs in the form cosign verifies, with the Station's own key. Nothing is sent to a public transparency log. | [Container images](../guide/images.md) |
-| Push rules | Nothing is pushed without a rule naming the project and the repository. Pull requests and drafts never push. | [Container images](../guide/images.md) |
+| Push rules | Nothing is pushed without a rule naming the Flight (codebase) and the repository. Pull requests and drafts never push. | [Container images](../guide/images.md) |
 | Digest pinning | Deploy steps can write `repository@sha256:...`, which nobody can move. | [Deployments](../guide/deployments.md) |
 | Policy gates | Require tests, findings below a severity, an SBOM, images built, signed and scanned by the Sortie, approvals, pinned libraries, images by digest from named Depots (registries). | [Policies](../guide/policies.md) |
 | Launchway releases | Reproducible binaries, packages and charts with CycloneDX SBOMs, signed checksums and SLSA provenance; signed server and Station (runner) images with SBOM and provenance attestations. | [Verifying downloads](verify-downloads.md) |

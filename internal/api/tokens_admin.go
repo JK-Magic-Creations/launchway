@@ -34,17 +34,17 @@ func (s *Server) checkTokenLimits(id *identity, role string, projects []string) 
 		}
 		if have := s.cur().Policy.RoleAnywhere(id.User, id.Groups); r > have {
 			if have == auth.NoRole {
-				return "you have no role on any project, so a token of yours can have none"
+				return "you have no role on any Flight, so a token of yours can have none"
 			}
 			return fmt.Sprintf("a token's role can be no higher than yours: you are at most %s", have)
 		}
 	}
 	if len(projects) > maxTokenPatterns {
-		return fmt.Sprintf("at most %d project patterns", maxTokenPatterns)
+		return fmt.Sprintf("at most %d Flight patterns", maxTokenPatterns)
 	}
 	for _, p := range projects {
 		if _, err := path.Match(p, ""); err != nil || p == "" || len(p) > 100 || strings.ContainsAny(p, "/\x00") {
-			return fmt.Sprintf("%q is not a project pattern; write a project's name, or a pattern such as pay-*", clip(p, 40))
+			return fmt.Sprintf("%q is not a Flight pattern; write a Flight's name, or a pattern such as pay-*", clip(p, 40))
 		}
 	}
 	return ""

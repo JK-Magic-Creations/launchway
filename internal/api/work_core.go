@@ -134,7 +134,7 @@ func (s *Server) workMaintains(id *identity, sc work.Scope) bool {
 // or installation (a bare owner/name is a project).
 func parseWorkScope(v string) (work.Scope, error) {
 	if v == "" {
-		return work.Scope{}, errors.New("say the scope: project:owner/name, unit:name, organization or installation")
+		return work.Scope{}, errors.New("say the scope: Flight:owner/name, unit:name, organization or installation")
 	}
 	kind, id, ok := strings.Cut(v, ":")
 	if !ok {

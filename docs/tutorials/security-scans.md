@@ -93,7 +93,7 @@ curl -s "http://127.0.0.1:8080/api/v1/runs/<run-id>/findings?severity=critical"
 
 ## 4 Search the SBOM
 
-Open **Components** in the menu and search for `requests`. Every Sortie and project that contains
+Open **Components** in the menu and search for `requests`. Every Sortie and Flight (codebase) that contains
 the package is listed, with its version. This answers "where do we use this library?" when a new
 vulnerability is announced.
 
@@ -111,14 +111,14 @@ new Sortie's Security tab, filter by status **fixed**: the webhook and the old p
 findings are there. Anything still found would be **existing**, and anything new, **new**. Only
 scanners that ran both times are compared.
 
-The project's **Security** page shows the counts over the branch's recent Sorties, and the findings
+The Flight's **Security** page shows the counts over the branch's recent Sorties, and the findings
 still open, each with the Sortie where it was first seen.
 
 ## What you learned
 
 - Any scanner that writes SARIF can report to Launchway with `reports.findings`.
 - Findings are compared run to run: new, existing, fixed. Secret values are never kept.
-- SBOMs make every component searchable across projects.
+- SBOMs make every component searchable across Flights.
 
 ## What next
 

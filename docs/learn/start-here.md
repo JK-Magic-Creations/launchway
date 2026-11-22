@@ -21,7 +21,7 @@ flowchart LR
 
 1. **Open Home.** Home is the first page. At the top it says either "All clear" or how many things
    need you. Under that are the changes on their way. See [the launch line](concepts/launch-line.md).
-2. **Add a project.** A project is one piece of software, kept in one Git repository. The
+2. **Add a Flight (codebase).** A Flight is one piece of software, kept in one Git repository. The
    [Connect a repository](app:/config/wizard/connect-repository) wizard asks a few plain questions
    and checks your answers before it creates anything.
 3. **Try a pipeline without saving.** A pipeline is the list of steps that Sortie (run) for a change.

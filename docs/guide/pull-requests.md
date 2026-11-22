@@ -112,7 +112,7 @@ A repository says who owns which files in `.launchway/owners`, a plain text file
   Groups are always asked as groups. A draft gets nobody until it is marked ready.
 
 Groups here are the groups the server already knows (the sign-in provider's, and the local ones); a Squadron holds
-projects, not people, so a Squadron cannot be asked to review yet.
+Flights (codebase), not people, so a Squadron cannot be asked to review yet.
 
 Descriptions and comments are stored exactly as written. Clients render them as Markdown without raw HTML,
 with the same sanitizer the rest of the product uses.
@@ -227,7 +227,7 @@ Plainly, these do not exist today:
 
 - **Forks.** A pull request's source is a branch of the same repository. There is no way to ask for a
   change from a copy of the repository.
-- **Owners that are Squadrons.** Owners and reviewers are people and groups; a Squadron holds projects, not people.
+- **Owners that are Squadrons.** Owners and reviewers are people and groups; a Squadron holds Flights, not people.
 - **A pending review kept between visits**, comments on a whole file rather than a line, hiding whitespace in the diff,
   a file tree for very large pull requests, and the changes since *your* last review (the changes since a chosen
   revision are there).

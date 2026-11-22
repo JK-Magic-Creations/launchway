@@ -15,7 +15,7 @@ import (
 )
 
 type tgProject struct {
-	Project string `json:"project" jsonschema:"the project's name, as list_projects gives it"`
+	Project string `json:"project" jsonschema:"the Flight's name, as list_projects gives it"`
 }
 
 type tgKey struct {
@@ -37,8 +37,8 @@ func tg(ctx context.Context, c *mcpCall, tool, method, path string, body any) (m
 }
 
 func addToggleTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_toggles", Annotations: readOnly("List a project's Switches"),
-		Description: "The Switches a project sees, each with its state in every Airfield (off, on, targeted by rules, rollout), its owner, stale mentions and changes waiting for approval. A toggle is a value an application reads at run time, so that something can be turned on, off or rolled out to a share of users without a deployment."},
+	addTool(srv, c, &mcp.Tool{Name: "list_toggles", Annotations: readOnly("List a Flight's Switches"),
+		Description: "The Switches a Flight sees, each with its state in every Airfield (off, on, targeted by rules, rollout), its owner, stale mentions and changes waiting for approval. A toggle is a value an application reads at run time, so that something can be turned on, off or rolled out to a share of users without a deployment."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "list_toggles", http.MethodGet, apiPath("/api/v1/projects/%s/toggles", in.Project), nil)
 		})
@@ -83,13 +83,13 @@ func addToggleTools(srv *mcp.Server, c *mcpCall) {
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "get_toggle_safeguards", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-safeguards", in.Project), nil)
 		})
-	addTool(srv, c, &mcp.Tool{Name: "list_toggle_keys", Annotations: readOnly("List a project's SDK keys"),
-		Description: "The SDK keys of a project's environments: kind, name, prefix, expiry, last use. Never a secret; keys are made and rotated in the web page or with the CLI. Needs the operator role."},
+	addTool(srv, c, &mcp.Tool{Name: "list_toggle_keys", Annotations: readOnly("List a Flight's SDK keys"),
+		Description: "The SDK keys of a Flight's environments: kind, name, prefix, expiry, last use. Never a secret; keys are made and rotated in the web page or with the CLI. Needs the operator role."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "list_toggle_keys", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-keys", in.Project), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "plan_toggles_file", Annotations: readOnly("Compare a toggles file with the live toggles"),
-		Description: "How a toggles file (YAML, the same model as the API) differs from the project's live toggles: toggles and Airfields to add, to change, and ones that exist only live. Changes nothing."},
+		Description: "How a toggles file (YAML, the same model as the API) differs from the Flight's live toggles: toggles and Airfields to add, to change, and ones that exist only live. Changes nothing."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			File string `json:"file" jsonschema:"the file's text"`
@@ -111,12 +111,12 @@ func addToggleMoreReadTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "list_toggle_schedules", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-schedules", in.Project)+"?all=true", nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "list_toggle_segments", Annotations: readOnly("List toggle segments"),
-		Description: "The segments a project sees: named, reusable sets of rules that toggles' rules can name."},
+		Description: "The segments a Flight sees: named, reusable sets of rules that toggles' rules can name."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "list_toggle_segments", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-segments", in.Project), nil)
 		})
-	addTool(srv, c, &mcp.Tool{Name: "export_toggles_file", Annotations: readOnly("Export a project's toggles as a file"),
-		Description: "The project's own toggles and segments as a YAML file (the .launchway/toggles.yaml a repository can hold), for review in a pull request."},
+	addTool(srv, c, &mcp.Tool{Name: "export_toggles_file", Annotations: readOnly("Export a Flight's toggles as a file"),
+		Description: "The Flight's own toggles and segments as a YAML file (the .launchway/toggles.yaml a repository can hold), for review in a pull request."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in tgProject) (map[string]any, error) {
 			return tg(ctx, c, "export_toggles_file", http.MethodGet, apiPath("/api/v1/projects/%s/toggle-file", in.Project), nil)
 		})
@@ -127,7 +127,7 @@ func addToggleMoreReadTools(srv *mcp.Server, c *mcpCall) {
 
 func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "create_toggle", Annotations: changes("Create a feature toggle", false, false),
-		Description: "Make a toggle in a project: key, type (boolean, string, number, json), default (what it serves while off), kind (release, kill, experiment, operational, permission), owner, description, an expected removal date (expires, 2027-03-01). It starts off in every Airfield. Audited."},
+		Description: "Make a toggle in a Flight: key, type (boolean, string, number, json), default (what it serves while off), kind (release, kill, experiment, operational, permission), owner, description, an expected removal date (expires, 2027-03-01). It starts off in every Airfield. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Key         string `json:"key" jsonschema:"lower-case letters, digits and - _ ."`
@@ -220,7 +220,7 @@ func addToggleChangeTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "save_toggle_segment", http.MethodPut, apiPath("/api/v1/projects/%s/toggle-segments/%s", in.Project, in.Name), body)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "apply_toggles_file", Annotations: changes("Apply a toggles file", false, true),
-		Description: "Make a project's toggles match a file, through the same safeguards as any change: a reason, and an approval where one is on. Never removes what the file leaves out. Run plan_toggles_file first. Audited."},
+		Description: "Make a Flight's toggles match a file, through the same safeguards as any change: a reason, and an approval where one is on. Never removes what the file leaves out. Run plan_toggles_file first. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			File   string `json:"file" jsonschema:"the toggles file text"`
@@ -242,7 +242,7 @@ func addToggleAdminTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "cancel_toggle_schedule", http.MethodDelete, apiPath("/api/v1/projects/%s/toggle-schedules/%d", in.Project, in.Schedule), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "lock_toggle", Annotations: changes("Lock a shared toggle", true, true),
-		Description: "Lock a toggle that is shared from a level above its projects, with a reason: no nearer level may define one of the same key. Needs an administrator of that level. Audited."},
+		Description: "Lock a toggle that is shared from a level above its Flights, with a reason: no nearer level may define one of the same key. Needs an administrator of that level. Audited."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgKey
 			Reason string `json:"reason" jsonschema:"why; it is shown wherever the lock stops someone"`
@@ -264,7 +264,7 @@ func addToggleAdminTools(srv *mcp.Server, c *mcpCall) {
 			return tg(ctx, c, "delete_toggle_segment", http.MethodDelete, apiPath("/api/v1/projects/%s/toggle-segments/%s", in.Project, in.Name)+"?"+url.Values{"reason": {in.Reason}}.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "set_toggle_safeguards", Annotations: changes("Set toggle safeguards", true, true),
-		Description: "Set the safeguards for changing toggles in a project's Airfield (or all of them): require_reason, require_approval, approvals (how many people), watch_minutes, and locked (names of safeguards that levels below may not change). Turning one down needs a reason and is recorded. Needs the admin role on the project."},
+		Description: "Set the safeguards for changing toggles in a Flight's Airfield (or all of them): require_reason, require_approval, approvals (how many people), watch_minutes, and locked (names of safeguards that levels below may not change). Turning one down needs a reason and is recorded. Needs the admin role on the Flight."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			tgProject
 			Environment string         `json:"environment,omitempty" jsonschema:"only this environment; all of them when empty"`

@@ -314,7 +314,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/caches/begin:
         post:
-            description: 'Declares an entry to save (name, key, platform, size, SHA-256). {"exists": true} when an entry with that key is kept already (entries are never changed) or being saved by another Sortie; 403 when the policy or the Sortie''s scope forbids saving, 413 when the entry is over the limits or does not fit the project''s quota. The entry''s bytes count against the quota from here, ending the project''s least recently used entries to make room (those of pull requests and branches first) and reported as evicted.'
+            description: 'Declares an entry to save (name, key, platform, size, SHA-256). {"exists": true} when an entry with that key is kept already (entries are never changed) or being saved by another Sortie; 403 when the policy or the Sortie''s scope forbids saving, 413 when the entry is over the limits or does not fit the Flight''s quota. The entry''s bytes count against the quota from here, ending the Flight''s least recently used entries to make room (those of pull requests and branches first) and reported as evicted.'
             operationId: post_api_runner_v1_caches_begin
             responses:
                 "200":
@@ -464,7 +464,7 @@ paths:
             x-launchway-access: runner
     /api/runner/v1/config/state-credential:
         post:
-            description: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            description: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s Flight: valid for that run only, read-only for pull request and draft runs.'
             operationId: post_api_runner_v1_config_state_credential
             responses:
                 "200":
@@ -483,7 +483,7 @@ paths:
                     $ref: '#/components/responses/Error'
             security:
                 - runnerToken: []
-            summary: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s project: valid for that run only, read-only for pull request and draft runs.'
+            summary: 'A Station (runner), under a lease, asks for the credential of one workspace of the lease''s Flight: valid for that run only, read-only for pull request and draft runs.'
             tags:
                 - runner
             x-launchway-access: runner
@@ -1130,7 +1130,7 @@ paths:
                 - v1
             x-launchway-access: public
         get:
-            description: 'The Terraform/OpenTofu http backend: the current state, 404 if none. HTTP basic credentials: the password is a Sortie''s state credential (lwst_..., one workspace of one project, until the Sortie ends) or an API token with the viewer role.'
+            description: 'The Terraform/OpenTofu http backend: the current state, 404 if none. HTTP basic credentials: the password is a Sortie''s state credential (lwst_..., one workspace of one Flight, until the Sortie ends) or an API token with the viewer role.'
             operationId: get_api_state_v1_project_workspace
             parameters:
                 - in: path
@@ -1495,7 +1495,7 @@ paths:
             x-launchway-access: signed-in
             x-launchway-audit: prefs.activity.clear
         get:
-            description: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days. It is the caller''s alone: no route takes another user''s name, so administrators cannot read it. Entries for projects the caller can no longer see are left out. ?limit= (100, at most 200).'
+            description: 'The caller''s own trail: continue (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), recent (newest first), paused and retention_days. It is the caller''s alone: no route takes another user''s name, so administrators cannot read it. Entries for Flights the caller can no longer see are left out. ?limit= (100, at most 200).'
             operationId: get_api_v1_activity
             responses:
                 "200":
@@ -1517,7 +1517,7 @@ paths:
                 - activity
             x-launchway-access: signed-in
         put:
-            description: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the project.'
+            description: 'Notes (or moves) an entry of the caller''s trail, one for each thing they opened: {kind, obj, project, title, href, action, state}. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the Flight.'
             operationId: put_api_v1_activity
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -1647,7 +1647,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/approvals:
         get:
-            description: Approval steps waiting for a decision, in the projects the caller may see.
+            description: Approval steps waiting for a decision, in the Flights the caller may see.
             operationId: get_api_v1_approvals
             responses:
                 "200":
@@ -1664,7 +1664,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Approval steps waiting for a decision, in the projects the caller may see.
+            summary: Approval steps waiting for a decision, in the Flights the caller may see.
             tags:
                 - approvals
             x-launchway-access: signed-in
@@ -1939,7 +1939,7 @@ paths:
                 - cache-policy
             x-launchway-access: signed-in
         put:
-            description: Changes the installation's policy; a field left out keeps its value. 400 for a value out of range (an entry limit above the project's quota, idle days outside 1 to 3650). Audited with the policy before and after.
+            description: Changes the installation's policy; a field left out keeps its value. 400 for a value out of range (an entry limit above the Flight's quota, idle days outside 1 to 3650). Audited with the policy before and after.
             operationId: put_api_v1_cache_policy
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -2074,7 +2074,7 @@ paths:
             x-launchway-audit: config.create
     /api/v1/config/{kind}/{obj}:
         delete:
-            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an Airfield or a Flight line (Station (runner) pool): the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the Logbook) or if it would leave the configuration invalid'
+            description: 'Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a Flight, an Airfield or a Ramp (Station (runner) pool): the answer lists them; {"force_in_use": true} deletes it anyway, recorded in the object''s history and the Logbook) or if it would leave the configuration invalid'
             operationId: delete_api_v1_config_kind_obj
             parameters:
                 - in: path
@@ -2336,7 +2336,7 @@ paths:
             x-launchway-audit: config.check_signin
     /api/v1/config/effective/{project}:
         get:
-            description: 'What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project'
+            description: 'What applies to a Flight and where each part comes from: the Base, the Wing, a Squadron or the Flight'
             operationId: get_api_v1_config_effective_project
             parameters:
                 - in: path
@@ -2361,7 +2361,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project'
+            summary: 'What applies to a Flight and where each part comes from: the Base, the Wing, a Squadron or the Flight'
             tags:
                 - config
             x-launchway-access: admin
@@ -2688,7 +2688,7 @@ paths:
             x-launchway-audit: encryption.root_key_copy
     /api/v1/environments:
         get:
-            description: The configured Airfields that list a project the caller may see, with what is deployed in each.
+            description: The configured Airfields that list a Flight the caller may see, with what is deployed in each.
             operationId: get_api_v1_environments
             responses:
                 "200":
@@ -2705,13 +2705,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The configured Airfields that list a project the caller may see, with what is deployed in each.
+            summary: The configured Airfields that list a Flight the caller may see, with what is deployed in each.
             tags:
                 - environments
             x-launchway-access: signed-in
     /api/v1/events:
         get:
-            description: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other projects'' results), newest first, limited to the projects the caller may read. Each event has its id, project, at, source, verified, summary, payload as kept (credential-looking values removed), and decisions: for each trigger judged, the decision (started, held, waiting, filtered, superseded, skipped, duplicate, refused or error), the reason in words and the run_number it started. Filters: project, source, decision, verified (yes or no), ref, since and before (Unix milliseconds or RFC 3339), limit (100 by default, at most 500). See [Events](../guide/events.md).'
+            description: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other Flights'' results), newest first, limited to the Flights the caller may read. Each event has its id, project, at, source, verified, summary, payload as kept (credential-looking values removed), and decisions: for each trigger judged, the decision (started, held, waiting, filtered, superseded, skipped, duplicate, refused or error), the reason in words and the run_number it started. Filters: project, source, decision, verified (yes or no), ref, since and before (Unix milliseconds or RFC 3339), limit (100 by default, at most 500). See [Events](../guide/events.md).'
             operationId: get_api_v1_events
             responses:
                 "200":
@@ -2728,13 +2728,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other projects'' results), newest first, limited to the projects the caller may read.'
+            summary: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other Flights'' results), newest first, limited to the Flights the caller may read.'
             tags:
                 - events
             x-launchway-access: signed-in
     /api/v1/events/{id}:
         get:
-            description: One event with its decisions. An event of a project the caller cannot read is 404.
+            description: One event with its decisions. An event of a Flight the caller cannot read is 404.
             operationId: get_api_v1_events_id
             parameters:
                 - in: path
@@ -2765,7 +2765,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/events/{id}/replay:
         post:
-            description: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its project (403 otherwise). Answers 201 with the run and replay_of. A new event points back to the first. An event that was not verified is 409 with code not_verified; one with nothing to repeat is 409 with code not_replayable.
+            description: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its Flight (403 otherwise). Answers 201 with the run and replay_of. A new event points back to the first. An event that was not verified is 409 with code not_verified; one with nothing to repeat is 409 with code not_replayable.
             operationId: post_api_v1_events_id_replay
             parameters:
                 - in: path
@@ -2791,7 +2791,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its project (403 otherwise).
+            summary: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its Flight (403 otherwise).
             tags:
                 - events
             x-launchway-access: signed-in
@@ -3158,7 +3158,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/graph/rescan:
         post:
-            description: Reads every repository, project and the installation again.
+            description: Reads every repository, Flight and the installation again.
             operationId: post_api_v1_graph_rescan
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -3177,7 +3177,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Reads every repository, project and the installation again.
+            summary: Reads every repository, Flight and the installation again.
             tags:
                 - graph
             x-launchway-access: admin
@@ -3253,7 +3253,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/health-sources:
         get:
-            description: The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached.
+            description: The health sources the caller's Flights may use, by name, type and Flights; never where they are or how they are reached.
             operationId: get_api_v1_health_sources
             responses:
                 "200":
@@ -3270,13 +3270,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached.
+            summary: The health sources the caller's Flights may use, by name, type and Flights; never where they are or how they are reached.
             tags:
                 - health-sources
             x-launchway-access: signed-in
     /api/v1/home:
         get:
-            description: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately. ?view=mine or all. Only what the caller may see; counts never include anything else.'
+            description: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the Flights by Squadron with their health, favorites, and what finished lately. ?view=mine or all. Only what the caller may see; counts never include anything else.'
             operationId: get_api_v1_home
             responses:
                 "200":
@@ -3293,13 +3293,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the projects by Squadron with their health, favorites, and what finished lately.'
+            summary: 'The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron''s, then the rest), the Flights by Squadron with their health, favorites, and what finished lately.'
             tags:
                 - home
             x-launchway-access: signed-in
     /api/v1/images:
         get:
-            description: 'Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a project''s images (?project=). {"hits": […]}'
+            description: 'Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a Flight''s images (?project=). {"hits": […]}'
             operationId: get_api_v1_images
             responses:
                 "200":
@@ -3316,7 +3316,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a project's images (?project=).
+            summary: Which run built a digest (?digest=), the latest image of a repository (?repository=host/path, with ?tag=), or a Flight's images (?project=).
             tags:
                 - images
             x-launchway-access: signed-in
@@ -3394,7 +3394,7 @@ paths:
             x-launchway-access: public
     /api/v1/launch-lines:
         get:
-            description: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a project the caller may not see). Only projects the caller may see.'
+            description: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a Flight the caller may not see). Only Flights the caller may see.'
             operationId: get_api_v1_launch_lines
             responses:
                 "200":
@@ -3411,7 +3411,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a project the caller may not see).'
+            summary: 'Where each recent change is on its way, as stations worked out from a Sortie''s steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one Sortie (404 for a run of a Flight the caller may not see).'
             tags:
                 - launch-lines
             x-launchway-access: signed-in
@@ -3778,7 +3778,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/notifications:
         get:
-            description: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. limit (at most 500).'
+            description: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the Flights the caller may read. limit (at most 500).'
             operationId: get_api_v1_notifications
             responses:
                 "200":
@@ -3795,7 +3795,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read.'
+            summary: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the Flights the caller may read.'
             tags:
                 - notifications
             x-launchway-access: signed-in
@@ -3865,7 +3865,7 @@ paths:
             x-launchway-audit: folder.create
     /api/v1/organize/{area}/labels:
         put:
-            description: Replaces an item's labels (up to 20, lower case). Needs operator on the project.
+            description: Replaces an item's labels (up to 20, lower case). Needs operator on the Flight.
             operationId: put_api_v1_organize_area_labels
             parameters:
                 - in: path
@@ -4274,7 +4274,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/projects:
         get:
-            description: The projects the caller may see.
+            description: The Flights the caller may see.
             operationId: get_api_v1_projects
             responses:
                 "200":
@@ -4291,13 +4291,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The projects the caller may see.
+            summary: The Flights the caller may see.
             tags:
                 - projects
             x-launchway-access: signed-in
     /api/v1/projects/{name}:
         get:
-            description: One project.
+            description: One Flight.
             operationId: get_api_v1_projects_name
             parameters:
                 - in: path
@@ -4322,7 +4322,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'GET /api/v1/projects/{name}: One project.'
+            summary: 'GET /api/v1/projects/{name}: One Flight.'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -4360,7 +4360,7 @@ paths:
             x-launchway-access: admin
             x-launchway-audit: cache_policy.clear_project
         get:
-            description: The policy that applies to the project, with source project (its own override), installation or default.
+            description: The policy that applies to the Flight, with source project (its own override), installation or default.
             operationId: get_api_v1_projects_name_cache_policy
             parameters:
                 - in: path
@@ -4385,12 +4385,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The policy that applies to the project, with source project (its own override), installation or default.
+            summary: The policy that applies to the Flight, with source project (its own override), installation or default.
             tags:
                 - projects
             x-launchway-access: project-viewer
         put:
-            description: Overrides the policy for one project; a field left out keeps the value that applies to it now.
+            description: Overrides the policy for one Flight; a field left out keeps the value that applies to it now.
             operationId: put_api_v1_projects_name_cache_policy
             parameters:
                 - in: path
@@ -4416,7 +4416,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Overrides the policy for one project; a field left out keeps the value that applies to it now.
+            summary: Overrides the policy for one Flight; a field left out keeps the value that applies to it now.
             tags:
                 - projects
             x-launchway-access: admin
@@ -4455,7 +4455,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: cache.delete
         get:
-            description: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            description: 'The Flight''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             operationId: get_api_v1_projects_name_caches
             parameters:
                 - in: path
@@ -4480,13 +4480,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            summary: 'The Flight''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the Sortie that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/caches/{id}:
         delete:
-            description: Ends one entry; the next Sortie that wanted it starts without it. Answers {"ended", "bytes"}; 404 for an entry that does not exist or is another project's.
+            description: Ends one entry; the next Sortie that wanted it starts without it. Answers {"ended", "bytes"}; 404 for an entry that does not exist or is another Flight's.
             operationId: delete_api_v1_projects_name_caches_id
             parameters:
                 - in: path
@@ -4555,7 +4555,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/coverage:
         get:
-            description: A project's coverage over its last runs of a ref (?ref=, ?runs=).
+            description: A Flight's coverage over its last runs of a ref (?ref=, ?runs=).
             operationId: get_api_v1_projects_name_coverage
             parameters:
                 - in: path
@@ -4580,7 +4580,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A project's coverage over its last runs of a ref (?ref=, ?runs=).
+            summary: A Flight's coverage over its last runs of a ref (?ref=, ?runs=).
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -4619,7 +4619,7 @@ paths:
             x-launchway-audit: run.draft
     /api/v1/projects/{name}/event-sources:
         get:
-            description: The project's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret). The secret is never returned. See [Event sources](../guide/event-sources.md).
+            description: The Flight's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret). The secret is never returned. See [Event sources](../guide/event-sources.md).
             operationId: get_api_v1_projects_name_event_sources
             parameters:
                 - in: path
@@ -4644,7 +4644,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret).
+            summary: The Flight's event sources, each with its url, mapping, filter, dedupe_key, window and limits, and whether it has a secret (has_secret).
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -5000,7 +5000,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/git-hook:
         post:
-            description: 'A Git host''s push or pull-request webhook: makes the server poll the project at once. Recorded as webhook.git.'
+            description: 'A Git host''s push or pull-request webhook: makes the server poll the Flight at once. Recorded as webhook.git.'
             operationId: post_api_v1_projects_name_git_hook
             parameters:
                 - in: path
@@ -5022,7 +5022,7 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             security: []
-            summary: 'A Git host''s push or pull-request webhook: makes the server poll the project at once.'
+            summary: 'A Git host''s push or pull-request webhook: makes the server poll the Flight at once.'
             tags:
                 - projects
             x-launchway-access: public
@@ -5059,7 +5059,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/lanes:
         get:
-            description: 'The project''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position). A Sortie''s own place is its lane block in the Sortie JSON: name, key, label, state (holding, waiting, replaced or skipped), position, and behind (the run it waits behind, or that replaced it). GET /api/v1/runs?lane=NAME lists only runs in that lane. A waiting run is canceled with the Sortie''s cancel route.'
+            description: 'The Flight''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position). A Sortie''s own place is its lane block in the Sortie JSON: name, key, label, state (holding, waiting, replaced or skipped), position, and behind (the run it waits behind, or that replaced it). GET /api/v1/runs?lane=NAME lists only runs in that lane. A waiting run is canceled with the Sortie''s cancel route.'
             operationId: get_api_v1_projects_name_lanes
             parameters:
                 - in: path
@@ -5084,7 +5084,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position).'
+            summary: 'The Flight''s [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its name, key and label, the Sortie that holds it (holder) and the Sorties waiting, in the order they start (waiting, each with its position).'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -5120,7 +5120,7 @@ paths:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: Commits pipeline text to the project's repository, as the caller.
+            description: Commits pipeline text to the Flight's repository, as the caller.
             operationId: post_api_v1_projects_name_pipeline
             parameters:
                 - in: path
@@ -5146,14 +5146,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Commits pipeline text to the project's repository, as the caller.
+            summary: Commits pipeline text to the Flight's repository, as the caller.
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: pipeline.save
     /api/v1/projects/{name}/refs:
         get:
-            description: The project's branches and tags.
+            description: The Flight's branches and tags.
             operationId: get_api_v1_projects_name_refs
             parameters:
                 - in: path
@@ -5178,13 +5178,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's branches and tags.
+            summary: The Flight's branches and tags.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/registry:
         get:
-            description: 'The project''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
+            description: 'The Flight''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
             operationId: get_api_v1_projects_name_registry
             parameters:
                 - in: path
@@ -5209,13 +5209,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
+            summary: 'The Flight''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/registry/image:
         delete:
-            description: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets 403). Refused with 409 for an immutable tag or an image a deployment uses. The bytes go at the next collection.
+            description: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the Flight (an operator gets 403). Refused with 409 for an immutable tag or an image a deployment uses. The bytes go at the next collection.
             operationId: delete_api_v1_projects_name_registry_image
             parameters:
                 - in: path
@@ -5241,7 +5241,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets 403).
+            summary: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the Flight (an operator gets 403).
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -5309,7 +5309,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/registry/policy:
         get:
-            description: The project's policy (with ?repository= one repository's) and the effective values after the levels are combined.
+            description: The Flight's policy (with ?repository= one repository's) and the effective values after the levels are combined.
             operationId: get_api_v1_projects_name_registry_policy
             parameters:
                 - in: path
@@ -5334,12 +5334,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's policy (with ?repository= one repository's) and the effective values after the levels are combined.
+            summary: The Flight's policy (with ?repository= one repository's) and the effective values after the levels are combined.
             tags:
                 - projects
             x-launchway-access: project-viewer
         put:
-            description: Replaces it; project admin only. A project admin may lower the quota but not raise it above the installation's.
+            description: Replaces it; Flight admin only. A Flight admin may lower the quota but not raise it above the installation's.
             operationId: put_api_v1_projects_name_registry_policy
             parameters:
                 - in: path
@@ -5365,7 +5365,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Replaces it; project admin only.
+            summary: Replaces it; Flight admin only.
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -5402,7 +5402,7 @@ paths:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: Deletes them; project admin only. Answers what was deleted.
+            description: Deletes them; Flight admin only. Answers what was deleted.
             operationId: post_api_v1_projects_name_registry_retention
             parameters:
                 - in: path
@@ -5428,14 +5428,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Deletes them; project admin only.
+            summary: Deletes them; Flight admin only.
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: registry.retention_run
     /api/v1/projects/{name}/registry/tag:
         delete:
-            description: ?repository=&tag= deletes only the tag; project admin only; 409 for an immutable tag.
+            description: ?repository=&tag= deletes only the tag; Flight admin only; 409 for an immutable tag.
             operationId: delete_api_v1_projects_name_registry_tag
             parameters:
                 - in: path
@@ -5461,14 +5461,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: ?repository=&tag= deletes only the tag; project admin only; 409 for an immutable tag.
+            summary: ?repository=&tag= deletes only the tag; Flight admin only; 409 for an immutable tag.
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: registry.tag_delete
     /api/v1/projects/{name}/release-gates:
         get:
-            description: The checklists of the project, one per Airfield.
+            description: The checklists of the Flight, one per Airfield.
             operationId: get_api_v1_projects_name_release_gates
             parameters:
                 - in: path
@@ -5493,13 +5493,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The checklists of the project, one per Airfield.
+            summary: The checklists of the Flight, one per Airfield.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/release-gates/{airfield}:
         put:
-            description: 'Sets what a release must pass to reach an Airfield: require_checks, require_notes, require_no_blocking_findings, soak_minutes, clearances, clearance_roles, previous_airfield, window (days, from, to, zone). Admin on the project.'
+            description: 'Sets what a release must pass to reach an Airfield: require_checks, require_notes, require_no_blocking_findings, soak_minutes, clearances, clearance_roles, previous_airfield, window (days, from, to, zone). Admin on the Flight.'
             operationId: put_api_v1_projects_name_release_gates_airfield
             parameters:
                 - in: path
@@ -5570,7 +5570,7 @@ paths:
             x-launchway-audit: release.return
     /api/v1/projects/{name}/release-settings:
         get:
-            description: 'How the project''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
+            description: 'How the Flight''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
             operationId: get_api_v1_projects_name_release_settings
             parameters:
                 - in: path
@@ -5595,12 +5595,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'How the project''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
+            summary: 'How the Flight''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
             tags:
                 - projects
             x-launchway-access: project-viewer
         put:
-            description: 'Sets them: {"scheme", "tag_prefix", "changelog", "public"}. Needs the admin role on the project. The scheme cannot change once a release is a candidate, published or withdrawn. public is refused unless the installation allows public downloads.'
+            description: 'Sets them: {"scheme", "tag_prefix", "changelog", "public"}. Needs the admin role on the Flight. The scheme cannot change once a release is a candidate, published or withdrawn. public is refused unless the installation allows public downloads.'
             operationId: put_api_v1_projects_name_release_settings
             parameters:
                 - in: path
@@ -5633,7 +5633,7 @@ paths:
             x-launchway-audit: release.settings
     /api/v1/projects/{name}/releases:
         get:
-            description: 'The project''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked. Drafts are shown only to operators.'
+            description: 'The Flight''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked. Drafts are shown only to operators.'
             operationId: get_api_v1_projects_name_releases
             parameters:
                 - in: path
@@ -5658,7 +5658,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked.'
+            summary: 'The Flight''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked.'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -6195,7 +6195,7 @@ paths:
             x-launchway-audit: release.plan
     /api/v1/projects/{name}/releases/{version}/promote:
         post:
-            description: 'Promotes to an Airfield: {"airfield", "override"}. Starts the project''s pipeline at the release''s tag with the inputs release, version, airfield, sha and digest/digests it declares. override (a reason) is for administrators and only for lines that may be overridden. Answers 201 with the promotion and the Sortie, or 409 with the checklist.'
+            description: 'Promotes to an Airfield: {"airfield", "override"}. Starts the Flight''s pipeline at the release''s tag with the inputs release, version, airfield, sha and digest/digests it declares. override (a reason) is for administrators and only for lines that may be overridden. Answers 201 with the promotion and the Sortie, or 409 with the checklist.'
             operationId: post_api_v1_projects_name_releases_version_promote
             parameters:
                 - in: path
@@ -6233,7 +6233,7 @@ paths:
             x-launchway-audit: release.promote
     /api/v1/projects/{name}/releases/{version}/publish:
         post:
-            description: 'Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release''s commit) and fixes the release. {"public"} asks for public downloads (admin, and only where the installation and project allow). Refused with 409 if the tag is at another commit or Launchway cannot write to the repository.'
+            description: 'Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release''s commit) and fixes the release. {"public"} asks for public downloads (admin, and only where the installation and Flight allow). Refused with 409 if the tag is at another commit or Launchway cannot write to the repository.'
             operationId: post_api_v1_projects_name_releases_version_publish
             parameters:
                 - in: path
@@ -6402,7 +6402,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/rollback:
         get:
-            description: 'What a service can be returned to base to in an Airfield after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md).'
+            description: 'What a service can be returned to base to in an Airfield after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the Flight (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md).'
             operationId: get_api_v1_projects_name_rollback
             parameters:
                 - in: path
@@ -6466,7 +6466,7 @@ paths:
             x-launchway-audit: deployment.rollback
     /api/v1/projects/{name}/run-trigger-allows:
         get:
-            description: The projects this project allows to trigger on its results, and whether each may read step outputs.
+            description: The Flights this Flight allows to trigger on its results, and whether each may read step outputs.
             operationId: get_api_v1_projects_name_run_trigger_allows
             parameters:
                 - in: path
@@ -6491,12 +6491,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The projects this project allows to trigger on its results, and whether each may read step outputs.
+            summary: The Flights this Flight allows to trigger on its results, and whether each may read step outputs.
             tags:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: Allows {"downstream_project", "share_outputs"}. The caller is an operator of this (the upstream) project.
+            description: Allows {"downstream_project", "share_outputs"}. The caller is an operator of this (the upstream) Flight.
             operationId: post_api_v1_projects_name_run_trigger_allows
             parameters:
                 - in: path
@@ -6529,7 +6529,7 @@ paths:
             x-launchway-audit: run_trigger.allow
     /api/v1/projects/{name}/run-trigger-allows/{downstream}:
         delete:
-            description: Withdraws it; the downstream project's triggers stay and are refused, with the reason, until it is given again.
+            description: Withdraws it; the downstream Flight's triggers stay and are refused, with the reason, until it is given again.
             operationId: delete_api_v1_projects_name_run_trigger_allows_downstream
             parameters:
                 - in: path
@@ -6560,14 +6560,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Withdraws it; the downstream project's triggers stay and are refused, with the reason, until it is given again.
+            summary: Withdraws it; the downstream Flight's triggers stay and are refused, with the reason, until it is given again.
             tags:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: run_trigger.revoke
     /api/v1/projects/{name}/run-triggers:
         get:
-            description: 'The project''s triggers on other projects'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping. See [Triggers on results](../guide/result-triggers.md).'
+            description: 'The Flight''s triggers on other Flights'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping. See [Triggers on results](../guide/result-triggers.md).'
             operationId: get_api_v1_projects_name_run_triggers
             parameters:
                 - in: path
@@ -6592,12 +6592,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s triggers on other projects'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping.'
+            summary: 'The Flight''s triggers on other Flights'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping.'
             tags:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: 'Makes a trigger: {"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}. 409 if the upstream project has not allowed this one, or if it would make a cycle; 400 for an expression that cannot be read. The caller must be able to read the upstream project.'
+            description: 'Makes a trigger: {"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}. 409 if the upstream Flight has not allowed this one, or if it would make a cycle; 400 for an expression that cannot be read. The caller must be able to read the upstream Flight.'
             operationId: post_api_v1_projects_name_run_triggers
             parameters:
                 - in: path
@@ -6668,7 +6668,7 @@ paths:
             x-launchway-audit: run_trigger.delete
     /api/v1/projects/{name}/run-triggers/graph:
         get:
-            description: 'What the software graph says this project depends on, for starting it after them: the projects that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this project to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note. Nothing is made. 404 when the graph is off. See [Triggers from the software graph](../guide/software-graph.md#start-dependents-after-a-push).'
+            description: 'What the software graph says this Flight depends on, for starting it after them: the Flights that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this Flight to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note. Nothing is made. 404 when the graph is off. See [Triggers from the software graph](../guide/software-graph.md#start-dependents-after-a-push).'
             operationId: get_api_v1_projects_name_run_triggers_graph
             parameters:
                 - in: path
@@ -6693,12 +6693,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What the software graph says this project depends on, for starting it after them: the projects that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this project to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note.'
+            summary: 'What the software graph says this Flight depends on, for starting it after them: the Flights that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this Flight to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note.'
             tags:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: 'Makes the result triggers the plan shows, for the projects that have allowed this one: a trigger named graph-<upstream> that starts a run of this project when a run of the upstream ends well. Answers the plan with created set on each trigger made. A project that has not allowed it is left out, with the reason. Nothing is made until this is called.'
+            description: 'Makes the result triggers the plan shows, for the Flights that have allowed this one: a trigger named graph-<upstream> that starts a run of this Flight when a run of the upstream ends well. Answers the plan with created set on each trigger made. A Flight that has not allowed it is left out, with the reason. Nothing is made until this is called.'
             operationId: post_api_v1_projects_name_run_triggers_graph
             parameters:
                 - in: path
@@ -6724,7 +6724,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Makes the result triggers the plan shows, for the projects that have allowed this one: a trigger named graph-<upstream> that starts a run of this project when a run of the upstream ends well.'
+            summary: 'Makes the result triggers the plan shows, for the Flights that have allowed this one: a trigger named graph-<upstream> that starts a run of this Flight when a run of the upstream ends well.'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -6764,7 +6764,7 @@ paths:
             x-launchway-audit: run.start
     /api/v1/projects/{name}/schedules:
         get:
-            description: The schedules read from the default branch, when each fires next, recent firings, and the project's webhook triggers.
+            description: The schedules read from the default branch, when each fires next, recent firings, and the Flight's webhook triggers.
             operationId: get_api_v1_projects_name_schedules
             parameters:
                 - in: path
@@ -6789,13 +6789,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The schedules read from the default branch, when each fires next, recent firings, and the project's webhook triggers.
+            summary: The schedules read from the default branch, when each fires next, recent firings, and the Flight's webhook triggers.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/security:
         get:
-            description: A project's findings over its last runs of a ref (?ref=, ?runs=).
+            description: A Flight's findings over its last runs of a ref (?ref=, ?runs=).
             operationId: get_api_v1_projects_name_security
             parameters:
                 - in: path
@@ -6820,7 +6820,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A project's findings over its last runs of a ref (?ref=, ?runs=).
+            summary: A Flight's findings over its last runs of a ref (?ref=, ?runs=).
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -6859,7 +6859,7 @@ paths:
             x-launchway-access: public
     /api/v1/projects/{name}/standards:
         get:
-            description: 'The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository''s own file with its problems.'
+            description: 'The effective profile of a Flight at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository''s own file with its problems.'
             operationId: get_api_v1_projects_name_standards
             parameters:
                 - in: path
@@ -6884,13 +6884,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository''s own file with its problems.'
+            summary: 'The effective profile of a Flight at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository''s own file with its problems.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/standards/file:
         get:
-            description: The repository's .launchway/standards.yaml as it is, its problems, and the file the project's own settings would make.
+            description: The repository's .launchway/standards.yaml as it is, its problems, and the file the Flight's own settings would make.
             operationId: get_api_v1_projects_name_standards_file
             parameters:
                 - in: path
@@ -6915,7 +6915,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The repository's .launchway/standards.yaml as it is, its problems, and the file the project's own settings would make.
+            summary: The repository's .launchway/standards.yaml as it is, its problems, and the file the Flight's own settings would make.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -7212,7 +7212,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/tests:
         get:
-            description: 'A project''s tests over its last runs of a ref: totals, slowest, most failing, flaky.'
+            description: 'A Flight''s tests over its last runs of a ref: totals, slowest, most failing, flaky.'
             operationId: get_api_v1_projects_name_tests
             parameters:
                 - in: path
@@ -7237,13 +7237,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'A project''s tests over its last runs of a ref: totals, slowest, most failing, flaky.'
+            summary: 'A Flight''s tests over its last runs of a ref: totals, slowest, most failing, flaky.'
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/tests/flaky:
         get:
-            description: The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. ?limit= (default 100, at most 500).
+            description: The Flight's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. ?limit= (default 100, at most 500).
             operationId: get_api_v1_projects_name_tests_flaky
             parameters:
                 - in: path
@@ -7268,13 +7268,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy.
+            summary: The Flight's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/tests/history:
         get:
-            description: One test's results in the project's last runs.
+            description: One test's results in the Flight's last runs.
             operationId: get_api_v1_projects_name_tests_history
             parameters:
                 - in: path
@@ -7299,7 +7299,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: One test's results in the project's last runs.
+            summary: One test's results in the Flight's last runs.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -7583,7 +7583,7 @@ paths:
             x-launchway-audit: toggle.withdraw
     /api/v1/projects/{name}/toggle-file:
         get:
-            description: The project's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
+            description: The Flight's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
             operationId: get_api_v1_projects_name_toggle_file
             parameters:
                 - in: path
@@ -7608,13 +7608,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
+            summary: The Flight's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
             tags:
                 - projects
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/toggle-keys:
         get:
-            description: 'The SDK keys of the project (?environment=): kind, prefix, expiry, last use. Never a secret.'
+            description: 'The SDK keys of the Flight (?environment=): kind, prefix, expiry, last use. Never a secret.'
             operationId: get_api_v1_projects_name_toggle_keys
             parameters:
                 - in: path
@@ -7639,7 +7639,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The SDK keys of the project (?environment=): kind, prefix, expiry, last use.'
+            summary: 'The SDK keys of the Flight (?environment=): kind, prefix, expiry, last use.'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -7849,7 +7849,7 @@ paths:
                 - projects
             x-launchway-access: project-viewer
         put:
-            description: 'Sets safeguards at the project (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}. Needs the admin role on the project (the level''s admin above it). Turning one down needs a reason; 409 for one a level above locked.'
+            description: 'Sets safeguards at the Flight (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}. Needs the admin role on the Flight (the level''s admin above it). Turning one down needs a reason; 409 for one a level above locked.'
             operationId: put_api_v1_projects_name_toggle_safeguards
             parameters:
                 - in: path
@@ -7875,7 +7875,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Sets safeguards at the project (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}.'
+            summary: 'Sets safeguards at the Flight (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}.'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -7951,7 +7951,7 @@ paths:
             x-launchway-audit: toggle.schedule_cancel
     /api/v1/projects/{name}/toggle-segments:
         get:
-            description: The segments the project sees.
+            description: The segments the Flight sees.
             operationId: get_api_v1_projects_name_toggle_segments
             parameters:
                 - in: path
@@ -7976,7 +7976,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The segments the project sees.
+            summary: The segments the Flight sees.
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -8088,7 +8088,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/toggles:
         get:
-            description: 'The project''s toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting). A toggle defined at a level above the project shows with inherited: true.'
+            description: 'The Flight''s toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting). A toggle defined at a level above the Flight shows with inherited: true.'
             operationId: get_api_v1_projects_name_toggles
             parameters:
                 - in: path
@@ -8113,12 +8113,12 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The project's toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting).
+            summary: The Flight's toggles with their state in each Airfield (environments), stale mentions and changes waiting (waiting).
             tags:
                 - projects
             x-launchway-access: project-viewer
         post:
-            description: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}. Types boolean, string, number, json. It starts off in every Airfield. At a level above the project it needs an administrator of that level. 409 if the key exists, or is locked above.'
+            description: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}. Types boolean, string, number, json. It starts off in every Airfield. At a level above the Flight it needs an administrator of that level. 409 if the key exists, or is locked above.'
             operationId: post_api_v1_projects_name_toggles
             parameters:
                 - in: path
@@ -8415,7 +8415,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: toggle.unlock
         put:
-            description: 'Locks a toggle shared from a level above its projects: {reason}. Needs an administrator of that level.'
+            description: 'Locks a toggle shared from a level above its Flights: {reason}. Needs an administrator of that level.'
             operationId: put_api_v1_projects_name_toggles_key_lock
             parameters:
                 - in: path
@@ -8446,7 +8446,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Locks a toggle shared from a level above its projects: {reason}.'
+            summary: 'Locks a toggle shared from a level above its Flights: {reason}.'
             tags:
                 - projects
             x-launchway-access: project-operator
@@ -8489,7 +8489,7 @@ paths:
             x-launchway-access: project-viewer
     /api/v1/projects/{name}/variables:
         get:
-            description: 'Every variable in effect for a project, optionally ?environment=, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why'
+            description: 'Every variable in effect for a Flight, optionally ?environment=, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why'
             operationId: get_api_v1_projects_name_variables
             parameters:
                 - in: path
@@ -8514,7 +8514,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Every variable in effect for a project, optionally ?environment=, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why'
+            summary: 'Every variable in effect for a Flight, optionally ?environment=, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why'
             tags:
                 - projects
             x-launchway-access: project-viewer
@@ -8648,7 +8648,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/queue:
         get:
-            description: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions. See [Queues and limits](../guide/queues.md).'
+            description: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the Flights the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions. See [Queues and limits](../guide/queues.md).'
             operationId: get_api_v1_queue
             responses:
                 "200":
@@ -8665,7 +8665,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
+            summary: 'The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the Flights the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
             tags:
                 - queue
             x-launchway-access: signed-in
@@ -8835,7 +8835,7 @@ paths:
                 - release-formations
             x-launchway-access: signed-in
         post:
-            description: 'Makes a formation: {"name", "note", "releases": ["project@version", ...], "order"}, in promotion order; with "order": "dependencies" the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (409 with the reason when it cannot). Needs the operator role on every project in it.'
+            description: 'Makes a formation: {"name", "note", "releases": ["project@version", ...], "order"}, in promotion order; with "order": "dependencies" the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (409 with the reason when it cannot). Needs the operator role on every Flight in it.'
             operationId: post_api_v1_release_formations
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -8980,7 +8980,7 @@ paths:
                 - release-freezes
             x-launchway-access: signed-in
         post:
-            description: 'Makes a freeze: {"project", "airfield", "from", "to", "reason"}. Without project it freezes every project and needs the admin role everywhere; with one it needs the admin role on that project.'
+            description: 'Makes a freeze: {"project", "airfield", "from", "to", "reason"}. Without project it freezes every Flight and needs the admin role everywhere; with one it needs the admin role on that Flight.'
             operationId: post_api_v1_release_freezes
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -9061,7 +9061,7 @@ paths:
                 - release-installation
             x-launchway-access: signed-in
         put:
-            description: 'Allows or forbids them: {"public_downloads"}. Administrators of every project.'
+            description: 'Allows or forbids them: {"public_downloads"}. Administrators of every Flight.'
             operationId: put_api_v1_release_installation
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -9087,7 +9087,7 @@ paths:
             x-launchway-audit: release.installation
     /api/v1/release-matrix:
         get:
-            description: 'Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
+            description: 'Which release runs in which Airfield: for each Flight and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
             operationId: get_api_v1_release_matrix
             responses:
                 "200":
@@ -9104,7 +9104,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
+            summary: 'Which release runs in which Airfield: for each Flight and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
             tags:
                 - release-matrix
             x-launchway-access: signed-in
@@ -9133,7 +9133,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/releases:
         get:
-            description: 'Releases of every project the caller may see: ?project=, ?state=.'
+            description: 'Releases of every Flight the caller may see: ?project=, ?state=.'
             operationId: get_api_v1_releases
             responses:
                 "200":
@@ -9150,7 +9150,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Releases of every project the caller may see: ?project=, ?state=.'
+            summary: 'Releases of every Flight the caller may see: ?project=, ?state=.'
             tags:
                 - releases
             x-launchway-access: signed-in
@@ -9761,7 +9761,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/commits/{sha}:
         get:
-            description: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of projects the caller may see that were started for this commit.'
+            description: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of Flights the caller may see that were started for this commit.'
             operationId: get_api_v1_repositories_owner_name_commits_sha
             parameters:
                 - in: path
@@ -9796,7 +9796,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of projects the caller may see that were started for this commit.'
+            summary: 'One commit (a full or abbreviated name, branch or tag): {"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}; the Sorties are those of Flights the caller may see that were started for this commit.'
             tags:
                 - repositories
             x-launchway-access: repo-viewer
@@ -12286,7 +12286,7 @@ paths:
             x-launchway-access: repo-viewer
     /api/v1/rollbacks/review:
         get:
-            description: 'Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only projects the caller may see.'
+            description: 'Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only Flights the caller may see.'
             operationId: get_api_v1_rollbacks_review
             responses:
                 "200":
@@ -12438,7 +12438,7 @@ paths:
             x-launchway-audit: runner.join_token.revoke
     /api/v1/runner-pools:
         get:
-            description: 'The Flight lines (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
+            description: 'The Ramps (runner_pools in the configuration, and the default pool): name, kind, Flights, events and whether the pool requires identity.'
             operationId: get_api_v1_runner_pools
             responses:
                 "200":
@@ -12455,7 +12455,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The Flight lines (runner_pools in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity.'
+            summary: 'The Ramps (runner_pools in the configuration, and the default pool): name, kind, Flights, events and whether the pool requires identity.'
             tags:
                 - runner-pools
             x-launchway-access: any-viewer
@@ -12550,7 +12550,7 @@ paths:
             x-launchway-audit: runner.rotate
     /api/v1/runs:
         get:
-            description: Runs of the projects the caller may see, newest first.
+            description: Runs of the Flights the caller may see, newest first.
             operationId: get_api_v1_runs
             responses:
                 "200":
@@ -12567,7 +12567,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Runs of the projects the caller may see, newest first.
+            summary: Runs of the Flights the caller may see, newest first.
             tags:
                 - runs
             x-launchway-access: signed-in
@@ -12845,7 +12845,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/runs/{id}/config-reports/{step}/rerun-failed:
         post:
-            description: Starts a run of the same project and branch with the input limit set to the hosts that failed or were unreachable. 409 if none did.
+            description: Starts a run of the same Flight and branch with the input limit set to the hosts that failed or were unreachable. 409 if none did.
             operationId: post_api_v1_runs_id_config_reports_step_rerun_failed
             parameters:
                 - in: path
@@ -12876,14 +12876,14 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Starts a run of the same project and branch with the input limit set to the hosts that failed or were unreachable.
+            summary: Starts a run of the same Flight and branch with the input limit set to the hosts that failed or were unreachable.
             tags:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: config.rerun_failed
     /api/v1/runs/{id}/coverage:
         get:
-            description: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            description: A Sortie's coverage, step by step, with the previous run of its ref and the Flight's default branch to compare.
             operationId: get_api_v1_runs_id_coverage
             parameters:
                 - in: path
@@ -12908,7 +12908,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare.
+            summary: A Sortie's coverage, step by step, with the previous run of its ref and the Flight's default branch to compare.
             tags:
                 - runs
             x-launchway-access: run-viewer
@@ -14358,7 +14358,7 @@ paths:
             x-launchway-access: run-viewer
     /api/v1/search:
         get:
-            description: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch). ?q=, ?limit= (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link.'
+            description: 'One search over what the caller may see: Flights, repositories, folders, labels and Sorties (by number, commit or branch). ?q=, ?limit= (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link.'
             operationId: get_api_v1_search
             responses:
                 "200":
@@ -14375,7 +14375,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch).'
+            summary: 'One search over what the caller may see: Flights, repositories, folders, labels and Sorties (by number, commit or branch).'
             tags:
                 - search
             x-launchway-access: signed-in
@@ -14558,7 +14558,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/standards/coverage:
         get:
-            description: 'For the projects of a level that the caller may read: whether Standing orders are off, each check''s state and whether it runs, open findings by severity.'
+            description: 'For the Flights of a level that the caller may read: whether Standing orders are off, each check''s state and whether it runs, open findings by severity.'
             operationId: get_api_v1_standards_coverage
             responses:
                 "200":
@@ -14575,7 +14575,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'For the projects of a level that the caller may read: whether Standing orders are off, each check''s state and whether it runs, open findings by severity.'
+            summary: 'For the Flights of a level that the caller may read: whether Standing orders are off, each check''s state and whether it runs, open findings by severity.'
             tags:
                 - standards
             x-launchway-access: signed-in
@@ -14604,7 +14604,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/standards/settings:
         get:
-            description: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Project) and &scope=NAME, with version (0 when none are stored).'
+            description: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Flight) and &scope=NAME, with version (0 when none are stored).'
             operationId: get_api_v1_standards_settings
             responses:
                 "200":
@@ -14621,7 +14621,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Project) and &scope=NAME, with version (0 when none are stored).'
+            summary: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Flight) and &scope=NAME, with version (0 when none are stored).'
             tags:
                 - standards
             x-launchway-access: signed-in
@@ -15222,7 +15222,7 @@ paths:
             x-launchway-audit: user.sign_out
     /api/v1/validate:
         post:
-            description: Checks pipeline text without running it. With ?project=NAME it checks it for that project too, and a valid pipeline may come back with warnings (for example, a pull-request filter by target branch in a project with no forge connection).
+            description: Checks pipeline text without running it. With ?project=NAME it checks it for that Flight too, and a valid pipeline may come back with warnings (for example, a pull-request filter by target branch in a Flight with no forge connection).
             operationId: post_api_v1_validate
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -15247,7 +15247,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/variables:
         get:
-            description: The variables at a level (?level=&scope=&environment=&names=) with what each inherits from above and whether this level may override it. 400 without a level; 404 for a project the caller cannot see
+            description: The variables at a level (?level=&scope=&environment=&names=) with what each inherits from above and whether this level may override it. 400 without a level; 404 for a Flight the caller cannot see
             operationId: get_api_v1_variables
             responses:
                 "200":
@@ -15302,7 +15302,7 @@ paths:
             x-launchway-access: signed-in
             x-launchway-audit: variable.delete
         put:
-            description: 'Sets a variable: {level, scope, environment, type, of, value, description}. Types: string, number, boolean, list, map, secret (a reference {store, key, field}, never text) and connection (a name, with of). A name keeps one type everywhere. Who: an operator of the project, or an admin of the Squadron''s projects, or of every project for the Wing and the installation. 409 when a lock above forbids it, naming the level and who can change it'
+            description: 'Sets a variable: {level, scope, environment, type, of, value, description}. Types: string, number, boolean, list, map, secret (a reference {store, key, field}, never text) and connection (a name, with of). A name keeps one type everywhere. Who: an operator of the Flight, or an admin of the Squadron''s Flights, or of every Flight for the Wing and the installation. 409 when a lock above forbids it, naming the level and who can change it'
             operationId: put_api_v1_variables_name
             parameters:
                 - in: path
@@ -15367,7 +15367,7 @@ paths:
             x-launchway-access: signed-in
             x-launchway-audit: variable.unlock
         put:
-            description: 'Locks it: {level, scope, environment, reason}; a reason is required. Needs an admin at that level (of the project, at a project). Answers the variable and the nearer settings now ignored'
+            description: 'Locks it: {level, scope, environment, reason}; a reason is required. Needs an admin at that level (of the Flight, at a Flight). Answers the variable and the nearer settings now ignored'
             operationId: put_api_v1_variables_name_lock
             parameters:
                 - in: path
@@ -15400,7 +15400,7 @@ paths:
             x-launchway-audit: variable.lock
     /api/v1/verifications:
         get:
-            description: 'Recent verifications of the projects the caller may see: ?environment=, ?project=, ?service=, ?limit=.'
+            description: 'Recent verifications of the Flights the caller may see: ?environment=, ?project=, ?service=, ?limit=.'
             operationId: get_api_v1_verifications
             responses:
                 "200":
@@ -15417,13 +15417,13 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Recent verifications of the projects the caller may see: ?environment=, ?project=, ?service=, ?limit=.'
+            summary: 'Recent verifications of the Flights the caller may see: ?environment=, ?project=, ?service=, ?limit=.'
             tags:
                 - verifications
             x-launchway-access: signed-in
     /api/v1/waivers:
         get:
-            description: 'Waivers of the projects the caller may see: ?project=, ?active=1, ?limit=.'
+            description: 'Waivers of the Flights the caller may see: ?project=, ?active=1, ?limit=.'
             operationId: get_api_v1_waivers
             responses:
                 "200":
@@ -15440,7 +15440,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Waivers of the projects the caller may see: ?project=, ?active=1, ?limit=.'
+            summary: 'Waivers of the Flights the caller may see: ?project=, ?active=1, ?limit=.'
             tags:
                 - waivers
             x-launchway-access: signed-in
@@ -15786,7 +15786,7 @@ paths:
                 - work
             x-launchway-access: signed-in
         patch:
-            description: 'Changes an agent''s projects, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
+            description: 'Changes an agent''s Flights, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
             operationId: patch_api_v1_work_agents_name
             parameters:
                 - in: path
@@ -15812,7 +15812,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Changes an agent''s projects, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
+            summary: 'Changes an agent''s Flights, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
             tags:
                 - work
             x-launchway-access: signed-in
@@ -16727,7 +16727,7 @@ paths:
             x-launchway-audit: work.move
     /api/v1/work/items/{ref}/rank:
         post:
-            description: Puts the item top, bottom, before or after another item of the same Project ({where, other}). Not for agents.
+            description: Puts the item top, bottom, before or after another item of the same Flight ({where, other}). Not for agents.
             operationId: post_api_v1_work_items_ref_rank
             parameters:
                 - in: path
@@ -16753,7 +16753,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: Puts the item top, bottom, before or after another item of the same Project ({where, other}).
+            summary: Puts the item top, bottom, before or after another item of the same Flight ({where, other}).
             tags:
                 - work
             x-launchway-access: signed-in
@@ -17206,7 +17206,7 @@ paths:
             x-launchway-audit: work.settings
     /api/v1/work/spend:
         get:
-            description: 'What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items.'
+            description: 'What agents reported spending: each agent over 24 hours against its budget, each Flight over all time, and the costliest items.'
             operationId: get_api_v1_work_spend
             responses:
                 "200":
@@ -17223,7 +17223,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items.'
+            summary: 'What agents reported spending: each agent over 24 hours against its budget, each Flight over all time, and the costliest items.'
             tags:
                 - work
             x-launchway-access: signed-in
@@ -17815,7 +17815,7 @@ paths:
             x-launchway-access: public
     /public/releases/{name}/{version}/{asset}:
         get:
-            description: A file of a release with no sign-in. Answers 404 unless the installation allows public downloads, the project asks for them, and the release is published and was made public.
+            description: A file of a release with no sign-in. Answers 404 unless the installation allows public downloads, the Flight asks for them, and the release is published and was made public.
             operationId: get_public_releases_name_version_asset
             parameters:
                 - in: path

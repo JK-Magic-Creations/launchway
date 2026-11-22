@@ -44,18 +44,18 @@ const configUsage = `Usage:
   launchway config export [-o FILE]                   every object as configuration text (YAML)
   launchway config import FILE [--prune] [--apply]    show what importing FILE would change; --apply makes it so
   launchway config imports [--json]                   past imports, the first start's among them
-  launchway config effective PROJECT [--json]         what applies to a project, and where it comes from
+  launchway config effective FLIGHT [--json]         what applies to a Flight, and where it comes from
   launchway config check-repository URL [--branch B]  read a repository as the server would: branches, pipeline file
   launchway config check-signin --issuer URL --client-id ID --redirect-url URL --secret-env VAR
                      [--admin-group G] [--admin-user U]   check sign-in answers; prints the auth: block for the file
 
   launchway health-sources|models|policy-sources get|set|create|delete|restore|history ...   likewise
-  launchway projects list|get|set|create|delete|restore|history ...   the same for projects
+  launchway projects list|get|set|create|delete|restore|history ...   the same for Flights
 
 A spec is the object's settings with the keys of the configuration file, for
-example a project's repo, branch and pipeline. CHANGES.yaml is a list of
+example a Flight's repo, branch and pipeline. CHANGES.yaml is a list of
 {kind, name, unit, spec, action (put, delete or restore), version}.
-Changing configuration needs the admin role on every project.
+Changing configuration needs the admin role on every Flight.
 `
 
 func cmdConfig(args []string) error {
@@ -382,7 +382,7 @@ func (cl *client) configSet(args []string, create bool) error {
 	fs := flag.NewFlagSet("config set", flag.ContinueOnError)
 	file := fs.String("f", "", "the spec, as YAML or JSON (- for standard input)")
 	inline := fs.String("spec", "", "the spec as JSON, instead of -f")
-	unit := fs.String("unit", "", "the Squadron (unit) it belongs to (a project), or is defined at (anything else)")
+	unit := fs.String("unit", "", "the Squadron (unit) it belongs to (a Flight), or is defined at (anything else)")
 	ver := fs.Int64("version", 0, "change it only if it is at this version")
 	comment := fs.String("comment", "", "why, for the history")
 	mgr := fs.String("manager", "", "who manages it: api (the default), terraform or git; needs an API token")
@@ -800,7 +800,7 @@ func (cl *client) configEffective(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("give the project: launchway config effective shop")
+		return usageErr("give the Flight: launchway config effective shop")
 	}
 	var v struct {
 		Project string `json:"project"`
@@ -818,7 +818,7 @@ func (cl *client) configEffective(args []string) error {
 		return err
 	}
 	return cl.print(v, *asJSON, func() {
-		fmt.Fprintf(cl.out, "Project %s", v.Project)
+		fmt.Fprintf(cl.out, "Flight %s", v.Project)
 		if v.Unit != "" {
 			fmt.Fprintf(cl.out, " (unit %s)", v.Unit)
 		}

@@ -18,14 +18,14 @@ import (
 )
 
 const standardsUsage = `Usage:
-  launchway standards show PROJECT [--json]        the Standing orders that apply to a repository: each check, its state,
+  launchway standards show FLIGHT [--json]        the Standing orders that apply to a repository: each check, its state,
                                                    where the value comes from, and what a lock above holds
   launchway standards show --level LEVEL [--scope NAME] [--json]
-                                                   the settings one level has (installation, organization, unit, project)
+                                                   the settings one level has (installation, organization, unit, Flight)
   launchway standards set --level LEVEL [--scope NAME] [KEY=VALUE ...] [--unset KEY ...] [--reason TEXT]
                                           [--lock KEY=REASON ...] [--unlock KEY ...]
                                                    change a level's settings; a level cannot weaken what a level above locked
-  launchway standards explain PROJECT KEY          why a setting has the value it has: check ID, off, gate.fail_on, ...
+  launchway standards explain FLIGHT KEY          why a setting has the value it has: check ID, off, gate.fail_on, ...
   launchway standards coverage [--level LEVEL] [--scope NAME] [--json]
                                                    which repositories have which checks in effect
   launchway standards profile [--json]             every check Launchway can run, with its tool, license and defaults
@@ -35,13 +35,13 @@ the level), gate.fail_on (critical, high, medium or low), gate.require_fix, gate
 gate.incomplete (pass or fail), licenses.allow and licenses.deny (comma-separated names).
 Settings change in the interface or here; a repository may also keep .launchway/standards.yaml for its own.
 
-  launchway findings list PROJECT [--status open|fixed|accepted|all] [--severity S,S] [--check ID] [--q TEXT] [--oldest] [--json]
+  launchway findings list FLIGHT [--status open|fixed|accepted|all] [--severity S,S] [--check ID] [--q TEXT] [--oldest] [--json]
                                                    the findings the default branch has had: open, fixed or accepted
-  launchway findings show PROJECT FINGERPRINT [--json]   one finding: what, where, why it matters, how to fix it
-  launchway findings accept PROJECT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]
+  launchway findings show FLIGHT FINGERPRINT [--json]   one finding: what, where, why it matters, how to fix it
+  launchway findings accept FLIGHT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]
                                                    accept a risk or mark a false positive; it ends on the date and is recorded
-  launchway findings reopen PROJECT FINGERPRINT    end a decision, so the finding counts again
-  launchway findings export PROJECT [--format json|csv|sarif] [--status S] [-o FILE]
+  launchway findings reopen FLIGHT FINGERPRINT    end a decision, so the finding counts again
+  launchway findings export FLIGHT [--format json|csv|sarif] [--status S] [-o FILE]
   launchway findings inspect RUN [--standing new|existing|accepted] [--json]
                                                    what the Inspection of a run found and its verdict
 `
@@ -106,8 +106,8 @@ type stdLevelScope struct{ level, scope string }
 
 func stdLevelFlags(fs *flag.FlagSet) *stdLevelScope {
 	l := &stdLevelScope{}
-	fs.StringVar(&l.level, "level", "", "installation, organization, unit or project")
-	fs.StringVar(&l.scope, "scope", "", "the unit's or project's name")
+	fs.StringVar(&l.level, "level", "", "installation, organization, unit or Flight")
+	fs.StringVar(&l.scope, "scope", "", "the unit's or Flight's name")
 	return l
 }
 
@@ -142,7 +142,7 @@ func (cl *client) standardsShow(args []string) error {
 		})
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway standards show PROJECT | --level LEVEL [--scope NAME] [--json]")
+		return usageErr("launchway standards show FLIGHT | --level LEVEL [--scope NAME] [--json]")
 	}
 	var p struct {
 		Effective standards.Effective `json:"effective"`
@@ -265,7 +265,7 @@ func (cl *client) standardsExplain(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway standards explain PROJECT KEY")
+		return usageErr("launchway standards explain FLIGHT KEY")
 	}
 	var p struct {
 		Effective standards.Effective `json:"effective"`
@@ -362,7 +362,7 @@ func (cl *client) standardsCoverage(args []string) error {
 	}
 	return cl.print(out, *asJSON, func() {
 		tw := tabwriter.NewWriter(cl.out, 2, 4, 2, ' ', 0)
-		fmt.Fprintln(tw, "PROJECT\tCHECKS IN EFFECT\tOPEN FINDINGS")
+		fmt.Fprintln(tw, "FLIGHT\tCHECKS IN EFFECT\tOPEN FINDINGS")
 		for _, p := range out.Projects {
 			var on []string
 			for id, c := range p.Checks {
@@ -533,7 +533,7 @@ func (cl *client) findingsList(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway findings list PROJECT [--status S] [--severity S] [--check ID] [--q TEXT] [--oldest] [--json]")
+		return usageErr("launchway findings list FLIGHT [--status S] [--severity S] [--check ID] [--q TEXT] [--oldest] [--json]")
 	}
 	v := url.Values{"status": {*status}, "severity": {*sev}, "check": {*check}, "q": {*q}, "limit": {strconv.Itoa(*limit)}}
 	if *oldest {
@@ -579,7 +579,7 @@ func (cl *client) findingsShow(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway findings show PROJECT FINGERPRINT [--json]")
+		return usageErr("launchway findings show FLIGHT FINGERPRINT [--json]")
 	}
 	var f engine.TrackedFinding
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/findings/"+url.PathEscape(pos[1]), nil, &f); err != nil {
@@ -615,7 +615,7 @@ func (cl *client) findingsAccept(args []string) error {
 		return err
 	}
 	if len(pos) != 2 || *reason == "" || (*expires == "") == (*days == 0) {
-		return usageErr("launchway findings accept PROJECT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]")
+		return usageErr("launchway findings accept FLIGHT FINGERPRINT --reason TEXT (--expires YYYY-MM-DD | --days N) [--false-positive]")
 	}
 	if *days > 0 {
 		*expires = time.Now().UTC().AddDate(0, 0, *days).Format(standards.DateFormat)
@@ -640,7 +640,7 @@ func (cl *client) findingsReopen(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway findings reopen PROJECT FINGERPRINT")
+		return usageErr("launchway findings reopen FLIGHT FINGERPRINT")
 	}
 	if err := cl.call("POST", "/api/v1/projects/"+url.PathEscape(pos[0])+"/findings/"+url.PathEscape(pos[1])+"/reopen", map[string]string{}, nil); err != nil {
 		return err
@@ -659,7 +659,7 @@ func (cl *client) findingsExport(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway findings export PROJECT [--format json|csv|sarif] [--status S] [-o FILE]")
+		return usageErr("launchway findings export FLIGHT [--format json|csv|sarif] [--status S] [-o FILE]")
 	}
 	var got struct {
 		Findings []engine.TrackedFinding `json:"findings"`

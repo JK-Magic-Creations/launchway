@@ -50,7 +50,7 @@ The SSH key and the vault password are **references** (`vault:ansible/deploy#pri
 
 ## The Sortie report {#the-run-report}
 
-Open a Sortie's Configuration report from the project's **Configuration** page, or with `launchway configuration report RUN STEP`. It shows:
+Open a Sortie's Configuration report from the Flight's **Configuration** page, or with `launchway configuration report RUN STEP`. It shows:
 
 - the recap line, also on the Sortie: `12 hosts: 9 changed, 3 ok, 0 failed` (in check mode, `would change`);
 - the failed task with its message at the top, or the host that could not be reached;

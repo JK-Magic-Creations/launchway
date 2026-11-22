@@ -18,7 +18,7 @@ rest is registered as pending and moves stage by stage. The server refuses to st
   see or name. Every installation has the **default Base** (`bs_default`), and until the switch is
   on it is the only one. The settings level that is stored as `installation` is that Base's top
   level.
-- **Wing, Squadron, Project**: the levels inside a Base, as before. A Wing is what the code calls
+- **Wing, Squadron, Flight (codebase)**: the levels inside a Base, as before. A Wing is what the code calls
   an `org`.
 - **Scope**: a value (`store.Scope`) that says which Base an operation is for.
 
@@ -56,7 +56,7 @@ rest is registered as pending and moves stage by stage. The server refuses to st
    - **Scoped** if it holds anything a customer created, owns or could infer. Give it a
      `base_id TEXT NOT NULL` column, begin its primary key and every unique index with `base_id`,
      and begin every index that serves a lookup with it. Names that were unique across the
-     installation (a project name, a token's hash, a repository path) are unique per Base now.
+     installation (a Flight name, a token's hash, a repository path) are unique per Base now.
    - **Pending** only when you cannot do the above in this change. Name the stage (S2 to S6) and
      say what the rows are keyed by today. Every pending table is a promise; the list is checked
      and only shrinks.
@@ -84,7 +84,7 @@ called, whether a name is taken, how busy they are, or how long a lookup took be
 
 - A thing in another Base and a thing that exists nowhere give the **same error** (`ErrNotFound`,
   same words).
-- A name that is unique **within** a Base (a user, a project, a token's name) is free in every
+- A name that is unique **within** a Base (a user, a Flight, a token's name) is free in every
   other Base. The only global names are Base labels (host names), and a label that is taken,
   reserved or malformed is refused with the same message.
 - A router answers an unknown host and a suspended Base identically.

@@ -211,7 +211,7 @@ export function ToggleDetailPage({ project, toggle: key }: { project: string; to
       </div>
       {tg.stale.map((n) => <p className="tg-callout" key={n.reason}><b>A note, not an action.</b> {n.detail}</p>)}
       <ErrorBox error={t.error} />
-      {tg.environments.length === 0 && <Sheet title={terms().say("{Environments}")}><p className="sub">{terms().say("No {environment} is known to this project yet.")}</p></Sheet>}
+      {tg.environments.length === 0 && <Sheet title={terms().say("{Environments}")}><p className="sub">{terms().say("No {environment} is known to this {project} yet.")}</p></Sheet>}
       {tg.environments.map((e) => (
         <Sheet key={e.environment} title={e.environment} actions={can && editing !== e.environment && !(tg.inherited && !me?.admin) ? <>{tg.kind === "kill" && tg.safe_value !== null && <Button sm kind="bad" onClick={() => setKilling(e.environment)}>Switch to the safe value now</Button>}<Button sm onClick={() => setEditing(e.environment)}>Edit</Button></> : undefined}>
           <div className="tg-env">

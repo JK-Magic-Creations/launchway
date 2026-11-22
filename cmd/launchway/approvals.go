@@ -65,7 +65,7 @@ func (cl *client) approvals(args []string) error {
 
 func (cl *client) approvalsList(args []string) error {
 	fs := flag.NewFlagSet("approvals list", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project's approvals")
+	project := fs.String("project", "", "only this Flight's approvals")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if pos, err := parseArgs(fs, args); err != nil {
 		return err

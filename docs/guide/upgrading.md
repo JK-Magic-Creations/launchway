@@ -18,6 +18,18 @@ release if anything needed a manual step.
 > the deploy step's own tests, not by this matrix. The network plugin was kind's default, which
 > enforces policy.
 
+## What was renamed
+
+Words change on screens, in help and in the documentation; no stored name changes. Nothing needs an edit.
+
+| Before | Now (default words) | Plain words | Permanent name, unchanged |
+|---|---|---|---|
+| Project | Flight | Codebase | `project` |
+| Squadron (an optional group) | Squadron (a named folder of Flights, always shown) | Team | `unit` |
+| Flight line | Ramp | Runner group | `runner_group` (kind `runner-pools`) |
+
+API paths, configuration kinds, command-line flags, file keys, Terraform resources, tokens and the database keep their names; a Flight's page is still `/projects/NAME`. An installation that renamed its levels in Settings keeps its own words.
+
 ## What an upgrade does
 
 - **Nothing is generated while rendering.** `helm template` is the same every time and holds no secret,

@@ -309,7 +309,7 @@ function NoEnvironments() {
 function Example() {
   return (
     <div className="howto">
-      <p className="sub">In a project's <Mono>.launchway/pipeline.yaml</Mono>:</p>
+      <p className="sub">{terms().say("In a {project}'s")} <Mono>.launchway/pipeline.yaml</Mono>:</p>
       <pre className="code">{terms().say(`  deploy-prod:
     kind: {deploy:do}
     needs: build

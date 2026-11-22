@@ -1,13 +1,13 @@
 # Sign-in with OpenID Connect and roles
 
 This guide turns on sign-in through your organization's OpenID Connect provider, grants roles per
-project with access bindings, and covers API tokens, sessions and the Logbook. It is for the
+Flight (codebase) with access bindings, and covers API tokens, sessions and the Logbook. It is for the
 operator of a Launchway server.
 
 > **Verified** on 2026-11-19 against commit f717337: Dex v2.45.0 in a container (static client and
 > static users with groups) against a server on PostgreSQL 17; sign-in with headless Chromium
 > (Playwright 1.65), directly and through an nginx TLS proxy; an admin, a viewer with an operator
-> binding on some projects, and a person with no binding; `403` and `404` answers; API tokens made,
+> binding on some Flights, and a person with no binding; `403` and `404` answers; API tokens made,
 > limited, used by `launchway login` and `launchway runs`, and revoked; the limit on failed
 > attempts (`429`); sign-out; the Logbook. **Not verified:** other providers (Keycloak, Okta,
 > Entra ID, Authentik); environment-limited bindings in action on a real deployment (only that
@@ -155,14 +155,14 @@ are different issuers.
 
 | Role | May |
 |---|---|
-| `viewer` | see projects, runs, logs, pipeline files, approvals and Stations (runners); use the Playground and the editor |
+| `viewer` | see Flights, runs, logs, pipeline files, approvals and Stations (runners); use the Playground and the editor |
 | `operator` | also start, cancel, resume and re-run runs, approve and reject, save pipelines, and start draft runs if `drafts.allow` is `operator` |
 | `admin` | also read the Logbook, start draft runs if `drafts.allow` is `admin`, save a pipeline that has problems, and waive a policy's rule if `policy.waivers.allow` is `admin` |
 
 Each entry in `access` grants a `role` to one `group` or one `user`:
 
-- on the projects matching one of `projects` (patterns: `*` any characters but `/`, `?` one
-  character, `[...]`), or on every project if there is no `projects`;
+- on the Flights matching one of `projects` (patterns: `*` any characters but `/`, `?` one
+  character, `[...]`), or on every Flight if there is no `projects`;
 - where several entries match, the highest role wins;
 - someone matching none can sign in, but sees nothing;
 - The Logbook and everyone's API tokens need `admin` from an entry without `projects`.
@@ -170,7 +170,7 @@ Each entry in `access` grants a `role` to one `group` or one `user`:
 ### Limit a binding to Airfields (environments) {#limit-a-binding-to-environments}
 
 An entry may also list `environments`. It then grants its role on deployments (promote, abort,
-retry, and approvals that name a deployment) in those Airfields only; on its projects it grants
+retry, and approvals that name a deployment) in those Airfields only; on its Flights it grants
 as usual otherwise. An entry without `environments` covers every Airfield.
 
 ```yaml
@@ -216,7 +216,7 @@ await browser.close();
 
 ## What people without a role see
 
-Rights are checked by the server, whatever the UI shows. A project or run you may not see answers
+Rights are checked by the server, whatever the UI shows. A Flight or run you may not see answers
 `404`, exactly as if it did not exist; one you may see but not change answers `403`. With the
 configuration above:
 
@@ -251,7 +251,7 @@ Scripts and the [command line](../reference/cli.md) use API tokens, sent as
 Open **API tokens** in the UI, give the token a name and an expiry, and optionally limit it:
 
 - to a **role** no higher than your highest: a viewer token of an admin reads and changes nothing;
-- to **projects**, by names or patterns such as `pay-*`: elsewhere it is as if they did not exist.
+- to **Flights**, by names or patterns such as `pay-*`: elsewhere it is as if they did not exist.
 
 The token is shown once; only its SHA-256 is stored. Every token expires: by default after 90
 days, at most after `auth.tokens.max_days` (default 365, up to 3650). A token acts as you, with
@@ -292,14 +292,14 @@ launchway runs list
 launchway runs start payments-api --ref main --wait --timeout 10m
 ```
 
-A token limited to `payments-*` gets `launchway: not found: project app` for any other project.
+A token limited to `payments-*` gets `launchway: not found: project app` for any other Flight.
 `launchway login` refuses a plain `http://` address that is not on your own machine unless you add
 `--allow-http`. In scripts, `LAUNCHWAY_SERVER` and `LAUNCHWAY_TOKEN` override what it stored.
 
 ### Revoke tokens
 
 Revoke your own tokens on the **API tokens** page (`DELETE /api/v1/tokens/{id}`). The page shows
-when and from which address each token was last used. Admins of every project see everyone's
+when and from which address each token was last used. Admins of every Flight see everyone's
 tokens there and may revoke any (`GET /api/v1/admin/tokens`, `DELETE /api/v1/admin/tokens/{id}`).
 A revoked token gets `401` at once.
 
@@ -337,10 +337,10 @@ The UI sends the header. Requests with an API token need not.
 
 Every change made by someone signed in (allowed or refused), every refused token (`token.use`),
 every webhook call, every waiver, and every sign-in, failed sign-in and sign-out is recorded with
-its time, user, address, action, project, target, outcome (`ok`, `denied` or `failed`) and a short
+its time, user, address, action, Flight, target, outcome (`ok`, `denied` or `failed`) and a short
 detail. Secrets, tokens, session ids and pipeline text are never in it.
 
-Admins of every project read it on the **Audit trail** page, or:
+Admins of every Flight read it on the **Audit trail** page, or:
 
 ```sh
 curl -s -H "Authorization: Bearer $LAUNCHWAY_TOKEN" \

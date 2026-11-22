@@ -165,7 +165,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
           <div className="cf-grid">
             <TextInput label="Output tokens per call" type="number" value={maxTokens} onChange={setMaxTokens} placeholder="4096" problems={by.max_tokens} help="The longest answer. Default 4096." />
             <TextInput label={terms().say("Calls per {run}")} type="number" value={callsPerRun} onChange={setCallsPerRun} placeholder="20" problems={by.calls_per_run} help="Stops a runaway loop. Default 20." />
-            <TextInput label="Tokens per project per day" type="number" value={tokensPerDay} onChange={setTokensPerDay} placeholder="no limit" problems={by.tokens_per_day} help="A daily budget, input plus output. Empty: no limit." />
+            <TextInput label={terms().say("Tokens per {project} per day")} type="number" value={tokensPerDay} onChange={setTokensPerDay} placeholder="no limit" problems={by.tokens_per_day} help="A daily budget, input plus output. Empty: no limit." />
           </div>
         </>
       ),

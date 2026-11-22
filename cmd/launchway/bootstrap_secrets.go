@@ -31,7 +31,7 @@ The Helm chart runs it as a pre-install and pre-upgrade hook Job; it needs only 
   --root-key NAME          the root key (key root.key): 32 random bytes in base64, the text of a root key file
   --runner-token NAME      the token runners present to servers (key token)
   --db-password NAME       the bundled database's password (key password)
-  --deploy-pool-token NAME the deploy runner pool's token (key token)
+  --deploy-pool-token NAME the Ramp's token for launches (key token)
   --setup-code NAME        the one-time code for the first administrator (key code)
 
 Each flag also reads an environment variable: LAUNCHWAY_BOOTSTRAP_NAMESPACE, _ROOT_KEY, _RUNNER_TOKEN,

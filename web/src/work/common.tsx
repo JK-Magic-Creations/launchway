@@ -69,7 +69,7 @@ export function ErrorPanel({ error, onRetry }: { error: unknown; onRetry?: () =>
   if (!error) return null;
   const e = error as { message?: string; status?: number; next?: string };
   const status = error instanceof ApiError ? error.status : e.status;
-  const next = e.next ?? (status === 404 ? "It may have been removed, or you may not have access to it." : status === 403 ? "Ask someone who maintains this project to give you access." : "Try again in a moment.");
+  const next = e.next ?? (status === 404 ? "It may have been removed, or you may not have access to it." : status === 403 ? terms().say("Ask someone who maintains this {project} to give you access.") : "Try again in a moment.");
   return (
     <div className="errorbox wk-error" role="alert">
       <strong>{e.message ?? String(error)}</strong>

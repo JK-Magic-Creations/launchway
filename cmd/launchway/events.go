@@ -50,7 +50,7 @@ func eventTime(ms int64) string { return time.UnixMilli(ms).UTC().Format("2006-0
 
 func (cl *client) eventsList(args []string) error {
 	fs := flag.NewFlagSet("events list", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project")
+	project := fs.String("project", "", "only this Flight")
 	src := fs.String("source", "", "only this kind of source")
 	dec := fs.String("decision", "", "only events with a decision of this kind")
 	ver := fs.String("verified", "", "yes or no")
@@ -105,7 +105,7 @@ func (cl *client) eventsShow(args []string) error {
 		return err
 	}
 	return cl.print(ev, *asJSON, func() {
-		fmt.Fprintf(cl.out, "%s\n  project  %s\n  source   %s %s\n  at       %s\n  verified %v\n", ev.Summary, ev.Project, ev.Source, ev.SourceName, eventTime(ev.At), ev.Verified)
+		fmt.Fprintf(cl.out, "%s\n  Flight  %s\n  source   %s %s\n  at       %s\n  verified %v\n", ev.Summary, ev.Project, ev.Source, ev.SourceName, eventTime(ev.At), ev.Verified)
 		if ev.ReplayOf != "" {
 			fmt.Fprintf(cl.out, "  replay of %s\n", ev.ReplayOf)
 		}

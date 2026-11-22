@@ -12,24 +12,24 @@ import (
 )
 
 const stateUsage = `Usage:
-  launchway state list PROJECT [--json]                      the state workspaces Launchway holds for a project
-  launchway state show PROJECT WORKSPACE [--version N]       resources and output names (never values)
-  launchway state versions PROJECT WORKSPACE                 who wrote each version, when, from which run
-  launchway state lock PROJECT WORKSPACE [--reason TEXT]     lock a workspace by hand (a maintenance window)
-  launchway state unlock PROJECT WORKSPACE --reason TEXT     force-release a lock; refused while its run is going
-  launchway state pull PROJECT WORKSPACE --reason TEXT [--version N]   the raw state document, to standard output
-  launchway state push PROJECT WORKSPACE FILE|- [--adopt]    store a state document (an import or a repair)
-  launchway state rollback PROJECT WORKSPACE --version N --reason TEXT   store an earlier version as the newest
+  launchway state list FLIGHT [--json]                      the state workspaces Launchway holds for a Flight
+  launchway state show FLIGHT WORKSPACE [--version N]       resources and output names (never values)
+  launchway state versions FLIGHT WORKSPACE                 who wrote each version, when, from which run
+  launchway state lock FLIGHT WORKSPACE [--reason TEXT]     lock a workspace by hand (a maintenance window)
+  launchway state unlock FLIGHT WORKSPACE --reason TEXT     force-release a lock; refused while its run is going
+  launchway state pull FLIGHT WORKSPACE --reason TEXT [--version N]   the raw state document, to standard output
+  launchway state push FLIGHT WORKSPACE FILE|- [--adopt]    store a state document (an import or a repair)
+  launchway state rollback FLIGHT WORKSPACE --version N --reason TEXT   store an earlier version as the newest
 
 State is the Terraform and OpenTofu state Launchway keeps for you (the http backend; nothing to
 set up). It holds secrets in clear text by design of its format, so it is sealed in the database,
 show and versions never print a value, and pull needs a reason that goes to the Logbook with
 your name. Rollback changes the stored state only: no real resource changes, and the next plan
-shows the difference. Listing needs the viewer role on the project; everything else, the operator role.
+shows the difference. Listing needs the viewer role on the Flight; everything else, the operator role.
 `
 
 const configurationUsage = `Usage:
-  launchway configuration overview PROJECT [--json]           per Airfield: last apply, drift, last plan, state
+  launchway configuration overview FLIGHT [--json]           per Airfield: last apply, drift, last plan, state
   launchway configuration report RUN [STEP] [--json]          the configuration reports of a run (Ansible, plans)
   launchway configuration rerun-failed RUN STEP               run again on the hosts that failed or were unreachable
 
@@ -300,7 +300,7 @@ func (cl *client) stateRollback(a stateArgs) error {
 		return err
 	}
 	if a.version < 1 || a.reason == "" {
-		return usageErr("launchway state rollback PROJECT WORKSPACE --version N --reason TEXT")
+		return usageErr("launchway state rollback FLIGHT WORKSPACE --version N --reason TEXT")
 	}
 	var out map[string]any
 	if err := cl.call("POST", stateBase(a.pos[0], a.pos[1])+"/rollback", map[string]any{"version": a.version, "reason": a.reason}, &out); err != nil {

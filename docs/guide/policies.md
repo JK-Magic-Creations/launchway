@@ -95,7 +95,7 @@ rule, links to the evidence (the Tests, Security, Images and Cargo (artifacts) t
 the waiver that passed a rule. The **Policy** page lists the policies in force, where each comes
 from and at which version, their scope, mode and rules, and recent verdicts of the Sorties you may see.
 
-**Waivers.** A waiver lets one rule of one policy pass for a project, optionally only in one Sortie,
+**Waivers.** A waiver lets one rule of one policy pass for a Flight (codebase), optionally only in one Sortie,
 one Airfield, or (for `findings`) for one finding by its fingerprint, until it expires. A reason
 and an expiry are required (at most `policy.waivers.max_days`, default 30). Waivers are a log of
 grants and revocations, written to the Logbook (`policy.waive`, `policy.revoke_waiver`), shown
@@ -140,8 +140,8 @@ configuration. Every server loads each source and stores what it loaded in the d
 server judges from what is stored, so all of them reach the same verdict from the same inputs.
 Policy names must be unique across the configuration and the sources.
 
-**Failing closed.** A source governs the projects it covers whatever is in it, so when its
-policies cannot be known, every run of those projects is refused at every policy point (run start,
+**Failing closed.** A source governs the Flights it covers whatever is in it, so when its
+policies cannot be known, every run of those Flights is refused at every policy point (run start,
 deploying, pushing an image), naming the source and the reason, and the Policy page shows the
 source as failing closed. That happens when no server has loaded it yet (just after it is added),
 when the version does not exist or is a branch, when a file does not parse or uses a rule this

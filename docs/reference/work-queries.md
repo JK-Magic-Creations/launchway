@@ -8,7 +8,7 @@ See [tracking work](../guide/tracking-work.md#finding-work).
 state:in_progress type:bug -label:wontfix assignee:me updated:<7d "payment fails"
 ```
 
-You only ever get items you may see: confidential items you may not read and Projects you may not read are left out
+You only ever get items you may see: confidential items you may not read and Flights (codebase) you may not read are left out
 whatever the query says.
 
 ## Terms

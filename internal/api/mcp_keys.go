@@ -199,7 +199,7 @@ type protectedOut struct {
 // pipelineWriter admits a pipeline to a protected branch, for exactly some files.
 type pipelineWriter struct {
 	Branch   string   `json:"branch" jsonschema:"the protected branch or pattern the rule covers, such as main"`
-	Projects []string `json:"projects" jsonschema:"project names or patterns whose deploy steps are admitted, such as mcp-*"`
+	Projects []string `json:"projects" jsonschema:"Flight names or patterns whose deploy steps are admitted, such as mcp-*"`
 	Files    []string `json:"files" jsonschema:"the files the pipeline may change, relative to the repository's root; ** matches any number of directories"`
 }
 

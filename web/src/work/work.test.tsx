@@ -224,7 +224,7 @@ describe("agents", () => {
     expect(within(row).getByText("On")).toBeTruthy();
     expect(within(row).getByText("$2.45 of $10.00")).toBeTruthy();
     expect(within(agents.getByRole("button", { name: "review-agent" }).closest("tr")!).getByText("Switched off")).toBeTruthy();
-    expect(screen.getByRole("table", { name: "Spend by agent, project and item" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Spend by agent, Flight and item" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "docs-agent" }));
     await user.click(await screen.findByRole("button", { name: "Switch off" }));
     expect(last(calls, "PATCH", B + "/agents/docs-agent")).toBeUndefined();

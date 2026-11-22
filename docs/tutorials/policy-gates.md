@@ -1,17 +1,17 @@
 # Policy gates and waivers
 
-Set a rule that every pipeline of a project must follow, watch it in report mode, enforce it, and
+Set a rule that every pipeline of a Flight (codebase) must follow, watch it in report mode, enforce it, and
 let one Sortie (run) through with a waiver that has a reason and an expiry. For platform engineers and
 security reviewers. Takes about 15 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, using
-> the `hello` project from the earlier tutorials (it uses a library template). **Not verified
+> the `hello` Flight from the earlier tutorials (it uses a library template). **Not verified
 > here:** the gates before deploying and before an image push; they are judged the same way and
 > are shown in [Deploy with approval and Return to base (rollback)](deploy-with-approval.md).
 
 ## What you need
 
-- The server and `hello` project from the earlier tutorials, ideally with the library from
+- The server and `hello` Flight from the earlier tutorials, ideally with the library from
   [Templates from a library](library-templates.md).
 
 ## Where policies are judged
@@ -81,7 +81,7 @@ and the time, so it can be checked later.
 ## 3 Waive the rule for this Sortie {#3-waive-the-rule-for-this-run}
 
 The right fix is to pin the images (`alpine:3.22@sha256:...`). When that has to wait, an admin of
-the project can grant a **waiver**: one rule of one policy, for a project, optionally only for one
+the Flight can grant a **waiver**: one rule of one policy, for a Flight, optionally only for one
 run or Airfield (environment), with a reason and an expiry. In the web UI press **Waive…** beside the rule on the Sortie's Policy
 tab, or the API (replace the Sortie id):
 

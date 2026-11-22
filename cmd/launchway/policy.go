@@ -14,9 +14,9 @@ const policyUsage = `Usage:
   launchway policy list [--json]                the policies in force, their sources and recent verdicts
   launchway policy run <run-id> [--json]        a run's policy decisions, rule by rule
   launchway waivers list [--project P] [--active] [--json]
-  launchway waivers grant <project> --policy P --rule R --reason "..." --expires 72h
+  launchway waivers grant <Flight> --policy P --rule R --reason "..." --expires 72h
                   [--run RUN] [--environment E] [--finding FINGERPRINT] [--json]
-  launchway waivers revoke <project> <waiver-id> [--reason "..."]
+  launchway waivers revoke <Flight> <waiver-id> [--reason "..."]
 `
 
 // ---- policies ----
@@ -258,7 +258,7 @@ func (w waiverView) line() string {
 
 func (cl *client) waiverList(args []string) error {
 	fs := flag.NewFlagSet("waivers list", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project's waivers")
+	project := fs.String("project", "", "only this Flight's waivers")
 	active := fs.Bool("active", false, "only waivers in force")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -302,7 +302,7 @@ func (cl *client) waiverGrant(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || *pol == "" || *rule == "" || *reason == "" || *expires <= 0 {
-		return usageErr("launchway waivers grant <project> --policy P --rule R --reason \"...\" --expires 72h [--run RUN] [--environment E] [--finding F]")
+		return usageErr("launchway waivers grant <Flight> --policy P --rule R --reason \"...\" --expires 72h [--run RUN] [--environment E] [--finding F]")
 	}
 	hours := int((*expires + time.Hour - 1) / time.Hour)
 	body := map[string]any{"policy": *pol, "rule": *rule, "reason": *reason, "expires_in_hours": hours, "run": *run, "environment": *env, "finding": *finding}
@@ -321,7 +321,7 @@ func (cl *client) waiverRevoke(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("launchway waivers revoke <project> <waiver-id> [--reason \"...\"]")
+		return usageErr("launchway waivers revoke <Flight> <waiver-id> [--reason \"...\"]")
 	}
 	var w waiverView
 	if err := cl.call("POST", "/api/v1/projects/"+url.PathEscape(pos[0])+"/waivers/"+url.PathEscape(pos[1])+"/revoke", map[string]string{"reason": *reason}, &w); err != nil {

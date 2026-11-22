@@ -9,7 +9,7 @@ pipeline: every template has its own defaults, and a pipeline file can say every
 
 One sentence, the same on every page, in every message and in every interface:
 
-**The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield (environment) being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
+**The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, then the Flight (codebase), the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield (environment) being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
 
 The words Squadron, Wing and Base are the default names of the levels; the business set calls them
 team, organization and installation, and [Words](words.md) renames any of them. The rule does not change.
@@ -22,13 +22,13 @@ it. A lock is `final`: nothing below may override it.
 
 | Level | Reaches | Set by |
 |---|---|---|
-| Base (installation) | every project | an administrator of every project |
-| Wing (organization) | every project of the Wing | an administrator of every project |
-| Squadron (unit) | the projects in that Squadron | an administrator of every project in the Squadron |
-| Project | that project | an operator of the project |
+| Base (installation) | every Flight | an administrator of every Flight |
+| Wing (organization) | every Flight of the Wing | an administrator of every Flight |
+| Squadron (unit) | the Flights in that Squadron | an administrator of every Flight in the Squadron |
+| Flight | that Flight | an operator of the Flight |
 
-A lock needs the level's administrator: of every project for the installation and the Wing, of
-the Squadron's projects for a Squadron, of the project for a project. A variable set for a Squadron, or the
+A lock needs the level's administrator: of every Flight for the installation and the Wing, of
+the Squadron's Flights for a Squadron, of the Flight for a Flight. A variable set for a Squadron, or the
 Wing, never reaches another Squadron or another Wing: variables and locks do not cross
 Wings.
 
@@ -45,14 +45,14 @@ Wings.
 | `connection` | the name of a connection, with `of` (Depot, cluster, ...) | |
 
 A name keeps **one type everywhere**: the first level to set `replicas` as a number fixes it, and
-setting it as text at a project is refused. A name is lower-case letters, digits and `_`, starting with
+setting it as text at a Flight is refused. A name is lower-case letters, digits and `_`, starting with
 a letter, at most 40 characters.
 
 ## For an Airfield {#for-an-environment}
 
 A variable may be for one Airfield, such as `production`. Resolved for a deploy to that Airfield,
-at the same level the Airfield's variable beats the general one. A project's own general setting still
-beats the Wing's variable for production: a project is in control of itself unless something
+at the same level the Airfield's variable beats the general one. A Flight's own general setting still
+beats the Wing's variable for production: a Flight is in control of itself unless something
 above **locks**. A step with no Airfield, such as a build or a test, sees only the general variables.
 
 ## Locks
@@ -89,12 +89,12 @@ variables for that Airfield.
 When a lock stands on the variable, the file and the Sortie cannot override it:
 
 ```text
-registry is locked to harbor-retail by the wing (everything ships through the audited registry); the pipeline file sets harbor-cache. Only an administrator of every project can change it.
+registry is locked to harbor-retail by the wing (everything ships through the audited registry); the pipeline file sets harbor-cache. Only an administrator of every Flight can change it.
 ```
 
 This is reported by `launchway validate --project`, the editor, and when a Sortie is created, before any
 Station. Giving the locked value itself is accepted. If a template needs a variable and nothing sets it, the
-message says where to set it: for the project, its Squadron or its Wing (Settings, Variables), or under `with:`.
+message says where to set it: for the Flight, its Squadron or its Wing (Settings, Variables), or under `with:`.
 
 ## What a Sortie used {#what-a-run-used}
 
@@ -106,7 +106,7 @@ reference.
 ## Where to see and change them
 
 - **Settings, Variables**: the variables at each level, with what each inherits from above.
-- **A project, Variables**: everything in effect for the project, each with where it comes from, the
+- **A Flight, Variables**: everything in effect for the Flight, each with where it comes from, the
   values it overrides struck through in order, and a lock badge saying who locked it. **Override here** is
   one click, and disabled with the reason when a lock above forbids it.
 - The same panel sits beside the pipeline editor and in the run-start form, so the hierarchy is visible

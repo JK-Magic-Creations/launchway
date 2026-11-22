@@ -25,7 +25,7 @@ body{margin:0 auto;max-width:60rem;padding:1.5rem 1rem;background:var(--bg);colo
 h1{font-size:1.5rem}h2{font-size:1.15rem;margin-top:2rem}table{border-collapse:collapse;width:100%;margin:.5rem 0 1rem}
 th,td{border-bottom:1px solid var(--line);padding:.35rem .5rem;text-align:left}th{color:var(--mut);font-weight:600}.n{text-align:right}
 svg{max-width:100%;height:auto}.mut{color:var(--mut)}</style></head><body>`)
-	scope := "every project"
+	scope := "every Flight"
 	if r.Project != "" {
 		scope = r.Project
 	}
@@ -78,7 +78,7 @@ svg{max-width:100%;height:auto}.mut{color:var(--mut)}</style></head><body>`)
 		b.WriteString("</tbody></table>")
 	}
 	table("By Airfield", r.ByAirfield)
-	table("By project", r.ByProject)
+	table("By Flight", r.ByProject)
 	b.WriteString("<h2>What shipped</h2>")
 	if len(r.Shipped) == 0 {
 		b.WriteString("<p>No release was published in this period.</p>")

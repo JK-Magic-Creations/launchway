@@ -98,8 +98,8 @@ describe("honest empty states", () => {
   it("the projects list offers the action that adds one", async () => {
     vi.mocked(api.projects).mockResolvedValue([]);
     app(<ProjectsPage />);
-    expect(await screen.findByText("No projects yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a project" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(await screen.findByText("No Codebases yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/config/wizard/connect-repository");
   });
   it("deployments with no environment offers the wizard", async () => {
     vi.mocked(api.environments).mockResolvedValue([]);

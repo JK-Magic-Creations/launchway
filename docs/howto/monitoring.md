@@ -15,7 +15,7 @@ operators.
 
 - A running server, and the address your monitoring system can reach it on. See
   [Install on one server](install-single-server.md).
-- For audit queries: an API token of someone who is an admin of every project. See
+- For audit queries: an API token of someone who is an admin of every Flight. See
   [Sign-in and roles](oidc-and-roles.md#api-tokens).
 
 ## Health and readiness of a server
@@ -103,7 +103,7 @@ time=2026-11-19T20:01:24.256-06:00 level=INFO msg="step finished" run=run_06gzdb
 time=2026-11-19T20:09:08.519-06:00 level=WARN msg="a sign-in failed" err="exchanging the code: oauth2: \"invalid_client\" \"Invalid client credentials.\""
 ```
 
-At start-up it also prints a block saying where it listens, the number of projects, the data
+At start-up it also prints a block saying where it listens, the number of Flights, the data
 directory, the database (password hidden) and where the Station token is.
 
 A Station started with `launchway runner` writes the date first, without `key=`:
@@ -123,7 +123,7 @@ Step output is not in these logs: it is stored with the Sortie (run), and read i
 ## the Logbook
 
 The Logbook records every change, every refused request by someone signed in, every refused API
-token, every webhook call, every sign-in, failed sign-in and sign-out. Admins of every project read
+token, every webhook call, every sign-in, failed sign-in and sign-out. Admins of every Flight read
 it on the **Audit trail** page or through the API:
 
 ```sh
@@ -143,7 +143,7 @@ Useful for monitoring:
 | `action=token.use`, `outcome=denied` | unknown, revoked or expired tokens, or tokens used beyond their limits |
 | `action=auth.sign_in`, `outcome=failed` | sign-ins the provider's answer did not pass; `detail` says why |
 | `detail` ending in `20 failures within 1m0s, so this address is refused for the rest of it` | an address hit the limit of 20 failed attempts a minute |
-| `action=webhook.git` or `webhook.run`, `outcome=denied` | webhook calls with a wrong secret, or for a project or trigger that does not exist |
+| `action=webhook.git` or `webhook.run`, `outcome=denied` | webhook calls with a wrong secret, or for a Flight or trigger that does not exist |
 | `action=policy.waive` | someone waived a policy rule |
 
 The trail is kept until you delete old rows from the `audit` table yourself. See
@@ -159,7 +159,7 @@ The trail is kept until you delete old rows from the `audit` table yourself. See
 | Too few Stations | `GET /api/v1/runners`: count of `online: true` | below what you expect, for 5 minutes |
 | Servers on different versions | `GET /api/v1/info` `version` differs between servers | outside an upgrade |
 | Database trouble | log lines `level=ERROR` with `failed to connect`, `the database does not answer yet` | any, for 1 minute |
-| Repositories cannot be read | log lines `msg="polling a project"` | the same project for 10 minutes |
+| Repositories cannot be read | log lines `msg="polling a project"` | the same Flight for 10 minutes |
 | The sign-in provider is unreachable | log line `the sign-in provider cannot be reached yet` | any |
 | Policy sources | log lines `a policy source was refused` (runs are refused) or `could not reach a policy source` | any |
 | Servers with different policies | log line `another server started recently with different policies in its configuration` | any |

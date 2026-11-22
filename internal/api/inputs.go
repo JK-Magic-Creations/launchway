@@ -121,7 +121,7 @@ func inputsDetail(vals map[string]string) string {
 // default branch if none), for the form that starts a run.
 func (s *Server) projectInputs(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	info, err := s.Projects.InputsAt(r.Context(), r.PathValue("name"), r.URL.Query().Get("ref"))

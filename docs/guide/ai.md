@@ -75,7 +75,7 @@ Each scalar property of the schema becomes an output (`notes`, `risk`), next to 
 An answer that does not follow the schema fails the step. The whole answer is kept as the Cargo (artifact)
 `response`, and the step shows the tokens used and the estimated cost. The model's answer is
 untrusted text: it can set outputs and a Cargo, never run anything. A pull-request run gets no
-model unless the project allows secrets on pull requests.
+model unless the Flight (codebase) allows secrets on pull requests.
 
 ## Models on verifications and failed steps
 
@@ -112,7 +112,7 @@ local model keeps everything on your own machines.
    and pull a model: `podman exec ollama ollama pull qwen3:8b` (a smaller one, such as
    `qwen2.5:0.5b`, is enough to try it out).
 2. Add it to the servers' configuration as `provider: openai`, `endpoint:
-   http://<host>:11434/v1`, `model: qwen3:8b`, with no `key`, and list the projects that may use it.
+   http://<host>:11434/v1`, `model: qwen3:8b`, with no `key`, and list the Flights that may use it.
 3. Set `ai: true` on the Stations that should make the calls (with Helm: `runner.ai: true`, and
    `delivery.deployRunner.ai: true` for verification explanations).
 4. Use `model: local` in an ai step or a verify step. `make test-local-model` runs the same thing

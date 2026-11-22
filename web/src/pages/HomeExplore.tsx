@@ -25,7 +25,7 @@ export function exploreTiles(p: ExploreProps): Tile[] {
   const unreachable = p.projects.filter((x) => x.error).length;
   const look = p.applications.filter(needsLook).length;
   return [
-    { key: "code", icon: "code", label: "Code", n: p.projects.length, unit: p.projects.length === 1 ? "project" : "projects", href: "/projects",
+    { key: "code", icon: "code", label: "Code", n: p.projects.length, unit: p.projects.length === 1 ? terms().say("{project}") : terms().say("{projects}"), href: "/projects",
       state: unreachable ? <><Status state="warn" /> {unreachable} cannot be reached</> : p.projects.length ? <><Status state="ok" /> All reachable</> : "None yet" },
     { key: "pipelines", icon: "graph", label: "Pipelines", n: p.projects.length, unit: p.projects.length === 1 ? "pipeline" : "pipelines", href: "/pipelines",
       state: failing ? <><Status state="bad" /> {failing} stopped</> : p.projects.some((x) => x.last_run) ? <><Status state="ok" /> Last runs are fine</> : terms().say("No {runs} yet") },

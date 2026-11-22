@@ -52,7 +52,7 @@ const (
 // runBrief is a run in a list.
 type runBrief struct {
 	ID        string `json:"id" jsonschema:"the run's ID, for the other tools"`
-	Number    int    `json:"number" jsonschema:"the run's number within its project"`
+	Number    int    `json:"number" jsonschema:"the run's number within its Flight"`
 	Project   string `json:"project"`
 	Status    string `json:"status" jsonschema:"queued, running, succeeded, failed or canceled"`
 	Event     string `json:"event" jsonschema:"what started it: push, manual, draft, pull_request, schedule, webhook or rerun"`
@@ -212,7 +212,7 @@ func addTool[In, Out any](srv *mcp.Server, c *mcpCall, t *mcp.Tool, timeout time
 // (the schemas are cached), and lets the tools close over the caller.
 func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "launchway", Title: "Launchway", Version: s.Version,
-		Description: "Build and delivery: projects, pipelines, runs, tests, findings, artifacts and deployments"},
+		Description: "Build and delivery: Flights, pipelines, runs, tests, findings, artifacts and deployments"},
 		&mcp.ServerOptions{
 			Instructions: mcpInstructions,
 			SchemaCache:  mcpSchemas,
@@ -240,14 +240,14 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 // ---- reading ----
 
 func addReadTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_projects", Annotations: readOnly("List projects"),
-		Description: "List the projects (Git repositories with a pipeline) this token may see, with each one's latest Sortie and whether this token may start runs there. Start here."},
+	addTool(srv, c, &mcp.Tool{Name: "list_projects", Annotations: readOnly("List Flights"),
+		Description: "List the Flights (Git repositories with a pipeline) this token may see, with each one's latest Sortie and whether this token may start runs there. Start here."},
 		mcpCallTimeout, listProjects)
-	addTool(srv, c, &mcp.Tool{Name: "get_project", Annotations: readOnly("Get a project"),
-		Description: "One project in detail: its branches and tags, the inputs a run of it takes at a ref, and its pipeline file at that ref (the default branch if none is given). Read this before starting a Sortie or changing a pipeline."},
+	addTool(srv, c, &mcp.Tool{Name: "get_project", Annotations: readOnly("Get a Flight"),
+		Description: "One Flight in detail: its branches and tags, the inputs a run of it takes at a ref, and its pipeline file at that ref (the default branch if none is given). Read this before starting a Sortie or changing a pipeline."},
 		mcpCallTimeout, getProject)
 	addTool(srv, c, &mcp.Tool{Name: "list_runs", Annotations: readOnly("List runs"),
-		Description: "List runs, newest first, optionally of one project and with one status. Pages with next_cursor."},
+		Description: "List runs, newest first, optionally of one Flight and with one status. Pages with next_cursor."},
 		mcpCallTimeout, listRuns)
 	addTool(srv, c, &mcp.Tool{Name: "get_run", Annotations: readOnly("Get a Sortie"),
 		Description: "A Sortie's state: every step's status and duration, and in words why it is waiting, why it failed and what can be done next. Failed steps carry the last lines of their output."},
@@ -277,10 +277,10 @@ func addReadTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Airfields and what is deployed in each, recent deployments, and, for one deployment of a Sortie (run_id and deployment), which rollout commands (promote, promote-full, abort, retry) are possible now and why not."},
 		mcpCallTimeout, getDeployments)
 	addTool(srv, c, &mcp.Tool{Name: "list_approvals", Annotations: readOnly("List approvals"),
-		Description: "Approval steps waiting for a person's decision, in the projects this token may see."},
+		Description: "Approval steps waiting for a person's decision, in the Flights this token may see."},
 		mcpCallTimeout, listApprovals)
 	addTool(srv, c, &mcp.Tool{Name: "validate_pipeline", Annotations: readOnly("Validate a pipeline"),
-		Description: "Check pipeline YAML with the server's own validator without running it. Returns every problem with its line, column, path and the text of that line, or, if it is valid, the steps and the order they run in. With project, templates from shared libraries are expanded and deploy Airfields checked, as a run of that project would."},
+		Description: "Check pipeline YAML with the server's own validator without running it. Returns every problem with its line, column, path and the text of that line, or, if it is valid, the steps and the order they run in. With Flight, templates from shared libraries are expanded and deploy Airfields checked, as a run of that Flight would."},
 		mcpCallTimeout, validatePipeline)
 	addTool(srv, c, &mcp.Tool{Name: "get_pipeline_reference", Annotations: readOnly("Pipeline reference"),
 		Description: "The pipeline format: every key, what it means and worked examples. Read it before writing or changing a pipeline. The same text is the resource launchway://docs/pipeline-reference."},
@@ -353,8 +353,8 @@ func (c *mcpCall) projectBrief(p projectView, role string) projectBrief {
 }
 
 type getProjectIn struct {
-	Project string `json:"project" jsonschema:"the project's name"`
-	Ref     string `json:"ref,omitempty" jsonschema:"a branch or tag; default the project's default branch"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
+	Ref     string `json:"ref,omitempty" jsonschema:"a branch or tag; default the Flight's default branch"`
 }
 
 type refBrief struct {
@@ -428,7 +428,7 @@ func getProject(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in getP
 // ---- runs ----
 
 type listRunsIn struct {
-	Project string `json:"project,omitempty" jsonschema:"only this project's runs"`
+	Project string `json:"project,omitempty" jsonschema:"only this Flight's runs"`
 	Status  string `json:"status,omitempty" jsonschema:"only runs with this status: queued, running, succeeded, failed or canceled"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"how many, at most 50; default 20"`
 	Cursor  string `json:"cursor,omitempty" jsonschema:"next_cursor of the previous page"`
@@ -949,7 +949,7 @@ type imagesIn struct {
 	Repository string `json:"repository,omitempty" jsonschema:"or: images pushed to this repository (host/path)"`
 	Digest     string `json:"digest,omitempty" jsonschema:"or: the image with this digest"`
 	Tag        string `json:"tag,omitempty" jsonschema:"only images with this tag"`
-	Project    string `json:"project,omitempty" jsonschema:"only images built by this project"`
+	Project    string `json:"project,omitempty" jsonschema:"only images built by this Flight"`
 	Limit      int    `json:"limit,omitempty" jsonschema:"at most 50; default 20"`
 }
 
@@ -977,7 +977,7 @@ func listImages(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in imag
 		}
 	}
 	if len(q) == 1 {
-		return imagesOut{}, errors.New("say which images: run_id, or a repository, digest, tag or project")
+		return imagesOut{}, errors.New("say which images: run_id, or a repository, digest, tag or Flight")
 	}
 	var hits []engine.ImageHit
 	if err := c.apiJSON(ctx, "list_images", http.MethodGet, "/api/v1/images?"+q.Encode(), nil, &hits); err != nil {
@@ -993,7 +993,7 @@ func listImages(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in imag
 
 type deploymentsIn struct {
 	Environment string `json:"environment,omitempty" jsonschema:"only this environment"`
-	Project     string `json:"project,omitempty" jsonschema:"only deployments of this project"`
+	Project     string `json:"project,omitempty" jsonschema:"only deployments of this Flight"`
 	Service     string `json:"service,omitempty" jsonschema:"only deployments of this service"`
 	RunID       string `json:"run_id,omitempty" jsonschema:"with deployment: the commands possible on that deployment now"`
 	Deployment  string `json:"deployment,omitempty" jsonschema:"a deployment's ID (dep_…), from this tool or get_run"`
@@ -1157,7 +1157,7 @@ func listApprovals(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ li
 
 type validateIn struct {
 	Text    string `json:"text" jsonschema:"the pipeline YAML"`
-	Project string `json:"project,omitempty" jsonschema:"check as a run of this project would: templates expanded, environments checked"`
+	Project string `json:"project,omitempty" jsonschema:"check as a run of this Flight would: templates expanded, environments checked"`
 }
 
 type problemOut struct {
@@ -1183,7 +1183,7 @@ type validateOut struct {
 	Steps    []validStep  `json:"steps,omitempty"`
 	Order    [][]string   `json:"order,omitempty" jsonschema:"steps in each list run in parallel, after the lists before"`
 	Expanded bool         `json:"templates_expanded" jsonschema:"whether uses steps were expanded from their libraries"`
-	Warnings []string     `json:"warnings,omitempty" jsonschema:"valid, but will not work as written for the project: for example, a pull-request filter by target branch in a project with no forge connection"`
+	Warnings []string     `json:"warnings,omitempty" jsonschema:"valid, but will not work as written for the Flight: for example, a pull-request filter by target branch in a Flight with no forge connection"`
 }
 
 func validatePipeline(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in validateIn) (validateOut, error) {
@@ -1236,7 +1236,7 @@ func validatePipeline(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 	out.Order = got.Levels
 	out.Summary = fmt.Sprintf("Valid: %d steps in %d stages.", len(out.Steps), len(out.Order))
 	if !got.Expanded && strings.Contains(in.Text, "uses:") {
-		out.Summary += " Steps that use templates were not expanded; pass project to check them against the libraries."
+		out.Summary += " Steps that use templates were not expanded; pass Flight to check them against the libraries."
 	}
 	return out, nil
 }

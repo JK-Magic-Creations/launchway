@@ -28,9 +28,9 @@ describe("Home on a new installation", () => {
   it("asks for the first thing and nothing else", async () => {
     stubHome(answer({ counts: { projects: 0, needs: 0 } }));
     render(<Home {...props()} />);
-    expect(screen.getByRole("heading", { name: "Add your first project" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add your first Codebase" })).toBeInTheDocument();
     expect(screen.getByText("0 of 5 essentials done")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a project" })).toHaveAttribute("href", "/config/wizard/connect-repository");
+    expect(screen.getByRole("link", { name: "Add a Codebase" })).toHaveAttribute("href", "/config/wizard/connect-repository");
     expect(await screen.findByText(/Nothing needs you\./)).toBeInTheDocument();
     expect(screen.queryByText("Latest runs")).not.toBeInTheDocument();
   });
@@ -38,7 +38,7 @@ describe("Home on a new installation", () => {
     render(<Home {...props()} />);
     const list = screen.getByRole("region", { name: /Setup checklist/i });
     expect(within(list).getAllByRole("link").map((a) => a.textContent)).toEqual([
-      "Add your first project", "Choose who does the work", "See your first run pass", "Create an environment", "Turn on sign-in",
+      "Add your first Codebase", "Choose who does the work", "See your first run pass", "Create an environment", "Turn on sign-in",
     ]);
   });
 });
@@ -47,7 +47,7 @@ describe("Home as setup progresses", () => {
   it("folds what is done into one line and moves the card on", () => {
     render(<Home {...props({ projects: [project()], runners: [runner()] })} />);
     expect(screen.getByRole("heading", { name: "See your first run pass" })).toBeInTheDocument();
-    expect(screen.getByText(/Done: Add your first project, Choose who does the work/)).toBeInTheDocument();
+    expect(screen.getByText(/Done: Add your first Codebase, Choose who does the work/)).toBeInTheDocument();
     expect(screen.getByText("2 of 5 essentials done")).toBeInTheDocument();
   });
   it("does not walk a person who is not an administrator through setup", () => {
@@ -140,7 +140,7 @@ describe("Home, v2", () => {
     render(<Home {...base()} lines={[line()]} images={7} />);
     const strip = screen.getByRole("region", { name: "Explore" });
     expect(within(strip).getByRole("link", { name: /Images/ })).toHaveTextContent("7");
-    expect(within(strip).getByRole("link", { name: /Code/ })).toHaveTextContent("1project");
+    expect(within(strip).getByRole("link", { name: /Code/ })).toHaveTextContent("1Codebase");
     expect(within(strip).getByRole("link", { name: /Pipelines/ })).toHaveTextContent("1 stopped");
     expect(within(strip).getByRole("link", { name: /Waiting/ })).toHaveTextContent("Nothing waits");
     expect(within(strip).getByRole("link", { name: /Traffic/ })).toHaveTextContent("Coming");

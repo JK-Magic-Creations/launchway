@@ -2,7 +2,7 @@
 
 See everything a delivery made, read its logs, and pause, restart or return it, from one page.
 
-A **Launch** is one delivery of one project to one Airfield: what a deploy step did, and what is running
+A **Launch** is one delivery of one Flight (codebase) to one Airfield: what a deploy step did, and what is running
 because of it. Its page shows the live tree of every object the delivery owns, the strategy's steps and
 where it is, how much real traffic the new version has, what the tests measured, and the logs of any pod.
 From the same page you can steer it. Everything is read by a launch Station (runner) in the Airfield, not by the
@@ -42,8 +42,8 @@ launch Station may read them) are replaced by `***` before anything leaves the l
 
 | | Role |
 |---|---|
-| The tree, manifests | viewer of the project |
-| Logs | operator of the project (on a protected Airfield (environment), from a binding that covers it) |
+| The tree, manifests | viewer of the Flight |
+| Logs | operator of the Flight (on a protected Airfield (environment), from a binding that covers it) |
 | Pause, resume, restart, scale; promote, promote fully, abort, retry | operator, likewise |
 
 Every manifest and log request and every control is in the Logbook, with who asked, what object, and

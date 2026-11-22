@@ -15,7 +15,7 @@ const LEVELS: { level: number; name: string; text: string }[] = [
   { level: 3, name: "Level 3", text: "" },
   { level: 4, name: "Level 4", text: "" },
 ];
-const WHO: [string, string][] = [["anyone", "Anyone who may change the item"], ["human", "A person, never an agent"], ["maintainer", "Someone who maintains the project"]];
+const WHO: [string, string][] = [["anyone", "Anyone who may change the item"], ["human", "A person, never an agent"], ["maintainer", "Someone who maintains the Flight"]];
 const CLASSES = ["small", "medium", "large"];
 
 function sourceText(a: SettingsAnswer, scope: string): string {

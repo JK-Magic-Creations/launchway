@@ -141,11 +141,11 @@ func (s *Server) setupGuide(w http.ResponseWriter, r *http.Request) {
 	}
 	if projects > 0 {
 		pipe.State = "done"
-		pipe.Summary = plural(projects, "project is", "projects are") + " set up."
+		pipe.Summary = plural(projects, "Flight is", "Flights are") + " set up."
 	} else {
 		pipe.Summary = "Make a first pipeline from a starter for one of your repositories."
 	}
-	pipe.Actions = []engine.Action{act("start_wizard", s.Settings != nil && s.Settings.Available(), "This server keeps its settings in its file, not in the database.", "Add the project to the server's settings file.")}
+	pipe.Actions = []engine.Action{act("start_wizard", s.Settings != nil && s.Settings.Available(), "This server keeps its settings in its file, not in the database.", "Add the Flight to the server's settings file.")}
 	g.Steps = append(g.Steps, pipe)
 
 	g.Checklist = securitycheck.Check(s.securityFacts(taken, g.Kubernetes, id.User != ""))

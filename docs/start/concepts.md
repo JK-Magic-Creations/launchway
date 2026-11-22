@@ -20,16 +20,16 @@ flowchart TB
   Role["Role"] -->|"decides who may act on"| Project
 ```
 
-## Project
+## Flight (codebase) {#project}
 
-A **project** is one Git repository that Launchway watches. The server's configuration lists the
-projects, with their repository address and the branch to treat as the default. Launchway polls
+A **Flight** is one Git repository that Launchway watches. The server's configuration lists the
+Flights, with their repository address and the branch to treat as the default. Launchway polls
 each repository for new commits and pull requests, and can be told to look at once by a webhook.
-Every project has a name made of lower-case letters, digits and hyphens.
+Every Flight has a name made of lower-case letters, digits and hyphens.
 
 ## Pipeline
 
-A **pipeline** is the file `.launchway/pipeline.yaml` in a project's repository. It says when the
+A **pipeline** is the file `.launchway/pipeline.yaml` in a Flight's repository. It says when the
 pipeline runs (on pushes to some branches, on pull requests, on a schedule, by a webhook or by
 hand) and which steps to run. Git is the only place a pipeline is kept: the web editor reads it
 from a branch and saves it back as a commit. A pipeline is checked before anything runs, and
@@ -48,7 +48,7 @@ steps:
 
 ## Run
 
-A **run** is one execution of a pipeline, at one commit. Runs have a number per project (#1, #2,
+A **run** is one execution of a pipeline, at one commit. Runs have a number per Flight (#1, #2,
 ...). A Sortie (run) is started by a push, a pull request, a schedule, a webhook, a person, or a person
 trying unsaved text (a **draft run**). Every change to a Sortie is stored as an
 [event](../reference/events.md), so a Sortie survives a server crash and can be **resumed** from the
@@ -71,14 +71,14 @@ work, runs each step in a container, a Kubernetes pod or directly on its machine
 back and reports the result. The server has a built-in Station; more Stations can run on other
 machines or clusters. Stations look up secrets themselves, so secret values never reach the server.
 A **deploy Station** is a Station with a `deploy:` section that does deploy work for a
-**Flight line (Station (runner) pool)**. A Station enrolled with a **join token** has an identity of its own and takes only
-the work of its pool's projects. See [Connect a Station](../howto/connect-runner.md) and
+**Ramp (Station (runner) pool)**. A Station enrolled with a **join token** has an identity of its own and takes only
+the work of its pool's Flights. See [Connect a Station](../howto/connect-runner.md) and
 [Stations on other machines and clusters](../guide/runner-identity.md).
 
 ## Airfield (environment) {#environment}
 
-An **Airfield** is a place a project deploys to, such as `staging` or `prod`, named in the
-server's configuration with the deploy target that serves it and the projects allowed to deploy
+An **Airfield** is a place a Flight deploys to, such as `staging` or `prod`, named in the
+server's configuration with the deploy target that serves it and the Flights allowed to deploy
 there. Each service has one lock per Airfield, so only one deployment happens at a time, and
 the **Airfields** page shows what version runs where. An Airfield can be **protected**, so
 the person who started a Sortie cannot promote it there. See [Deployments](../guide/deployments.md).
@@ -87,7 +87,7 @@ the person who started a Sortie cannot promote it there. See [Deployments](../gu
 
 A **library** is a Git repository of pipeline **templates** and the scripts they run. A pipeline
 names a library and a version (a Git tag, branch or commit) and uses a template as if it were one
-step; the Sortie records the exact commit used. Libraries let a platform team give many projects the
+step; the Sortie records the exact commit used. Libraries let a platform team give many Flights the
 same build, scan or release steps. See [Shared libraries](../guide/libraries.md).
 
 ## Policy
@@ -96,7 +96,7 @@ A **policy** is a rule set an organization sets for every pipeline, which the pi
 cannot switch off: for example "a deployment to prod needs passing tests, a scan with nothing worse
 than medium, and an approval by someone else". Policies live in the server's configuration or in a
 Git repository pinned by tag. Each policy is **enforced** (it stops the step) or **reported** (it
-only warns). A **waiver** lets one rule pass for a project for a limited time, with a reason. See
+only warns). A **waiver** lets one rule pass for a Flight for a limited time, with a reason. See
 [Policies](../guide/policies.md).
 
 ## Approval
@@ -108,7 +108,7 @@ cannot approve it themselves, by default. See [Approvals and re-runs](../guide/a
 ## Roles and access
 
 People sign in with the organization's OpenID Connect provider. Each person gets a **role** on
-each project: **viewer** (see), **operator** (start, cancel, approve, save pipelines) or **admin**
+each Flight: **viewer** (see), **operator** (start, cancel, approve, save pipelines) or **admin**
 (also read the Logbook and waive policy rules). Roles come from groups in the identity
 provider. Scripts use **API tokens** that expire. See [Sign-in and access](../guide/access.md) and
 [Roles and permissions](../reference/roles.md).

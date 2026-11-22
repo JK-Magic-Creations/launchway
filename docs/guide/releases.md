@@ -19,14 +19,14 @@ A release is in one of four states.
 
 ## Versions
 
-Each project says how its versions are written and ordered, in its release settings (`launchway release settings PROJECT --scheme ...`, admin on the project):
+Each Flight (codebase) says how its versions are written and ordered, in its release settings (`launchway release settings PROJECT --scheme ...`, admin on the Flight):
 
 - `semver` (the default): Semantic Versioning 2.0.0. `1.4.0`, `2.0.0-rc.1`, `1.4.0+build.5`. Ordered by the rules of the specification: a pre-release comes before its release, `rc.2` before `rc.10`, and build metadata is ignored.
 - `calver`: calendar versions that start with the year, such as `2026.11.21`, ordered number by number.
 - `natural`: any text; runs of digits compare as numbers, so `r9` comes before `r10`.
 - `created`: any text; the order is the order releases were made.
 
-A new version must be **higher than the highest so far**, unless you say it may not be (`--allow-lower`, for a release from a maintenance branch; see below). The same version twice is never allowed. The scheme cannot be changed once the project has a candidate or published release, because the order of its versions would change under it. The tag is the version with the project's `tag_prefix` (`v` by default).
+A new version must be **higher than the highest so far**, unless you say it may not be (`--allow-lower`, for a release from a maintenance branch; see below). The same version twice is never allowed. The scheme cannot be changed once the Flight has a candidate or published release, because the order of its versions would change under it. The tag is the version with the Flight's `tag_prefix` (`v` by default).
 
 ### Which version next
 
@@ -36,7 +36,7 @@ A new version must be **higher than the highest so far**, unless you say it may 
 - a feature (`feat:`, or a label `feature` or `enhancement`) asks for a **minor** version;
 - anything else asks for a **patch**.
 
-The highest wins. It is a proposal: a person confirms it or chooses another, and nothing is made by asking. With `--pre rc` it proposes the next pre-release (`1.5.0-rc.1`, then `-rc.2`). Where the project is hosted here, the labels of the merged pull requests are used; elsewhere the commit prefixes are.
+The highest wins. It is a proposal: a person confirms it or chooses another, and nothing is made by asking. With `--pre rc` it proposes the next pre-release (`1.5.0-rc.1`, then `-rc.2`). Where the Flight is hosted here, the labels of the merged pull requests are used; elsewhere the commit prefixes are.
 
 ## Making a draft
 
@@ -61,17 +61,17 @@ launchway release assets add shop 1.5.0 --file ./shop-linux-amd64
 launchway release assets add shop 1.5.0 --run run_abc --artifact art_1 --path dist/shop --images
 ```
 
-A file is kept with the release with its SHA-256 (worked out as it is stored; give `X-Launchway-SHA256` to have it checked). Files copied from a Sortie's Cargo are checked against the checksum the Sortie recorded and are copied into the release's own storage, so they outlive the Cargo, which expires. `--images` records the Sortie's image digests and, where they exist, summaries of its SBOM and scans. Each asset shows its provenance: which Sortie built it, at which commit, and who added it. Downloads need a signed-in person who can read the project.
+A file is kept with the release with its SHA-256 (worked out as it is stored; give `X-Launchway-SHA256` to have it checked). Files copied from a Sortie's Cargo are checked against the checksum the Sortie recorded and are copied into the release's own storage, so they outlive the Cargo, which expires. `--images` records the Sortie's image digests and, where they exist, summaries of its SBOM and scans. Each asset shows its provenance: which Sortie built it, at which commit, and who added it. Downloads need a signed-in person who can read the Flight.
 
 ## Publishing
 
-`launchway release publish PROJECT VERSION` creates the **annotated tag** at the release's commit and publishes the release. If the tag already exists at that commit it is adopted; if it exists anywhere else, publishing is refused, because a tag is never moved. Launchway can create the tag when the project has a `push:` section (see [Editing pipelines](editor.md)); without one, create the annotated tag yourself (`git tag -a v1.5.0 <commit> && git push origin v1.5.0`) and publish, and Launchway adopts it. Tags are not signed: Launchway has no signing key for Git objects, so there is nothing to claim. Image signing is separate (see [Container images](images.md)).
+`launchway release publish PROJECT VERSION` creates the **annotated tag** at the release's commit and publishes the release. If the tag already exists at that commit it is adopted; if it exists anywhere else, publishing is refused, because a tag is never moved. Launchway can create the tag when the Flight has a `push:` section (see [Editing pipelines](editor.md)); without one, create the annotated tag yourself (`git tag -a v1.5.0 <commit> && git push origin v1.5.0`) and publish, and Launchway adopts it. Tags are not signed: Launchway has no signing key for Git objects, so there is nothing to claim. Image signing is separate (see [Container images](images.md)).
 
 A published release's tag is checked again when it is promoted: if the tag no longer points to the released commit, nothing is promoted and the release page says so.
 
 ### Public downloads
 
-By default every download needs a signed-in person who can read the project. An installation can allow **public content**: an administrator of every project turns it on (`launchway release installation --public-downloads=true`, off by default), a project administrator asks for it in the project's settings (`--public`), and a release is made public when it is published (admin only). All three must agree; withdrawing a release stops its public download at once. Public files are at `/public/releases/PROJECT/VERSION/FILE`.
+By default every download needs a signed-in person who can read the Flight. An installation can allow **public content**: an administrator of every Flight turns it on (`launchway release installation --public-downloads=true`, off by default), a Flight administrator asks for it in the Flight's settings (`--public`), and a release is made public when it is published (admin only). All three must agree; withdrawing a release stops its public download at once. Public files are at `/public/releases/PROJECT/VERSION/FILE`.
 
 ## Release branches and urgent fixes
 
@@ -81,7 +81,7 @@ To release from a maintenance branch, create the release from that branch and sa
 launchway release create --project shop --version 1.4.2 --from release/1.4 --allow-lower --generate-notes
 ```
 
-The notes are written from the changes since the previous lower release of the same project. Backporting a fix to the maintenance branch is a pull request that cherry-picks the commit: open it on the hosted repository as usual (a pull request from a branch made with `git cherry-pick`), merge it, and release from the branch. Launchway does not cherry-pick for you yet; the roadmap says so.
+The notes are written from the changes since the previous lower release of the same Flight. Backporting a fix to the maintenance branch is a pull request that cherry-picks the commit: open it on the hosted repository as usual (a pull request from a branch made with `git cherry-pick`), merge it, and release from the branch. Launchway does not cherry-pick for you yet; the roadmap says so.
 
 ## With a pipeline
 

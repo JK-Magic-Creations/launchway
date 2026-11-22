@@ -32,7 +32,7 @@ export function EventsPage() {
       <PageHead eyebrow="Activity" title="Events"
         sentence={terms().say("Everything the server received, and what it decided for each trigger, with the reason. Use it to see why a {run} started, or why it did not.")} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
-        <label className="field"><span>Project</span><input value={draft.project} onChange={set("project")} /></label>
+        <label className="field"><span>{terms().say("{Project}")}</span><input value={draft.project} onChange={set("project")} /></label>
         <label className="field"><span>Source</span>
           <select value={draft.source} onChange={set("source")}><option value="">Any</option>{SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         </label>

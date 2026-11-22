@@ -167,7 +167,7 @@ func (s *Server) putReleaseSettings(w http.ResponseWriter, r *http.Request) {
 	in.Project = project
 	if in.Public {
 		if ok, _ := s.Engine.PublicReleasesAllowed(); !ok {
-			writeErr(w, http.StatusConflict, "this installation does not allow public downloads; an administrator of every project turns that on in the release settings of the installation first")
+			writeErr(w, http.StatusConflict, "this installation does not allow public downloads; an administrator of every {project} turns that on in the release settings of the installation first")
 			return
 		}
 	}
@@ -235,7 +235,7 @@ type createReleaseIn struct {
 
 func (s *Server) createRelease(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	project := r.PathValue("name")
@@ -396,7 +396,7 @@ func (s *Server) generateNotes(ctx context.Context, project string, set engine.R
 
 func (s *Server) previewNotes(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	project, q := r.PathValue("name"), r.URL.Query()
@@ -426,7 +426,7 @@ func (s *Server) previewNotes(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) nextVersion(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	project, q := r.PathValue("name"), r.URL.Query()
@@ -499,7 +499,7 @@ func (s *Server) compareReleases(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	// Order them so that the commits listed are those the newer has and the older lacks.
@@ -552,7 +552,7 @@ func (s *Server) regenerateNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	set, _ := s.Engine.ReleaseSettingsOf(rel.Project)
@@ -625,12 +625,12 @@ func (s *Server) publishRelease(w http.ResponseWriter, r *http.Request) {
 		}
 		set, _ := s.Engine.ReleaseSettingsOf(rel.Project)
 		if ok, _ := s.Engine.PublicReleasesAllowed(); !ok || !set.Public {
-			writeErr(w, http.StatusConflict, "public downloads are off: the installation must allow them and the project's release settings must ask for them")
+			writeErr(w, http.StatusConflict, "public downloads are off: the installation must allow them and the {project}'s release settings must ask for them")
 			return
 		}
 	}
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	set, _ := s.Engine.ReleaseSettingsOf(rel.Project)

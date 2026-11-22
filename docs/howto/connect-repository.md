@@ -1,6 +1,6 @@
 # Connect a repository
 
-The wizard turns a repository into a project: Launchway watches it, starts runs when you say, and
+The wizard turns a repository into a Flight (codebase): Launchway watches it, starts runs when you say, and
 shows each Sortie (run). Pipelines stay in Git: the wizard stores a reference to your repository, never a copy of
 a pipeline.
 
@@ -29,7 +29,7 @@ a pipeline.
 
 ## What it creates
 
-A summary lists the project exactly as it will be created. After you confirm it is created, and the
+A summary lists the Flight exactly as it will be created. After you confirm it is created, and the
 wizard offers to start a first Sortie and shows it.
 
 If the repository is on your own network (a Git server at a private address) the server refuses to
@@ -39,5 +39,5 @@ needs `egress.allow_local` in the bootstrap file (`make run` sets it). Do not pu
 in the address: the server refuses it, because the configuration's history cannot be scrubbed; the server
 uses its own Git credentials (an SSH key or a credential helper).
 
-From the command line: `launchway config check-repository URL`, then `launchway projects set NAME -f
+From the command line: `launchway config check-repository URL`, then `launchway Flights set NAME -f
 project.yaml`.

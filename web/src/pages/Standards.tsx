@@ -241,8 +241,8 @@ export function ProjectStandardsPage({ name }: { name: string }) {
             {data?.file_problems && data.file_problems.length > 0 && (
               <div className="callout callout-draft" role="alert"><strong>The file has problems</strong>, so what they name is left out until they are fixed:<ul>{data.file_problems.map((p) => <li key={p}>{p}</li>)}</ul></div>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>Show this project’s settings as a file</button>
-            {file && <textarea className="code st-file" readOnly rows={Math.min(24, file.from_settings.split("\n").length + 1)} aria-label="This project’s settings as a repository file" value={file.from_settings} />}
+            <button type="button" className="btn btn-sm" onClick={() => standardsApi.file(name).then(setFile).catch(setError)}>{terms().say("Show this {project}’s settings as a file")}</button>
+            {file && <textarea className="code st-file" readOnly rows={Math.min(24, file.from_settings.split("\n").length + 1)} aria-label={terms().say("This {project}’s settings as a repository file")} value={file.from_settings} />}
           </section>
         </>
       )}
@@ -283,7 +283,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
           <ul className="sf-list">{list.findings.map((f) => <FindingCard key={f.fingerprint} f={fromTracked(f)} project={name} profile={profile} onChanged={reload} />)}</ul>
         )}
         {list && list.matched > list.findings.length && <p className="faint small">{list.findings.length} of {list.matched} shown; narrow it with the filters or export all.</p>}
-        {!canOperate(me, name) && <p className="faint small">You can read these. Accepting a risk needs the operator role on this project.</p>}
+        {!canOperate(me, name) && <p className="faint small">{terms().say("You can read these. Accepting a risk needs the operator role on this {project}.")}</p>}
         <p className="faint small">When the pipeline is a run on the default branch, the backlog updates; <Link href={`/projects/${enc}/security`}>the Security page</Link> {terms().say("shows every {run}’s findings, including the tools you added yourself.")}</p>
       </section>
     </div>
@@ -339,7 +339,7 @@ export function SettingsStandardsPage() {
       <PageHead eyebrow="Settings" title={terms().say("{Standards}")} sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
       <div className="toolbar st-level" role="group" aria-label="Level">
         {LEVELS.map((l) => <button key={l} type="button" className={"chip" + (level === l ? " chip-on" : "")} aria-pressed={level === l} onClick={() => { setLevel(l); setScope(""); }}>{w[l] ?? l}</button>)}
-        {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? "squadron name" : "project name"} /></label>}
+        {need && <label>Name of the {(w[level] ?? level).toLowerCase()} <input value={scope} onChange={(e) => setScope(e.target.value.trim())} placeholder={level === "unit" ? "squadron name" : terms().say("{project} name")} /></label>}
       </div>
       <ErrorBox error={error} />
       {said && <div className="callout callout-info" role="status">{said}</div>}

@@ -145,8 +145,8 @@ imagePullSecrets: []
 # ---------------------------------------------------------------------------------------------
 # The server configuration file.
 #
-# SINCE SCHEMA 23 THE FILE IS BOOTSTRAP ONLY. Everything an administrator manages (projects,
-# libraries, Airfields, Flight lines, role bindings, policies, health sources, models, secret
+# SINCE SCHEMA 23 THE FILE IS BOOTSTRAP ONLY. Everything an administrator manages (Flights,
+# libraries, Airfields, Ramps, role bindings, policies, health sources, models, secret
 # stores, limits, the MCP endpoint, where Cargo are kept) lives in the database, with history
 # and an API, the web UI, the CLI and the MCP server. What the values below set for those is
 # IMPORTED ONCE, by the first server of a new installation to start, and ignored afterwards: each
@@ -184,7 +184,7 @@ config:
   #     # Optional: let steps of pull-request runs read secrets here (overrides
   #     # pull_requests: in extraConfig; the default is no).
   #     pull_requests: { secrets: false }
-  #     # Optional: turn this project's schedules off (overrides config.schedules.enabled).
+  #     # Optional: turn this Flight's schedules off (overrides config.schedules.enabled).
   #     schedules: { enabled: false }
   #     # Optional: the Git host's webhook, which makes the servers poll at once. The secret
   #     # comes from an environment variable (server.extraEnv, from a Secret) or a file.
@@ -205,7 +205,7 @@ config:
     # -- Individual test results one Sortie keeps; beyond this only the totals are kept.
     # Unset: the built-in default, 50000.
     maxCasesPerRun:
-    # -- Individual test results a project keeps over all its Sorties. When there are more, the
+    # -- Individual test results a Flight keeps over all its Sorties. When there are more, the
     # oldest runs' results are removed first (their totals stay). At least maxCasesPerRun.
     # Unset: the built-in default, 1000000.
     maxCasesPerProject:
@@ -248,7 +248,7 @@ config:
     maxFileMiB:
     # -- How much one run may keep, in MiB. Unset: 4096.
     maxRunMiB:
-    # -- How much a project may keep over all its Sorties, in GiB. Unset: 50.
+    # -- How much a Flight may keep over all its Sorties, in GiB. Unset: 50.
     maxProjectGiB:
     # -- How long Cargo are kept when the pipeline does not say (30d, 2w, 12h). Unset: 30d.
     retain:
@@ -261,11 +261,11 @@ config:
     maxUploadMiB:
     # -- Findings one Sortie keeps; beyond this only the counts. Unset: 20000.
     maxPerRun:
-    # -- Findings a project keeps over all its Sorties, oldest runs' removed first. Unset: 500000.
+    # -- Findings a Flight keeps over all its Sorties, oldest runs' removed first. Unset: 500000.
     maxPerProject:
     # -- SBOM components one Sortie keeps for searching. Unset: 20000.
     maxComponentsPerRun:
-    # -- SBOM components a project keeps. Unset: 1000000.
+    # -- SBOM components a Flight keeps. Unset: 1000000.
     maxComponentsPerProject:
     # -- MiB of a step's SBOM files read to summarize them (they are kept whole anyway). Unset: 64.
     maxSbomMiB:
@@ -286,7 +286,7 @@ config:
     maxCoverageUploadMiB:
     # -- Source files' coverage one Sortie keeps; beyond it only the totals. Unset: 20000.
     maxCoverageFilesPerRun:
-    # -- Source files' coverage a project keeps; the oldest runs' go first. Unset: 2000000.
+    # -- Source files' coverage a Flight keeps; the oldest runs' go first. Unset: 2000000.
     maxCoverageFilesPerProject:
     # -- A separate origin that alone serves hosted HTML reports, such as
     # https://reports.ci.example.com: a host name of its own routed to the same servers (add it to
@@ -299,7 +299,7 @@ config:
     maxMembers:
   # -- Schedules in pipelines (on.schedule).
   schedules:
-    # -- false turns every project's schedules off (a project's schedules: setting may turn
+    # -- false turns every Flight's schedules off (a Flight's schedules: setting may turn
     # its own back on); their firings are recorded as skipped.
     # Unset: the built-in default, on.
     enabled:
@@ -344,15 +344,15 @@ config:
     oauth:
       resource:
       scopes: []
-  # -- Flight lines (schemas 20 and 21), written as runner_pools: in the configuration's own
+  # -- Ramps (schemas 20 and 21), written as runner_pools: in the configuration's own
   # keys, after the launch pool delivery.* makes. Unset: none; every build Station is in the
-  # default pool, which serves every project. Set it only once every server and Station runs a
+  # default pool, which serves every Flight. Set it only once every server and Station runs a
   # release that knows it, and take it out before returning to base. For example:
   #   runnerPools:
   #     - { name: web, kind: build, projects: ["web-*"] }
   #     - { name: default, kind: build, projects: ["*"], require_identity: true }
   runnerPools:
-  # -- The role needed on every project to make join tokens and to revoke or rotate Stations:
+  # -- The role needed on every Flight to make join tokens and to revoke or rotate Stations:
   # admin, operator or none. Written as runner_admin only when set. Unset: admin.
   runnerAdmin:
   # -- Queues and limits (the guide "Queues and limits"): how long a step waits for room before it
@@ -363,11 +363,11 @@ config:
   queues:
     # -- The longest a step waits for room in the step namespace, such as 30m, or off. Default 60m.
     maxWait:
-    # -- Runs of a project at once. Default 10.
+    # -- Runs of a Flight at once. Default 10.
     runs:
     # -- Runs of one pipeline at once. Default: no limit.
     pipelineRuns:
-    # -- Pull-request runs of a project at once. Default 4.
+    # -- Pull-request runs of a Flight at once. Default 4.
     pullRequestRuns:
     pushRuns:
     scheduleRuns:
@@ -532,8 +532,8 @@ server:
       memory: 512Mi
       # -- Scratch space: the data directory (dataVolume), /tmp and logs. Keep it above dataVolume.sizeLimit.
       ephemeral-storage: 3Gi
-  # -- The data directory holds mirrors of the projects' repositories: a cache that is
-  # rebuilt when a pod starts. Size it to fit every project's repository.
+  # -- The data directory holds mirrors of the Flights' repositories: a cache that is
+  # rebuilt when a pod starts. Size it to fit every Flight's repository.
   dataVolume:
     sizeLimit: 2Gi
   # -- Probes. The startup probe allows time for database migrations, which run when a server
@@ -749,8 +749,8 @@ runner:
     # -- Depots by the name pipelines use: { host, credentials: { username, password: {
     # store, key, field } }, pullCredentials, caFile, insecure, push: [ { projects,
     # repositories } ], pullProjects: [ ... ] }. Credentials are secret references read from
-    # runner.secretStores. pullCredentials go to the builds of the projects in pullProjects (empty:
-    # every project), and to pull requests only when they may read secrets.
+    # runner.secretStores. pullCredentials go to the builds of the Flights in pullProjects (empty:
+    # every Flight), and to pull requests only when they may read secrets.
     # Mount a CA file with extraVolumes and name its path in caFile.
     registries: {}
     # -- A Secret with the Stations' own cosign key (cosign.key, and cosign.password if it is
@@ -964,7 +964,7 @@ delivery:
   #     protected: true          # the person who started a run may not promote it here; default false
   environments: null
   # -- Health sources: where verify steps read metrics and logs to judge a deployment. Each entry
-  # is split: name, type and projects go to the servers' verification.sources, and the whole
+  # is split: name, type and Flights go to the servers' verification.sources, and the whole
   # entry to the launch Station's health_sources, by name. Needs deployRunner.enabled: the launch
   # Station does the queries. Credentials are only secret references, read from
   # deployRunner.secretStores. Default (unset): none, and verify steps are refused.
@@ -973,7 +973,7 @@ delivery:
   # limits, statements, indices, timeField, messageField }.
   #   type: prometheus (also Thanos, Mimir, VictoriaMetrics), loki, clickhouse, elasticsearch,
   #     opensearch, postgres or http.
-  #   projects: patterns of the projects that may use it; at least one.
+  #   projects: patterns of the Flights that may use it; at least one.
   #   auth: { type: bearer|basic|header, user, header, secret: { store, key, field } }; for
   #     clickhouse and postgres type may be left out (user and secret are the database login).
   #   headers: fixed headers that are not secret, such as X-Scope-OrgID.
@@ -1015,7 +1015,7 @@ delivery:
   verification:
     sources: null
   deployRunner:
-    # -- Run a launch Station in this cluster, with a Flight line token of its own. It serves
+    # -- Run a launch Station in this cluster, with a Ramp token of its own. It serves
     # deployRunner.target, which must be this cluster.
     enabled: false
     # -- The target this cluster is, as delivery.environments names it.
@@ -1023,7 +1023,7 @@ delivery:
     replicas: 1
     # -- Where the Argo CD Applications are.
     argocdNamespace: argocd
-    # -- Which projects may launch which applications. Names must be written out (no
+    # -- Which Flights may launch which applications. Names must be written out (no
     # patterns): the RBAC rules name each application.
     #   - { projects: [shop], names: [shop] }
     applications: []
@@ -1043,7 +1043,7 @@ delivery:
     # Unset: the built-in default, false.
     ai: null
     # -- The launch Station's own limits on the work it takes (accept: in its runner.yaml), checked
-    # on the Station before anything runs: which projects it serves and which Airfields it
+    # on the Station before anything runs: which Flights it serves and which Airfields it
     # launches to. Written only when set. For example:
     #   accept: { projects: [launchway], Airfields: [launchway-dev, launchway-sandbox], executors: [launch] }
     accept: null
@@ -1123,7 +1123,7 @@ ai:
   # any OpenAI-compatible server), endpoint, model, key: { store, key, field }, projects,
   # max_tokens, max_input_bytes, calls_per_run, tokens_per_day, price: { input_per_mtok,
   # output_per_mtok, ... }, timeout, effort, stream, headers, max_tokens_field, schema_mode.
-  # A model's projects list is who may use it; empty: no project. The key is a secret reference,
+  # A model's Flights list is who may use it; empty: no Flight. The key is a secret reference,
   # looked up in the secret stores of whoever calls the model (runner.secretStores,
   # delivery.deployRunner.secretStores, or serverSecretStores below). Default (unset): none.
   # Example:

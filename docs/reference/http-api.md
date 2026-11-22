@@ -14,7 +14,7 @@ action differs from the route table in internal/api/api.go.
 
 This page describes every HTTP endpoint a Launchway server serves: who may call it, what it takes and what it returns. It is for people who write scripts and integrations against Launchway, and for operators who put it behind a proxy or load balancer.
 
-> **Verified** on 2026-11-19 against commit f717337: a representative call of every group was made with `curl` against a local server on `127.0.0.1` without sign-in (health, projects, runs, logs, events, tests, findings, Cargo (artifacts), policies, waivers, validate, the live stream, the Logbook, the CSRF refusal, the unknown-endpoint answer); then, with OpenID Connect sign-in on (a test provider), sign-in and sign-out, making API tokens (and the refusal to make one with a token, or with a role above the maker's), and the `401`, `403` and `404` refusals of each kind with tokens and session cookies; the route list is checked against the server's route table by a test. **Not verified:** deployment commands (they need Argo CD), image search with real images, the Git-host webhooks, and the Station (runner) API beyond a refused call.
+> **Verified** on 2026-11-19 against commit f717337: a representative call of every group was made with `curl` against a local server on `127.0.0.1` without sign-in (health, Flights (codebase), runs, logs, events, tests, findings, Cargo (artifacts), policies, waivers, validate, the live stream, the Logbook, the CSRF refusal, the unknown-endpoint answer); then, with OpenID Connect sign-in on (a test provider), sign-in and sign-out, making API tokens (and the refusal to make one with a token, or with a role above the maker's), and the `401`, `403` and `404` refusals of each kind with tokens and session cookies; the route list is checked against the server's route table by a test. **Not verified:** deployment commands (they need Argo CD), image search with real images, the Git-host webhooks, and the Station (runner) API beyond a refused call.
 
 The command line (`launchway runs`, `policy`, `waivers`) is a client of this API. See [the command-line reference](cli.md).
 
@@ -36,8 +36,8 @@ How a request is authenticated depends on the server's `auth.mode` and on the ro
 | Sign-in off (`auth.mode: none`) | anyone | No credentials. Every request acts as the configured `user`, with every right. An `Authorization` header is ignored. |
 | Sign-in on (`auth.mode: oidc`) | a browser | The `launchway_session` cookie set by [`GET /auth/callback`](#sign-in). |
 | Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens); `Authorization: token lw_…` and HTTP Basic with the token as the password are accepted too, for clients written for other Git hosts. A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
-| Either | a Station | `Authorization: Bearer <runner token>`: the shared Station token, a launch (deploy) Flight line's token, or the short-lived access token of an enrolled Station. Only the [Station API](#runner-api) accepts these. |
-| Either | a webhook caller | A secret the project's configuration names. See [Webhooks](#webhooks). |
+| Either | a Station | `Authorization: Bearer <runner token>`: the shared Station token, a launch (deploy) Ramp's token, or the short-lived access token of an enrolled Station. Only the [Station API](#runner-api) accepts these. |
+| Either | a webhook caller | A secret the Flight's configuration names. See [Webhooks](#webhooks). |
 
 A request without valid credentials answers `401` with `{"error": "sign in first, or send a valid API token"}`.
 
@@ -70,25 +70,25 @@ The web UI sends `X-Launchway-Background: 1` on requests it makes by itself, suc
 
 ## Access classes
 
-Every route belongs to one access class. The server checks it before the handler runs. A Sortie (run) or project the caller may not see answers `404`, exactly as if it did not exist; one the caller may see but not change answers `403`. See [Roles and permissions](roles.md) for how roles are worked out.
+Every route belongs to one access class. The server checks it before the handler runs. A Sortie (run) or Flight the caller may not see answers `404`, exactly as if it did not exist; one the caller may see but not change answers `403`. See [Roles and permissions](roles.md) for how roles are worked out.
 
 | Class | Who may call | Refusal |
 |---|---|---|
 | `public` | Anyone. The handler decides (health checks, sign-in, webhooks). | — |
-| `runner` | A Station, with the shared Station token, a Flight line's token or an enrolled Station's access token. | `401` |
+| `runner` | A Station, with the shared Station token, a Ramp's token or an enrolled Station's access token. | `401` |
 | `signed-in` | Anyone signed in (any role, or none). Lists show only what the caller may see. | `401` |
-| `any-viewer` | Someone with at least the viewer role on at least one project. | `403` |
-| `project-viewer` | A viewer of the project in `{name}`. | `404` |
-| `project-operator` | An operator of the project in `{name}`. | `404` if not a viewer, else `403` |
-| `project-draft` | Whoever `drafts.allow` allows to start draft runs of the project in `{name}` (operator by default). | `404` if not a viewer, else `403` |
-| `run-viewer` | A viewer of the project of the run in `{id}`. | `404` |
-| `run-operator` | An operator of the project of the run in `{id}`. | `404` if not a viewer, else `403` |
+| `any-viewer` | Someone with at least the viewer role on at least one Flight. | `403` |
+| `project-viewer` | A viewer of the Flight in `{name}`. | `404` |
+| `project-operator` | An operator of the Flight in `{name}`. | `404` if not a viewer, else `403` |
+| `project-draft` | Whoever `drafts.allow` allows to start draft runs of the Flight in `{name}` (operator by default). | `404` if not a viewer, else `403` |
+| `run-viewer` | A viewer of the Flight of the run in `{id}`. | `404` |
+| `run-operator` | An operator of the Flight of the run in `{id}`. | `404` if not a viewer, else `403` |
 | `repo-viewer` | A viewer of the repository `<owner>/<name>` (bindings name it by that path). | `404` (also when Git hosting is off, with `code: feature_off`) |
 | `repo-operator` | An operator of the repository. | `404` if not a viewer, else `403` |
 | `repo-admin` | An admin of the repository. | `404` if not a viewer, else `403` |
-| `admin` | An admin of every project (from an `access` entry without `projects`). | `403` |
+| `admin` | An admin of every Flight (from an `access` entry without `projects`). | `403` |
 
-Some handlers check more after the class: deployment commands and approvals that name a deployment need the role on the Airfield (environment), waivers need the role `policy.waivers.allow` names, saving with `force` needs admin on the project, and protected Airfields refuse the Sortie's starter. Those refusals are `403`.
+Some handlers check more after the class: deployment commands and approvals that name a deployment need the role on the Airfield (environment), waivers need the role `policy.waivers.allow` names, saving with `force` needs admin on the Flight, and protected Airfields refuse the Sortie's starter. Those refusals are `403`.
 
 ## Errors
 
@@ -214,20 +214,20 @@ With sign-in on it has only `auth_mode` (`oidc`), `version` and `schema`.
 {"admin": true, "auth_mode": "none", "groups": [], "roles": {"demo-app": "admin", "demo-lib-app": "admin"}, "runners": true, "user": "dana", "via": "none"}
 ```
 
-`via` is `none` (sign-in off), `session` or `token`. `roles` has the caller's role on each project they have one on, after any [token limits](#api-tokens). `admin` says whether they may read the Logbook; `runners` whether they may see the Stations.
+`via` is `none` (sign-in off), `session` or `token`. `roles` has the caller's role on each Flight they have one on, after any [token limits](#api-tokens). `admin` says whether they may read the Logbook; `runners` whether they may see the Stations.
 
-## Projects
+## Flights {#projects}
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/projects` | `signed-in` | — | The projects the caller may see. |
-| `GET /api/v1/projects/{name}` | `project-viewer` | — | One project. |
-| `GET /api/v1/projects/{name}/refs` | `project-viewer` | — | The project's branches and tags. |
+| `GET /api/v1/projects` | `signed-in` | — | The Flights the caller may see. |
+| `GET /api/v1/projects/{name}` | `project-viewer` | — | One Flight. |
+| `GET /api/v1/projects/{name}/refs` | `project-viewer` | — | The Flight's branches and tags. |
 | `GET /api/v1/projects/{name}/inputs` | `project-viewer` | — | The inputs the pipeline declares at `?ref=` (default: the default branch), for a start form. |
-| `GET /api/v1/projects/{name}/schedules` | `project-viewer` | — | The schedules read from the default branch, when each fires next, recent firings, and the project's webhook triggers. |
-| `GET /api/v1/projects/{name}/lanes` | `project-viewer` | — | The project's [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its `name`, `key` and `label`, the Sortie that holds it (`holder`) and the Sorties waiting, in the order they start (`waiting`, each with its `position`). A Sortie's own place is its `lane` block in the Sortie JSON: `name`, `key`, `label`, `state` (`holding`, `waiting`, `replaced` or `skipped`), `position`, and `behind` (the run it waits behind, or that replaced it). `GET /api/v1/runs?lane=NAME` lists only runs in that lane. A waiting run is canceled with the Sortie's cancel route. |
+| `GET /api/v1/projects/{name}/schedules` | `project-viewer` | — | The schedules read from the default branch, when each fires next, recent firings, and the Flight's webhook triggers. |
+| `GET /api/v1/projects/{name}/lanes` | `project-viewer` | — | The Flight's [lanes](pipeline.md#lane) that have a Sortie going or runs waiting: for each, its `name`, `key` and `label`, the Sortie that holds it (`holder`) and the Sorties waiting, in the order they start (`waiting`, each with its `position`). A Sortie's own place is its `lane` block in the Sortie JSON: `name`, `key`, `label`, `state` (`holding`, `waiting`, `replaced` or `skipped`), `position`, and `behind` (the run it waits behind, or that replaced it). `GET /api/v1/runs?lane=NAME` lists only runs in that lane. A waiting run is canceled with the Sortie's cancel route. |
 
-A project object has the configuration (`name`, `url` with credentials removed, `default_branch`, `poll_seconds`, `push`), the latest poll (`last_fetch`, `decisions`), its newest run as `last_run`, and `editor`, what the caller may do in the pipeline editor:
+A Flight object has the configuration (`name`, `url` with credentials removed, `default_branch`, `poll_seconds`, `push`), the latest poll (`last_fetch`, `decisions`), its newest run as `last_run`, and `editor`, what the caller may do in the pipeline editor:
 
 ```json
 "editor": {"drafts_allow": "operator", "may_draft": true, "draft_secrets": false, "may_save": true, "may_force": true}
@@ -247,29 +247,29 @@ A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committe
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `POST /api/v1/projects/{name}/runs` | `project-operator` | `run.start` | Starts a Sortie. Answers `201` with the Sortie. |
-| `GET /api/v1/runs` | `signed-in` | — | Runs of the projects the caller may see, newest first. |
+| `GET /api/v1/runs` | `signed-in` | — | Runs of the Flights the caller may see, newest first. |
 | `GET /api/v1/runs/{id}` | `run-viewer` | — | One run in full. |
 | `GET /api/v1/runs/{id}/events` | `run-viewer` | — | The Sortie's event log. |
 | `GET /api/v1/runs/{id}/pipeline-file` | `run-viewer` | — | The pipeline text the Sortie ran. |
 | `GET /api/v1/runs/{id}/steps/{step}/logs` | `run-viewer` | — | A step's log lines. |
-| `GET /api/v1/projects/{name}/run-triggers` | `project-viewer` | — | The project's triggers on other projects' results: each with its `kind` (`run` or `launch`), `upstream_project`, `when`, `filter`, `ref` and `mapping`. See [Triggers on results](../guide/result-triggers.md). |
-| `POST /api/v1/projects/{name}/run-triggers` | `project-operator` | `run_trigger.create` | Makes a trigger: `{"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}`. `409` if the upstream project has not allowed this one, or if it would make a cycle; `400` for an expression that cannot be read. The caller must be able to read the upstream project. |
-| `GET /api/v1/projects/{name}/run-triggers/graph` | `project-viewer` | — | What the software graph says this project depends on, for starting it after them: the projects that build the repositories its repository depends on, in build order (`level` 0 first), each with whether it has allowed this project to trigger on its results (`allowed`), the trigger that already exists (`trigger`) and a plain `note`. Nothing is made. `404` when the graph is off. See [Triggers from the software graph](../guide/software-graph.md#start-dependents-after-a-push). |
-| `POST /api/v1/projects/{name}/run-triggers/graph` | `project-operator` | `run_trigger.from_graph` | Makes the result triggers the plan shows, for the projects that have allowed this one: a trigger named `graph-<upstream>` that starts a run of this project when a run of the upstream ends well. Answers the plan with `created` set on each trigger made. A project that has not allowed it is left out, with the reason. Nothing is made until this is called. |
+| `GET /api/v1/projects/{name}/run-triggers` | `project-viewer` | — | The Flight's triggers on other Flights' results: each with its `kind` (`run` or `launch`), `upstream_project`, `when`, `filter`, `ref` and `mapping`. See [Triggers on results](../guide/result-triggers.md). |
+| `POST /api/v1/projects/{name}/run-triggers` | `project-operator` | `run_trigger.create` | Makes a trigger: `{"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}`. `409` if the upstream Flight has not allowed this one, or if it would make a cycle; `400` for an expression that cannot be read. The caller must be able to read the upstream Flight. |
+| `GET /api/v1/projects/{name}/run-triggers/graph` | `project-viewer` | — | What the software graph says this Flight depends on, for starting it after them: the Flights that build the repositories its repository depends on, in build order (`level` 0 first), each with whether it has allowed this Flight to trigger on its results (`allowed`), the trigger that already exists (`trigger`) and a plain `note`. Nothing is made. `404` when the graph is off. See [Triggers from the software graph](../guide/software-graph.md#start-dependents-after-a-push). |
+| `POST /api/v1/projects/{name}/run-triggers/graph` | `project-operator` | `run_trigger.from_graph` | Makes the result triggers the plan shows, for the Flights that have allowed this one: a trigger named `graph-<upstream>` that starts a run of this Flight when a run of the upstream ends well. Answers the plan with `created` set on each trigger made. A Flight that has not allowed it is left out, with the reason. Nothing is made until this is called. |
 | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}` | `project-operator` | `run_trigger.delete` | Removes a trigger. |
-| `GET /api/v1/projects/{name}/run-trigger-allows` | `project-viewer` | — | The projects this project allows to trigger on its results, and whether each may read step outputs. |
-| `POST /api/v1/projects/{name}/run-trigger-allows` | `project-operator` | `run_trigger.allow` | Allows `{"downstream_project", "share_outputs"}`. The caller is an operator of this (the upstream) project. |
-| `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}` | `project-operator` | `run_trigger.revoke` | Withdraws it; the downstream project's triggers stay and are refused, with the reason, until it is given again. |
-| `GET /api/v1/projects/{name}/event-sources` | `project-viewer` | — | The project's event sources, each with its `url`, `mapping`, `filter`, `dedupe_key`, window and limits, and whether it has a secret (`has_secret`). The secret is never returned. See [Event sources](../guide/event-sources.md). |
+| `GET /api/v1/projects/{name}/run-trigger-allows` | `project-viewer` | — | The Flights this Flight allows to trigger on its results, and whether each may read step outputs. |
+| `POST /api/v1/projects/{name}/run-trigger-allows` | `project-operator` | `run_trigger.allow` | Allows `{"downstream_project", "share_outputs"}`. The caller is an operator of this (the upstream) Flight. |
+| `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}` | `project-operator` | `run_trigger.revoke` | Withdraws it; the downstream Flight's triggers stay and are refused, with the reason, until it is given again. |
+| `GET /api/v1/projects/{name}/event-sources` | `project-viewer` | — | The Flight's event sources, each with its `url`, `mapping`, `filter`, `dedupe_key`, window and limits, and whether it has a secret (`has_secret`). The secret is never returned. See [Event sources](../guide/event-sources.md). |
 | `POST /api/v1/projects/{name}/event-sources` | `project-operator` | `event_source.create` | Makes a source: `{"name", "mapping": {"input": "expression"}, "filter", "dedupe_key", "schema" (JSON Schema text), "ref", "debounce_seconds" or "batch_seconds", "max_body", "rate_per_minute"}`. Answers `201` with the source and its `secret`, **shown once**. Every expression is checked when it is saved (`400` says which). `409` with code `no_root_key` on a server with no root key. |
 | `POST /api/v1/projects/{name}/event-sources/{source}` | `project-operator` | `event_source.change` | Changes the fields that are given, and with `"rotate_secret": true` makes a new secret (answered once). `"enabled": false` turns the source off. |
 | `DELETE /api/v1/projects/{name}/event-sources/{source}` | `project-operator` | `event_source.delete` | Removes the source and what it remembers. |
 | `POST /api/v1/projects/{name}/event-sources/{source}/test` | `project-operator` | `event_source.test` | Judges `{"body": {...}, "headers": {...}}` as a call would be (schema, filter, dedupe key, mapping, the pipeline's inputs) and records and starts nothing. Answers `status` (`ready`, `filtered`, `refused` or `error`), the `reason`, any `problems`, and the `inputs` the run would get. |
 | `POST /api/v1/projects/{name}/sources/{source}` | `public` | — | The call itself: a JSON body up to the source's limit, signed with `X-Launchway-Timestamp` and `X-Launchway-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<body>">` (five minutes, once). `201` started or held, `202` waiting in a window, `200` filtered or duplicate, `422` refused or error (with `problems`), `404` for a source that does not exist or cannot prove itself, `409` for a signature used before, `413` too large, `429` over the rate. Every answer but `404` for a missing source is an event, and the call is in the Logbook as `event_source.call`. |
-| `GET /api/v1/events` | `signed-in` | — | The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other projects' results), newest first, limited to the projects the caller may read. Each event has its `id`, `project`, `at`, `source`, `verified`, `summary`, `payload` as kept (credential-looking values removed), and `decisions`: for each trigger judged, the `decision` (`started`, `held`, `waiting`, `filtered`, `superseded`, `skipped`, `duplicate`, `refused` or `error`), the `reason` in words and the `run_number` it started. Filters: `project`, `source`, `decision`, `verified` (`yes` or `no`), `ref`, `since` and `before` (Unix milliseconds or RFC 3339), `limit` (100 by default, at most 500). See [Events](../guide/events.md). |
-| `GET /api/v1/events/{id}` | `signed-in` | — | One event with its decisions. An event of a project the caller cannot read is `404`. |
-| `POST /api/v1/events/{id}/replay` | `signed-in` | `event.replay` | Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its project (`403` otherwise). Answers `201` with the `run` and `replay_of`. A new event points back to the first. An event that was not verified is `409` with code `not_verified`; one with nothing to repeat is `409` with code `not_replayable`. |
-| `GET /api/v1/queue` | `signed-in` | — | The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the projects the caller may read (`?project=` for one): each with its `run`, `number`, `project`, `pipeline`, `class`, `position`, `code` (`automation_limit`, `kind_limit`, `pipeline_limit`, `project_limit` or `held_by_operator`), `reason`, the numbers of the runs it waits `behind`, and `actions`. See [Queues and limits](../guide/queues.md). |
+| `GET /api/v1/events` | `signed-in` | — | The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other Flights' results), newest first, limited to the Flights the caller may read. Each event has its `id`, `project`, `at`, `source`, `verified`, `summary`, `payload` as kept (credential-looking values removed), and `decisions`: for each trigger judged, the `decision` (`started`, `held`, `waiting`, `filtered`, `superseded`, `skipped`, `duplicate`, `refused` or `error`), the `reason` in words and the `run_number` it started. Filters: `project`, `source`, `decision`, `verified` (`yes` or `no`), `ref`, `since` and `before` (Unix milliseconds or RFC 3339), `limit` (100 by default, at most 500). See [Events](../guide/events.md). |
+| `GET /api/v1/events/{id}` | `signed-in` | — | One event with its decisions. An event of a Flight the caller cannot read is `404`. |
+| `POST /api/v1/events/{id}/replay` | `signed-in` | `event.replay` | Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its Flight (`403` otherwise). Answers `201` with the `run` and `replay_of`. A new event points back to the first. An event that was not verified is `409` with code `not_verified`; one with nothing to repeat is `409` with code `not_replayable`. |
+| `GET /api/v1/queue` | `signed-in` | — | The Sorties held back by a limit on concurrent Sorties, or by an operator, in the order they will go, limited to the Flights the caller may read (`?project=` for one): each with its `run`, `number`, `project`, `pipeline`, `class`, `position`, `code` (`automation_limit`, `kind_limit`, `pipeline_limit`, `project_limit` or `held_by_operator`), `reason`, the numbers of the runs it waits `behind`, and `actions`. See [Queues and limits](../guide/queues.md). |
 | `POST /api/v1/runs/{id}/trust` | `run-operator` | `run.trust` | A maintainer's *Run with secrets* on a restricted run (`{"comment": "..."}`): the steps that have not started may read secrets and launch. Recorded in the Sortie's events and the Logbook. Refused for a Sortie that is not restricted, or is over. The Sortie's `restriction` block says whether it is restricted and why, and its `actions` list `run_with_secrets`. See [Pull-request trust](../guide/pull-request-trust.md) |
 | `POST /api/v1/runs/{id}/queue` | `run-operator` | `run.queue` | Moves a Sortie that waits in a Holding pattern (queue): `{"action": "run_next"}` puts it at the front, `hold` keeps it waiting, `release` lets the limits decide again. Refused with a reason for a Sortie that already goes. A Sortie that is held lists these in its `actions`. |
 | `POST /api/v1/runs/{id}/cancel` | `run-operator` | `run.cancel` | Cancels the Sortie. |
@@ -319,8 +319,8 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/approvals` | `signed-in` | — | Approval steps waiting for a decision, in the projects the caller may see. |
-| `GET /api/v1/notifications` | `signed-in` | — | The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. `limit` (at most 500). |
+| `GET /api/v1/approvals` | `signed-in` | — | Approval steps waiting for a decision, in the Flights the caller may see. |
+| `GET /api/v1/notifications` | `signed-in` | — | The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the Flights the caller may read. `limit` (at most 500). |
 | `POST /api/v1/runs/{id}/steps/{step}/approve` | `run-operator` | `approval.approve` | Approves a waiting approval step. |
 | `POST /api/v1/runs/{id}/steps/{step}/reject` | `run-operator` | `approval.reject` | Rejects it. |
 
@@ -331,13 +331,13 @@ The body is optional: `{"comment": "Looks good"}`. Answers `{"ok": true}`. An ap
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/projects/{name}/pipeline` | `project-viewer` | — | The pipeline file at the tip of `?ref=` (default: the default branch). |
-| `POST /api/v1/projects/{name}/pipeline` | `project-operator` | `pipeline.save` | Commits pipeline text to the project's repository, as the caller. |
+| `POST /api/v1/projects/{name}/pipeline` | `project-operator` | `pipeline.save` | Commits pipeline text to the Flight's repository, as the caller. |
 | `POST /api/v1/projects/{name}/draft-runs` | `project-draft` | `run.draft` | Runs pipeline text that is not in Git against a branch. |
-| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. With `?project=NAME` it checks it for that project too, and a valid pipeline may come back with `warnings` (for example, a pull-request filter by target branch in a project with no forge connection). |
+| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. With `?project=NAME` it checks it for that Flight too, and a valid pipeline may come back with `warnings` (for example, a pull-request filter by target branch in a Flight with no forge connection). |
 
 **Read.** `{"ref", "kind", "sha", "subject", "author", "committed_at", "path", "exists", "configured", "text"}`.
 
-**Save.** The body is `{"base_ref", "base_sha", "pipeline", "message", "branch", "force"}`. The project needs `push:` in the configuration. `force: true` saves text that has problems and needs the admin role on the project. Answers `201` with where it was saved (`path`, `branch`, `sha`, …); `409` if the branch moved since `base_sha`; `502` if the push failed.
+**Save.** The body is `{"base_ref", "base_sha", "pipeline", "message", "branch", "force"}`. The Flight needs `push:` in the configuration. `force: true` saves text that has problems and needs the admin role on the Flight. Answers `201` with where it was saved (`path`, `branch`, `sha`, …); `409` if the branch moved since `base_sha`; `502` if the push failed.
 
 **Draft run.** `{"ref": "main", "pipeline": "<YAML text>", "inputs": {…}, "libraries": {…}}`. Answers `201` with the Sortie. Its steps may read secrets only if `drafts.secrets` is `true`. The pipeline text may be at most the size a pipeline file may be (`413` otherwise).
 
@@ -360,23 +360,23 @@ When the text is valid, `ok` is `true` and `graph` and `levels` describe it.
 | `GET /api/v1/runs/{id}/tests` | `run-viewer` | — | A Sortie's test totals, step by step, with what stands out. |
 | `GET /api/v1/runs/{id}/tests/cases` | `run-viewer` | — | A Sortie's test results, failures first, then the slowest. |
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | `run-viewer` | — | One result in full, with its trace and captured output. |
-| `GET /api/v1/projects/{name}/tests` | `project-viewer` | — | A project's tests over its last runs of a ref: totals, slowest, most failing, flaky. |
-| `GET /api/v1/projects/{name}/tests/history` | `project-viewer` | — | One test's results in the project's last runs. |
+| `GET /api/v1/projects/{name}/tests` | `project-viewer` | — | A Flight's tests over its last runs of a ref: totals, slowest, most failing, flaky. |
+| `GET /api/v1/projects/{name}/tests/history` | `project-viewer` | — | One test's results in the Flight's last runs. |
 | `GET /api/v1/runs/{id}/tests/compare` | `run-viewer` | — | A Sortie's tests beside the previous run of the same ref: new failures, fixed tests and tests still failing. |
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `run-viewer` | — | One attachment of a test result (a screenshot, video or trace), number `n` from 0. Supports `Range`, so videos can be played and sought. Served as a download or an image, never as a page. |
-| `GET /api/v1/runs/{id}/coverage` | `run-viewer` | — | A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare. |
+| `GET /api/v1/runs/{id}/coverage` | `run-viewer` | — | A Sortie's coverage, step by step, with the previous run of its ref and the Flight's default branch to compare. |
 | `GET /api/v1/runs/{id}/coverage/files` | `run-viewer` | — | A Sortie's per-file coverage: `?step=`, `?q=`, `?sort=` (`path`, `lines` or `missed`), `?limit=` and `?offset=`. |
 | `GET /api/v1/runs/{id}/debrief` | `run-viewer` | — | The Debrief of a Sortie (run): summary, change against the default branch's last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request's change, trend. |
 | `GET /api/v1/runs/{id}/debrief/export` | `run-viewer` | — | The Debrief as a download: `?format=html` (one file, no network needed), `pdf`, `json` or `junit` (every result, merged). |
 | `GET /api/v1/runs/{id}/debrief/summary` | `run-viewer` | — | The short Markdown form for a pull request comment; `?format=json` adds the headline and the annotations (failing assertions with a file and line). |
-| `GET /api/v1/projects/{name}/tests/flaky` | `project-viewer` | — | The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. `?limit=` (default 100, at most 500). |
+| `GET /api/v1/projects/{name}/tests/flaky` | `project-viewer` | — | The Flight's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. `?limit=` (default 100, at most 500). |
 | `GET /api/v1/projects/{name}/tests/timings` | `project-viewer` | — | Each test's typical duration from its statistics, slowest first. `?limit=` (at most 100000). |
 | `GET /api/v1/projects/{name}/tests/shards` | `project-viewer` | — | A balanced split of the tests for `?count=` shards (1 to 256) by duration. |
-| `GET /api/v1/projects/{name}/coverage` | `project-viewer` | — | A project's coverage over its last runs of a ref (`?ref=`, `?runs=`). |
+| `GET /api/v1/projects/{name}/coverage` | `project-viewer` | — | A Flight's coverage over its last runs of a ref (`?ref=`, `?runs=`). |
 | `GET /api/v1/runs/{id}/reports` | `run-viewer` | — | A Sortie's hosted HTML reports, each with a fresh signed link. |
 | `GET /hosted/{link}/{path...}` | `public` | — | A file of a hosted HTML report. It takes no session: the signed `link`, scoped to one report for a few hours and given only to people who may see the Sortie, is the permission. Served with a sandboxing `Content-Security-Policy`, and from the separate origin `reports.origin` when one is configured. |
 
-`…/tests/cases` takes `?status=failed|passed|skipped|flaky`, `?q=` (searched in the name, suite, file and message; at most 200 bytes), `?step=` (with `?attempt=`), `?limit=` and `?offset=`. `{case}` is a result's numeric `id`. The project routes take `?ref=` (a branch, a full ref, or `all`; default the default branch) and `?runs=`. `…/tests/history` needs `?key=`, the `key` of a result. See [Debriefs (test reports)](../tutorials/tests-and-reports.md).
+`…/tests/cases` takes `?status=failed|passed|skipped|flaky`, `?q=` (searched in the name, suite, file and message; at most 200 bytes), `?step=` (with `?attempt=`), `?limit=` and `?offset=`. `{case}` is a result's numeric `id`. The Flight routes take `?ref=` (a branch, a full ref, or `all`; default the default branch) and `?runs=`. `…/tests/history` needs `?key=`, the `key` of a result. See [Debriefs (test reports)](../tutorials/tests-and-reports.md).
 
 ## Cargo findings and SBOMs {#artifacts-findings-and-sboms}
 
@@ -388,7 +388,7 @@ When the text is valid, `ok` is `true` and `graph` and `levels` describe it.
 | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` | `run-operator` | `artifact.delete` | Deletes a kept Cargo. Answers with what was deleted. |
 | `GET /api/v1/artifact-store` | `any-viewer` | — | Where this server keeps Cargo (`database`, `filesystem` or `s3`), why, and how full the store is. |
 | `GET /api/v1/runs/{id}/findings` | `run-viewer` | — | A Sortie's security findings. |
-| `GET /api/v1/projects/{name}/security` | `project-viewer` | — | A project's findings over its last runs of a ref (`?ref=`, `?runs=`). |
+| `GET /api/v1/projects/{name}/security` | `project-viewer` | — | A Flight's findings over its last runs of a ref (`?ref=`, `?runs=`). |
 | `GET /api/v1/components` | `signed-in` | — | The Sorties whose SBOMs list a component: `?name=` (exact, ignoring case), `?version=`. |
 
 Downloads are sent as `application/octet-stream` (or `application/zip`) with `Content-Disposition: attachment`, `Cache-Control: private, no-store`, a sandboxing `Content-Security-Policy`, and, for a file, `ETag` and `X-Launchway-SHA256` with its SHA-256.
@@ -400,7 +400,7 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/runs/{id}/images` | `run-viewer` | — | What a Sortie's image steps built: digest, tags, platforms, signature, provenance, SBOM and scan. `{"images": […]}` |
-| `GET /api/v1/images` | `signed-in` | — | Which run built a digest (`?digest=`), the latest image of a repository (`?repository=host/path`, with `?tag=`), or a project's images (`?project=`). `{"hits": […]}` |
+| `GET /api/v1/images` | `signed-in` | — | Which run built a digest (`?digest=`), the latest image of a repository (`?repository=host/path`, with `?tag=`), or a Flight's images (`?project=`). `{"hits": […]}` |
 
 `GET /api/v1/images` needs one of `digest`, `repository` or `project` (`400` otherwise). See [Build and sign an image](../tutorials/build-and-sign-image.md).
 
@@ -408,9 +408,9 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/environments` | `signed-in` | — | The configured Airfields that list a project the caller may see, with what is deployed in each. |
+| `GET /api/v1/environments` | `signed-in` | — | The configured Airfields that list a Flight the caller may see, with what is deployed in each. |
 | `GET /api/v1/deployments` | `signed-in` | — | Deployments, newest first: `?environment=`, `?project=`, `?service=`, `?limit=`. |
-| `GET /api/v1/home` | `signed-in` | — | The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron's, then the rest), the projects by Squadron with their health, favorites, and what finished lately. `?view=mine` or `all`. Only what the caller may see; counts never include anything else. |
+| `GET /api/v1/home` | `signed-in` | — | The Tower in one answer: what needs you (by the attention rule), the Sorties running now (yours first, then your Squadron's, then the rest), the Flights by Squadron with their health, favorites, and what finished lately. `?view=mine` or `all`. Only what the caller may see; counts never include anything else. |
 | `GET /api/v1/attention` | `signed-in` | — | What needs a person: `needs` (each with `why` and `do`), `dismissed` (set aside by the caller), `retrying` (failures that a newer Sortie of the same pipeline and branch or pull request is retrying) and `count`. The rule is in the guide page *What the Tower shows*. |
 | `POST /api/v1/attention/dismiss` | `signed-in` | `prefs.attention.dismiss` | Sets one entry aside for the caller only: `{"key", "snooze_hours"}`; without snooze it returns when something newer replaces it. A personal preference, recorded in the Logbook as such. |
 | `POST /api/v1/attention/restore` | `signed-in` | `prefs.attention.restore` | Brings a set-aside entry back (`{"key"}`, or `*` for all). |
@@ -419,7 +419,7 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 | `PATCH /api/v1/organize/folders/{id}` | `signed-in` | `folder.update` | Renames, describes, reorders or moves a folder. A person who may not arrange its level gets 404. |
 | `DELETE /api/v1/organize/folders/{id}` | `signed-in` | `folder.delete` | Deletes a folder; what was in it moves up to its parent. |
 | `POST /api/v1/organize/{area}/move` | `signed-in` | `folder.move` | Files an item in a folder, or takes it out (`folder` empty). An item lives in one folder. Needs the right to arrange the folder's level. |
-| `PUT /api/v1/organize/{area}/labels` | `signed-in` | `labels.set` | Replaces an item's labels (up to 20, lower case). Needs operator on the project. |
+| `PUT /api/v1/organize/{area}/labels` | `signed-in` | `labels.set` | Replaces an item's labels (up to 20, lower case). Needs operator on the Flight. |
 | `GET /api/v1/layouts/{page}` | `signed-in` | — | The layout of a page: each level's shared layout from the Base down (a locked level stops the ones below), the caller's own, and the result in effect. `?scope=`. |
 | `PUT /api/v1/layouts/{page}` | `signed-in` | `layout.set` | Sets the shared layout of a page at a level, and whether it is locked for the levels below. Needs the right to arrange that level. |
 | `DELETE /api/v1/layouts/{page}` | `signed-in` | `layout.reset` | Removes a level's shared layout of a page (`?scope=`). |
@@ -429,21 +429,21 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 | `POST /api/v1/me/favorites` | `signed-in` | `prefs.favorite` | Adds or removes a favorite for the caller: `{"item":"project:<name>" or "repository:<path>","on":true}`. |
 | `GET /api/v1/layouts-export` | `signed-in` | — | A level's layouts and folders as one document (`?scope=`), to keep in Git. Needs the right to arrange the level. |
 | `POST /api/v1/layouts-import` | `signed-in` | `layout.import` | Applies such a document: adds and updates what it names and never deletes what it leaves out. `?dry_run=1` lists what it would do. |
-| `GET /api/v1/search` | `signed-in` | — | One search over what the caller may see: projects, repositories, folders, labels and Sorties (by number, commit or branch). `?q=`, `?limit=` (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link. |
-| `GET /api/v1/activity` | `signed-in` | — | The caller's own trail: `continue` (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), `recent` (newest first), `paused` and `retention_days`. It is the caller's alone: no route takes another user's name, so administrators cannot read it. Entries for projects the caller can no longer see are left out. `?limit=` (100, at most 200). |
-| `PUT /api/v1/activity` | `signed-in` | — | Notes (or moves) an entry of the caller's trail, one for each thing they opened: `{kind, obj, project, title, href, action, state}`. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the project. |
+| `GET /api/v1/search` | `signed-in` | — | One search over what the caller may see: Flights, repositories, folders, labels and Sorties (by number, commit or branch). `?q=`, `?limit=` (20, at most 50). Ranked: exact, prefix, word prefix, substring, then a typo. Each hit has a kind, a name, where it lives and a link. |
+| `GET /api/v1/activity` | `signed-in` | — | The caller's own trail: `continue` (what they started or changed lately and the last things they looked at, with what changed since for a Sortie), `recent` (newest first), `paused` and `retention_days`. It is the caller's alone: no route takes another user's name, so administrators cannot read it. Entries for Flights the caller can no longer see are left out. `?limit=` (100, at most 200). |
+| `PUT /api/v1/activity` | `signed-in` | — | Notes (or moves) an entry of the caller's trail, one for each thing they opened: `{kind, obj, project, title, href, action, state}`. Answers 204 and writes nothing while the trail is paused or when the caller cannot see the Flight. |
 | `DELETE /api/v1/activity` | `signed-in` | `prefs.activity.clear` | Deletes the caller's whole trail. |
 | `PUT /api/v1/activity/pause` | `signed-in` | `prefs.activity.pause` | Pauses or resumes writing the caller's trail: `{"paused": true}`. |
-| `GET /api/v1/launch-lines` | `signed-in` | — | Where each recent change is on its way, as stations worked out from a Sortie's steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has `parallel` (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step's state): `?project=`, `?limit=` (12, at most 50), or `?run=` for the line of one Sortie (404 for a run of a project the caller may not see). Only projects the caller may see. |
+| `GET /api/v1/launch-lines` | `signed-in` | — | Where each recent change is on its way, as stations worked out from a Sortie's steps and deployments (commit, checks, tests, package, each Airfield, verified), each with a state and one plain sentence; a station that stands for several steps also has `parallel` (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step's state): `?project=`, `?limit=` (12, at most 50), or `?run=` for the line of one Sortie (404 for a run of a Flight the caller may not see). Only Flights the caller may see. |
 | `GET /api/v1/settings/approvals` | `signed-in` | — | Whether the person who started a run may approve it here (`allow_self`), and whether people sign in. The approval cards use it to say exactly why someone cannot approve. |
 | `GET /api/v1/runs/{id}/deployments/{dep}/controls` | `run-viewer` | — | Which commands the caller could give a deployment now, and why not the others. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote` | `run-operator` | `deployment.promote` | Promotes a paused rollout one step. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` | `run-operator` | `deployment.promote_full` | Promotes a rollout fully, skipping its remaining steps. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/abort` | `run-operator` | `deployment.abort` | Aborts a rollout. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/retry` | `run-operator` | `deployment.retry` | Retries an aborted rollout. |
-| `GET /api/v1/projects/{name}/rollback` | `project-viewer` | — | What a service can be returned to base to in an Airfield after its deployment succeeded: `?environment=` (required), `?service=`. Answers the plan: what runs now (`current`), the lock holder if any (`holder`), and the `rollback` action as the server reports it (`available`, or `reason`, `instead` and `would_help`; `targets`, the earlier successful deployments, each with the deployments it reverts, its `consequence` and `suggestions`; `queueable`, `emergency`, `requires_approval`). Without the operator role on the project (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md). |
+| `GET /api/v1/projects/{name}/rollback` | `project-viewer` | — | What a service can be returned to base to in an Airfield after its deployment succeeded: `?environment=` (required), `?service=`. Answers the plan: what runs now (`current`), the lock holder if any (`holder`), and the `rollback` action as the server reports it (`available`, or `reason`, `instead` and `would_help`; `targets`, the earlier successful deployments, each with the deployments it reverts, its `consequence` and `suggestions`; `queueable`, `emergency`, `requires_approval`). Without the operator role on the Flight (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md). |
 | `POST /api/v1/projects/{name}/rollbacks` | `project-operator` | `deployment.rollback` | Rolls a service back: `{"environment", "service", "to", "reason", "queue"}`. `to` is a deployment ID or a version (default the previous successful deployment); `reason` is required; `queue` waits behind a deployment that holds the Airfield's lock. Answers `201` with the Return to base run. Refused with the action's own `reason` (`409`) when the action is not available. Needs the operator role on the Airfield too. |
-| `GET /api/v1/rollbacks/review` | `signed-in` | — | Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with `acknowledge`: whether the caller may, and if not why. Only projects the caller may see. |
+| `GET /api/v1/rollbacks/review` | `signed-in` | — | Aborts (emergency Returns to base (rollbacks)) of protected Airfields that no approver has acknowledged, newest first, each with `acknowledge`: whether the caller may, and if not why. Only Flights the caller may see. |
 | `POST /api/v1/runs/{id}/review` | `run-operator` | `rollback.review` | Acknowledges an Abort: `{"comment"}` (required). Refused for the person who asked unless `approvals.allow_self` is `true`, and for anyone the Airfield's `reviewers` leave out. Answers `{"ok": true}`. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` | `run-operator` | `deployment.withdraw` | Withdraws a command that no launch Station has taken yet. Answers `{"ok": true}`. |
 | `GET /api/v1/runs/{id}/deployments/{dep}/inspect` | `run-viewer` | — | The live tree of what a deployment made, read by a launch Station (runner) of its Airfield: `tree` (nodes with health, role, replicas, events, what changed in this Launch; the rollout's steps and weights), `actions` (pause, resume, restart, scale, each `ok` or with `why`), and what the caller may do (`can_logs`, `can_control`). Answers 502 when the Station could not look, saying what to turn on, and 504 when none answered. Cached for 3 seconds. The view is recorded in the Logbook once every few minutes per person |
@@ -458,13 +458,13 @@ The command routes take an optional `{"comment": "..."}` and answer `201` with t
 
 ## Releases
 
-Releases and release management (see [Making a release](../guide/releases.md)). Who may do what: a viewer reads published and withdrawn releases; an operator makes drafts, publishes, promotes and withdraws; an administrator of the project sets its release settings and checklists, freezes it and overrides what a checklist allows; an administrator of every project freezes every project and allows public downloads.
+Releases and release management (see [Making a release](../guide/releases.md)). Who may do what: a viewer reads published and withdrawn releases; an operator makes drafts, publishes, promotes and withdraws; an administrator of the Flight sets its release settings and checklists, freezes it and overrides what a checklist allows; an administrator of every Flight freezes every Flight and allows public downloads.
 
 | Route | Access | Audit action | What it does |
 |---|---|---|---|
-| `GET /api/v1/projects/{name}/release-settings` | `project-viewer` | — | How the project's versions are written and ordered (`scheme`: `semver`, `calver`, `natural` or `created`), its `tag_prefix`, `changelog` file and `public` setting, whether the installation allows public downloads, and whether Launchway may write to its repository. |
-| `PUT /api/v1/projects/{name}/release-settings` | `project-operator` | `release.settings` | Sets them: `{"scheme", "tag_prefix", "changelog", "public"}`. Needs the admin role on the project. The scheme cannot change once a release is a candidate, published or withdrawn. `public` is refused unless the installation allows public downloads. |
-| `GET /api/v1/projects/{name}/releases` | `project-viewer` | — | The project's releases, newest first, without their notes: `?state=` draft, candidate, published or yanked. Drafts are shown only to operators. |
+| `GET /api/v1/projects/{name}/release-settings` | `project-viewer` | — | How the Flight's versions are written and ordered (`scheme`: `semver`, `calver`, `natural` or `created`), its `tag_prefix`, `changelog` file and `public` setting, whether the installation allows public downloads, and whether Launchway may write to its repository. |
+| `PUT /api/v1/projects/{name}/release-settings` | `project-operator` | `release.settings` | Sets them: `{"scheme", "tag_prefix", "changelog", "public"}`. Needs the admin role on the Flight. The scheme cannot change once a release is a candidate, published or withdrawn. `public` is refused unless the installation allows public downloads. |
+| `GET /api/v1/projects/{name}/releases` | `project-viewer` | — | The Flight's releases, newest first, without their notes: `?state=` draft, candidate, published or yanked. Drafts are shown only to operators. |
 | `POST /api/v1/projects/{name}/releases` | `project-operator` | `release.create` | Makes a draft: `{"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}`. `from` is a branch, tag or commit (default the default branch); `adopt` names an existing annotated tag to release instead. `generate_notes` writes the notes from the merged pull requests and commits since the previous release; `run_id` is the Sortie that built it, whose image digests are recorded. A version not higher than the highest so far is refused unless `allow_lower`. Answers `201`. |
 | `GET /api/v1/projects/{name}/releases/next` | `project-viewer` | — | The next version proposed from the changes since the last release, with the reason for each change: `?from=` (branch, tag or commit), `?pre=` (a pre-release label such as `rc`). Nothing is made. |
 | `GET /api/v1/projects/{name}/releases/notes` | `project-viewer` | — | Release notes generated for a version, not saved: `?to=`, `?version=`. |
@@ -478,28 +478,28 @@ Releases and release management (see [Making a release](../guide/releases.md)). 
 | `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `project-operator` | `release.asset.remove` | Removes an asset from a draft or candidate. |
 | `GET /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `project-viewer` | — | Downloads a file of the release, signed in, with its checksum in `X-Launchway-SHA256`. |
 | `POST /api/v1/projects/{name}/releases/{version}/candidate` | `project-operator` | `release.candidate` | Moves a draft to candidate. |
-| `POST /api/v1/projects/{name}/releases/{version}/publish` | `project-operator` | `release.publish` | Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release's commit) and fixes the release. `{"public"}` asks for public downloads (admin, and only where the installation and project allow). Refused with `409` if the tag is at another commit or Launchway cannot write to the repository. |
+| `POST /api/v1/projects/{name}/releases/{version}/publish` | `project-operator` | `release.publish` | Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release's commit) and fixes the release. `{"public"}` asks for public downloads (admin, and only where the installation and Flight allow). Refused with `409` if the tag is at another commit or Launchway cannot write to the repository. |
 | `POST /api/v1/projects/{name}/releases/{version}/yank` | `project-operator` | `release.yank` | Withdraws a candidate or published release: `{"reason"}` (required). |
 | `POST /api/v1/projects/{name}/releases/{version}/changelog` | `project-operator` | `release.changelog` | Commits the notes at the top of the changelog file on a new branch and opens a pull request into the release's branch, never pushing to the branch itself: `{"base"}`. |
-| `GET /public/releases/{name}/{version}/{asset}` | `public` | — | A file of a release with no sign-in. Answers `404` unless the installation allows public downloads, the project asks for them, and the release is published and was made public. |
-| `GET /api/v1/releases` | `signed-in` | — | Releases of every project the caller may see: `?project=`, `?state=`. |
-| `GET /api/v1/release-matrix` | `signed-in` | — | Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote. |
+| `GET /public/releases/{name}/{version}/{asset}` | `public` | — | A file of a release with no sign-in. Answers `404` unless the installation allows public downloads, the Flight asks for them, and the release is published and was made public. |
+| `GET /api/v1/releases` | `signed-in` | — | Releases of every Flight the caller may see: `?project=`, `?state=`. |
+| `GET /api/v1/release-matrix` | `signed-in` | — | Which release runs in which Airfield: for each Flight and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote. |
 | `GET /api/v1/release-calendar` | `signed-in` | — | Planned, in-progress and done promotions and the freezes between `?from=` and `?to=`. |
 | `GET /api/v1/release-report` | `signed-in` | — | What shipped and the four delivery measures over a period: `?project=`, `?from=`, `?to=` (default 90 days), `?format=html` for a self-contained page. |
 | `GET /api/v1/release-installation` | `signed-in` | — | Whether this installation allows public downloads of releases. |
-| `PUT /api/v1/release-installation` | `admin` | `release.installation` | Allows or forbids them: `{"public_downloads"}`. Administrators of every project. |
+| `PUT /api/v1/release-installation` | `admin` | `release.installation` | Allows or forbids them: `{"public_downloads"}`. Administrators of every Flight. |
 | `GET /api/v1/release-freezes` | `signed-in` | — | Freezes in force, coming, and over in the last 30 days. |
-| `POST /api/v1/release-freezes` | `signed-in` | `release.freeze` | Makes a freeze: `{"project", "airfield", "from", "to", "reason"}`. Without `project` it freezes every project and needs the admin role everywhere; with one it needs the admin role on that project. |
+| `POST /api/v1/release-freezes` | `signed-in` | `release.freeze` | Makes a freeze: `{"project", "airfield", "from", "to", "reason"}`. Without `project` it freezes every Flight and needs the admin role everywhere; with one it needs the admin role on that Flight. |
 | `POST /api/v1/release-freezes/{id}/cancel` | `signed-in` | `release.freeze.cancel` | Ends a freeze early, with the same rights as making it. |
-| `GET /api/v1/projects/{name}/release-gates` | `project-viewer` | — | The checklists of the project, one per Airfield. |
-| `PUT /api/v1/projects/{name}/release-gates/{airfield}` | `project-operator` | `release.gate` | Sets what a release must pass to reach an Airfield: `require_checks`, `require_notes`, `require_no_blocking_findings`, `soak_minutes`, `clearances`, `clearance_roles`, `previous_airfield`, `window` (`days`, `from`, `to`, `zone`). Admin on the project. |
+| `GET /api/v1/projects/{name}/release-gates` | `project-viewer` | — | The checklists of the Flight, one per Airfield. |
+| `PUT /api/v1/projects/{name}/release-gates/{airfield}` | `project-operator` | `release.gate` | Sets what a release must pass to reach an Airfield: `require_checks`, `require_notes`, `require_no_blocking_findings`, `soak_minutes`, `clearances`, `clearance_roles`, `previous_airfield`, `window` (`days`, `from`, `to`, `zone`). Admin on the Flight. |
 | `GET /api/v1/projects/{name}/releases/{version}/checklist` | `project-viewer` | — | A release judged for an Airfield now: `?airfield=`. Each line passes, fails or waits, and whether an administrator may override what stops it. |
 | `POST /api/v1/projects/{name}/releases/{version}/clearances` | `project-operator` | `release.clearance` | Gives clearance for an Airfield: `{"airfield", "comment"}`. The person who published the release may not. |
-| `POST /api/v1/projects/{name}/releases/{version}/promote` | `project-operator` | `release.promote` | Promotes to an Airfield: `{"airfield", "override"}`. Starts the project's pipeline at the release's tag with the inputs `release`, `version`, `airfield`, `sha` and `digest`/`digests` it declares. `override` (a reason) is for administrators and only for lines that may be overridden. Answers `201` with the promotion and the Sortie, or `409` with the checklist. |
+| `POST /api/v1/projects/{name}/releases/{version}/promote` | `project-operator` | `release.promote` | Promotes to an Airfield: `{"airfield", "override"}`. Starts the Flight's pipeline at the release's tag with the inputs `release`, `version`, `airfield`, `sha` and `digest`/`digests` it declares. `override` (a reason) is for administrators and only for lines that may be overridden. Answers `201` with the promotion and the Sortie, or `409` with the checklist. |
 | `POST /api/v1/projects/{name}/releases/{version}/plan` | `project-operator` | `release.plan` | Writes a promotion on the calendar: `{"airfield", "at", "note"}`. A reminder; Launchway does not start it. |
 | `POST /api/v1/projects/{name}/release-returns` | `project-operator` | `release.return` | Returns an Airfield to base: `{"airfield", "to", "reason", "queue"}`, by the existing Return to base (rollback). Answers `201` with the Return to base run. |
 | `GET /api/v1/release-formations` | `signed-in` | — | Formations the caller may see. |
-| `POST /api/v1/release-formations` | `signed-in` | `release.formation.create` | Makes a formation: `{"name", "note", "releases": ["project@version", ...], "order"}`, in promotion order; with `"order": "dependencies"` the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (`409` with the reason when it cannot). Needs the operator role on every project in it. |
+| `POST /api/v1/release-formations` | `signed-in` | `release.formation.create` | Makes a formation: `{"name", "note", "releases": ["project@version", ...], "order"}`, in promotion order; with `"order": "dependencies"` the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (`409` with the reason when it cannot). Needs the operator role on every Flight in it. |
 | `GET /api/v1/release-formations/{id}` | `signed-in` | — | A formation (by id or name) with the state of each member. A promoting formation moves on when it is read. |
 | `POST /api/v1/release-formations/{id}/promote` | `signed-in` | `release.formation.promote` | Promotes it to an Airfield: `{"airfield", "override"}`. Nothing starts unless every member passes the checklist; then one member after another. |
 | `POST /api/v1/release-formations/{id}/advance` | `signed-in` | `release.formation.advance` | Records which members launched or failed and starts the next. |
@@ -510,7 +510,7 @@ Releases and release management (see [Making a release](../guide/releases.md)). 
 |---|---|---|---|
 | `GET /api/v1/policies` | `any-viewer` | — | The rule catalog, the policies in force with their sources and versions, and recent verdicts (`?recent=N` per policy, at most 100) of runs the caller may see. |
 | `GET /api/v1/runs/{id}/policy` | `run-viewer` | — | A Sortie's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive. |
-| `GET /api/v1/waivers` | `signed-in` | — | Waivers of the projects the caller may see: `?project=`, `?active=1`, `?limit=`. |
+| `GET /api/v1/waivers` | `signed-in` | — | Waivers of the Flights the caller may see: `?project=`, `?active=1`, `?limit=`. |
 | `POST /api/v1/projects/{name}/waivers` | `project-viewer` | `policy.waive` | Waives one rule of one policy. Answers `201` with the waiver. |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | `project-viewer` | `policy.revoke_waiver` | Ends a waiver. Answers with the waiver. |
 
@@ -527,7 +527,7 @@ Granting and revoking also need the role `policy.waivers.allow` names (admin by 
 Everything an administrator manages is a configuration object kept in the database, with a version
 and a history: see [Configuration objects](config-objects.md) for the kinds, their settings, how
 changes are checked and how a Terraform provider uses them. Reading and changing configuration
-needs the admin role on every project, except the overview, which any signed-in person with a role
+needs the admin role on every Flight, except the overview, which any signed-in person with a role
 may read (the web UI names the levels from it). A change names the version it expects (`If-Match`
 or `version` in the body); `412` says someone changed the object meanwhile. `X-Launchway-Manager:
 terraform` (or `git`), sent with an API token, says a tool manages the object; only that
@@ -546,12 +546,12 @@ manager may change it afterwards, unless the caller sends `take_ownership: true`
 | `POST /api/v1/config/check/repository` | `admin` | `config.check_repository` | `{"repo", "branch"}`: reads a repository with the server's own Git credentials and keeps nothing. Internal addresses and local paths are refused (`blocked`, `blocked_host`; see Egress in the server settings). Audited and limited to a few a minute per caller. Answers `ok`, a plain `problem`, the `default_branch`, the `branches` and whether the branch has a pipeline file |
 | `POST /api/v1/config/check/signin` | `admin` | `config.check_signin` | `{"issuer", "client_id", "redirect_url", "client_secret_env", "groups_claim", "admin_groups", "admin_users"}`: checks the answers against the identity provider and returns the `auth:` block for the configuration file (`snippet`). Sign-in stays in the file |
 | `POST /api/v1/config/apply` | `admin` | `config.apply` | `{"changes": [{"kind", "name", "action", "unit", "spec", "version", "comment"}]}`, at most 200: all or none. `action` is `put` (the default), `delete` or `restore`; `version` -1 means the object must not exist yet |
-| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the Base, the Wing, a Squadron or the project |
+| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a Flight and where each part comes from: the Base, the Wing, a Squadron or the Flight |
 | `GET /api/v1/config/{kind}` | `admin` | — | The objects of a kind; `?deleted=1` lists the deleted ones |
 | `POST /api/v1/config/{kind}` | `admin` | `config.create` | `{"name", "unit", "spec", "comment"}`: creates an object; `409` if it exists |
 | `GET /api/v1/config/{kind}/{obj}` | `admin` | — | One object: `spec`, `version` (also the `ETag`), `managed_by`, who created and last changed it, and `deleted` |
 | `PUT /api/v1/config/{kind}/{obj}` | `admin` | `config.put` | Creates or replaces the object, declaratively: sending the same body twice changes nothing the second time (`changed` says so). `400` lists every problem the same checks as the configuration file find |
-| `DELETE /api/v1/config/{kind}/{obj}` | `admin` | `config.delete` | Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an Airfield or a Flight line (Station (runner) pool): the answer lists them; `{"force_in_use": true}` deletes it anyway, recorded in the object's history and the Logbook) or if it would leave the configuration invalid |
+| `DELETE /api/v1/config/{kind}/{obj}` | `admin` | `config.delete` | Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a Flight, an Airfield or a Ramp (Station (runner) pool): the answer lists them; `{"force_in_use": true}` deletes it anyway, recorded in the object's history and the Logbook) or if it would leave the configuration invalid |
 | `POST /api/v1/config/{kind}/{obj}/restore` | `admin` | `config.restore` | Brings a deleted object back as it was |
 | `GET /api/v1/config/{kind}/{obj}/history` | `admin` | — | The object's changes, newest first, each with the fields that changed |
 
@@ -585,7 +585,7 @@ in the message.
 ## Built-in Depot (registry) {#built-in-registry}
 Launchway serves an OCI registry for container images, Helm charts and other OCI Cargo. The Depot
 protocol itself is under `/v2/` (see [the Depot guide](../guide/registry.md)); these routes manage what
-is in it. A repository is `PROJECT/NAME`: the first path component is the project, and the project's roles
+is in it. A repository is `PROJECT/NAME`: the first path component is the Flight, and the Flight's roles
 decide everything: viewer pulls and lists, operator pushes, admin deletes and sets policy. A repository
 someone may not read is answered as one that does not exist. The Depot is off (`404`, code `feature_off`)
 when `registry.enabled` is false or the server has no Cargo store, and answers `503` (code
@@ -597,23 +597,23 @@ when `registry.enabled` is false or the server has no Cargo store, and answers `
 | `POST /api/v1/registry/gc` | `admin` | `registry.gc_run` | Collects garbage. Body `{"dry_run": true}` lists what would go (`blobs`, `bytes`, `links`, `uploads`, `strays`, the first `digests`) and removes nothing. `409` when another server is collecting. |
 | `GET /api/v1/registry/policy` | `admin` | — | The installation's policy, or with `?scope=organization&name=` a Wing's: `quota_bytes`, `retention`, `immutable_tags`. |
 | `PUT /api/v1/registry/policy` | `admin` | `registry.policy` | Replaces it. Body `{"scope": "installation", "policy": {...}}`; an empty policy removes it. |
-| `GET /api/v1/projects/{name}/registry` | `project-viewer` | — | The project's repositories (`images`, `tags`, `bytes`, `pushed_at`), `used_bytes` against `quota_bytes` (`-1`: none), the `policy` in force with where each part comes from, and how to push. |
+| `GET /api/v1/projects/{name}/registry` | `project-viewer` | — | The Flight's repositories (`images`, `tags`, `bytes`, `pushed_at`), `used_bytes` against `quota_bytes` (`-1`: none), the `policy` in force with where each part comes from, and how to push. |
 | `GET /api/v1/projects/{name}/registry/images` | `project-viewer` | — | `?repository=` the images of one repository, newest first: `digest`, `tags`, `total_size`, `platforms`, `created_by` and `run_id`, `signed`, `has_sbom`, `vulnerabilities` (counts from an attached scan result), `attached` (signatures, SBOMs, scan results) and a copyable `pull` reference. |
 | `GET /api/v1/projects/{name}/registry/image` | `project-viewer` | — | `?repository=&reference=` (a tag or a digest): one image as above and its `manifest`. |
-| `DELETE /api/v1/projects/{name}/registry/image` | `project-operator` | `registry.image_delete` | `?repository=&reference=` deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets `403`). Refused with `409` for an immutable tag or an image a deployment uses. The bytes go at the next collection. |
-| `DELETE /api/v1/projects/{name}/registry/tag` | `project-operator` | `registry.tag_delete` | `?repository=&tag=` deletes only the tag; project admin only; `409` for an immutable tag. |
-| `GET /api/v1/projects/{name}/registry/policy` | `project-viewer` | — | The project's policy (with `?repository=` one repository's) and the `effective` values after the levels are combined. |
-| `PUT /api/v1/projects/{name}/registry/policy` | `project-operator` | `registry.policy` | Replaces it; project admin only. A project admin may lower the quota but not raise it above the installation's. |
+| `DELETE /api/v1/projects/{name}/registry/image` | `project-operator` | `registry.image_delete` | `?repository=&reference=` deletes the image with its tags and attachments; the caller must be an admin of the Flight (an operator gets `403`). Refused with `409` for an immutable tag or an image a deployment uses. The bytes go at the next collection. |
+| `DELETE /api/v1/projects/{name}/registry/tag` | `project-operator` | `registry.tag_delete` | `?repository=&tag=` deletes only the tag; Flight admin only; `409` for an immutable tag. |
+| `GET /api/v1/projects/{name}/registry/policy` | `project-viewer` | — | The Flight's policy (with `?repository=` one repository's) and the `effective` values after the levels are combined. |
+| `PUT /api/v1/projects/{name}/registry/policy` | `project-operator` | `registry.policy` | Replaces it; Flight admin only. A Flight admin may lower the quota but not raise it above the installation's. |
 | `GET /api/v1/projects/{name}/registry/retention` | `project-viewer` | — | What the retention rules would delete now (`?repository=` for one repository): each `candidate` with its tags, size and reason. Deletes nothing. |
-| `POST /api/v1/projects/{name}/registry/retention` | `project-operator` | `registry.retention_run` | Deletes them; project admin only. Answers what was `deleted`. |
+| `POST /api/v1/projects/{name}/registry/retention` | `project-operator` | `registry.retention_run` | Deletes them; Flight admin only. Answers what was `deleted`. |
 ### The Depot protocol under `/v2/` {#the-registry-protocol-under-v2}
 These endpoints speak the OCI Distribution API (version 1.1) and are not JSON-API routes: errors are the
 protocol's (`{"errors": [{"code", "message"}]}`, with Launchway's `error`, `code` and `next` beside them).
 Everything needs credentials: `GET /v2/` answers `401` with a `WWW-Authenticate: Bearer realm=".../v2/token"`
 challenge. Clients send HTTP Basic with any user name and an API token as the password, either directly or to
 `GET /v2/token` (which grants only what the caller may do, for five minutes); a pipeline's steps use a
-credential made for their Sortie (`lwi_...`), which pulls its own project's repositories and those a project's
-policy shares with it, pushes only to its own project and never for a pull request or draft run, and stops
+credential made for their Sortie (`lwi_...`), which pulls its own Flight's repositories and those a Flight's
+policy shares with it, pushes only to its own Flight and never for a pull request or draft run, and stops
 working when the Sortie ends. Passwords and tokens are accepted over HTTPS, or over HTTP only on a loopback
 listener or with `registry.allow_insecure_http`.
 | Endpoint | Does |
@@ -627,15 +627,15 @@ listener or with `registry.allow_insecure_http`.
 | `GET`, `PATCH`, `PUT`, `DELETE /v2/{name}/blobs/uploads/{id}` | status, chunk (with `Content-Range`), finish (`?digest=`), cancel; any server of a group may take any request |
 | `GET /v2/{name}/referrers/{digest}?artifactType=` | manifests whose `subject` is the digest (signatures, SBOMs, attestations) as an image index |
 ## Standing orders
-The same scans and best-practice checks for every repository, on by default (see [Standing orders](../guide/standing-orders.md)). The routes serve what can run, the settings of each level, a repository's effective profile with where each value comes from, the findings the default branch has had and what people decided about them, and a Sortie's Inspection. A level's settings are changed by someone who administers the level (the project's admin at a project); a value weaker than a lock above is refused with `409` and the plain sentence that names the lock.
+The same scans and best-practice checks for every repository, on by default (see [Standing orders](../guide/standing-orders.md)). The routes serve what can run, the settings of each level, a repository's effective profile with where each value comes from, the findings the default branch has had and what people decided about them, and a Sortie's Inspection. A level's settings are changed by someone who administers the level (the Flight's admin at a Flight); a value weaker than a lock above is refused with `409` and the plain sentence that names the lock.
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/standards/profile` | `signed-in` | — | The profile: every check with what it looks for, why, its ecosystem, tool, the tool's license and image digest, default state, whether it can block, its time budget and what it needs from the network; the gate defaults and the setting keys. |
-| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` (`installation`, `organization`, `unit` or `project`: a Base, a Wing, a Squadron or a Project) and `&scope=NAME`, with `version` (0 when none are stored). |
+| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` (`installation`, `organization`, `unit` or `project`: a Base, a Wing, a Squadron or a Flight) and `&scope=NAME`, with `version` (0 when none are stored). |
 | `PUT /api/v1/standards/settings` | `signed-in` | `standards.settings_set` | Replaces one level's settings (`level`, `scope`, `settings`, and `version` as read: a different version is `409`). `400` with the plain problems for an invalid value; `409` for a value weaker than a lock above. Switching Standing orders off needs a reason and is recorded as such. |
-| `GET /api/v1/standards/coverage` | `signed-in` | — | For the projects of a level that the caller may read: whether Standing orders are off, each check's state and whether it runs, open findings by severity. |
-| `GET /api/v1/projects/{name}/standards` | `project-viewer` | — | The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository's own file with its problems. |
-| `GET /api/v1/projects/{name}/standards/file` | `project-viewer` | — | The repository's `.launchway/standards.yaml` as it is, its problems, and the file the project's own settings would make. |
+| `GET /api/v1/standards/coverage` | `signed-in` | — | For the Flights of a level that the caller may read: whether Standing orders are off, each check's state and whether it runs, open findings by severity. |
+| `GET /api/v1/projects/{name}/standards` | `project-viewer` | — | The effective profile of a Flight at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository's own file with its problems. |
+| `GET /api/v1/projects/{name}/standards/file` | `project-viewer` | — | The repository's `.launchway/standards.yaml` as it is, its problems, and the file the Flight's own settings would make. |
 | `GET /api/v1/projects/{name}/findings` | `project-viewer` | — | The findings the default branch has had: `?status=` open, fixed, accepted or all, `severity`, `check`, `q`, `sort=oldest`, `limit`, `offset`; with totals by severity and check. |
 | `GET /api/v1/projects/{name}/findings/history` | `project-viewer` | — | Open findings by day, the mean days to fix, the oldest open finding. |
 | `GET /api/v1/projects/{name}/findings/export` | `project-viewer` | — | The findings as `?format=` json, csv or sarif (`status` as above). SARIF carries the fingerprint as a partial fingerprint. |
@@ -651,47 +651,47 @@ Stations look entries up, send them in chunks and restore them under a lease, wi
 Station API below. The request never says which scope an entry is in: the server works the scope out
 from the run the lease belongs to (`default` for the default branch, `ref:<ref>` for another branch or
 tag, `pull:<n>` for a pull request), so a Station cannot read or write an entry its Sortie's scopes do not
-reach. People and agents see a project's entries with the rights they have on the project and delete them
+reach. People and agents see a Flight's entries with the rights they have on the Flight and delete them
 as an operator; the policy (whether caches are kept, and how much) is an administrator's, in the
-database, as the installation's default with an override for a project.
+database, as the installation's default with an override for a Flight.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/projects/{name}/caches` | `project-viewer` | — | The project's entries, most recently used first: `id`, `name`, `key`, `scope`, `platform`, `bytes`, `files`, `status` (`kept` or `uploading`), `created_at`, `last_used_at`, `hits`, `pipeline`, `generation`, `sensitive`, and `run_id` and `run_number` of the Sortie that wrote it; `totals` (`entries`, `bytes`, `quota_bytes`, `max_entry_bytes`, `idle_days`) and the `policy` that applies. |
-| `DELETE /api/v1/projects/{name}/caches/{id}` | `project-operator` | `cache.delete` | Ends one entry; the next Sortie that wanted it starts without it. Answers `{"ended", "bytes"}`; `404` for an entry that does not exist or is another project's. |
+| `GET /api/v1/projects/{name}/caches` | `project-viewer` | — | The Flight's entries, most recently used first: `id`, `name`, `key`, `scope`, `platform`, `bytes`, `files`, `status` (`kept` or `uploading`), `created_at`, `last_used_at`, `hits`, `pipeline`, `generation`, `sensitive`, and `run_id` and `run_number` of the Sortie that wrote it; `totals` (`entries`, `bytes`, `quota_bytes`, `max_entry_bytes`, `idle_days`) and the `policy` that applies. |
+| `DELETE /api/v1/projects/{name}/caches/{id}` | `project-operator` | `cache.delete` | Ends one entry; the next Sortie that wanted it starts without it. Answers `{"ended", "bytes"}`; `404` for an entry that does not exist or is another Flight's. |
 | `DELETE /api/v1/projects/{name}/caches` | `project-operator` | `cache.delete` | Ends every entry of the cache named by `?name=pip`, in every scope, key and platform. `404` if there is none. |
 | `GET /api/v1/cache-policy` | `signed-in` | — | The installation's policy: `enabled`, `max_project_gib`, `max_entry_gib`, `idle_days`, `max_age_days`, and `source` (`default` until an administrator sets one). |
-| `PUT /api/v1/cache-policy` | `admin` | `cache_policy.set` | Changes the installation's policy; a field left out keeps its value. `400` for a value out of range (an entry limit above the project's quota, idle days outside 1 to 3650). Audited with the policy before and after. |
-| `GET /api/v1/projects/{name}/cache-policy` | `project-viewer` | — | The policy that applies to the project, with `source` `project` (its own override), `installation` or `default`. |
-| `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one project; a field left out keeps the value that applies to it now. |
+| `PUT /api/v1/cache-policy` | `admin` | `cache_policy.set` | Changes the installation's policy; a field left out keeps its value. `400` for a value out of range (an entry limit above the Flight's quota, idle days outside 1 to 3650). Audited with the policy before and after. |
+| `GET /api/v1/projects/{name}/cache-policy` | `project-viewer` | — | The policy that applies to the Flight, with `source` `project` (its own override), `installation` or `default`. |
+| `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one Flight; a field left out keeps the value that applies to it now. |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.clear_project` | Removes the override: the installation's policy applies again. |
 
 ## Variables
 
-A variable is a name with a type, a value, an optional Airfield and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the Squadron's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a Sortie starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings. See the [guide](../guide/variables.md).
+A variable is a name with a type, a value, an optional Airfield and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the Squadron's or the Flight's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a Sortie starts, then the pipeline file's own `with:`, then the Flight, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings. See the [guide](../guide/variables.md).
 
 | Route | Who | Audit action | What it does |
 |---|---|---|---|
-| `GET /api/v1/variables` | `signed-in` | — | The variables at a level (`?level=&scope=&environment=&names=`) with what each inherits from above and whether this level may override it. `400` without a level; `404` for a project the caller cannot see |
-| `PUT /api/v1/variables/{name}` | `signed-in` | `variable.set` | Sets a variable: `{level, scope, environment, type, of, value, description}`. Types: `string`, `number`, `boolean`, `list`, `map`, `secret` (a reference `{store, key, field}`, never text) and `connection` (a name, with `of`). A name keeps one type everywhere. Who: an operator of the project, or an admin of the Squadron's projects, or of every project for the Wing and the installation. `409` when a lock above forbids it, naming the level and who can change it |
+| `GET /api/v1/variables` | `signed-in` | — | The variables at a level (`?level=&scope=&environment=&names=`) with what each inherits from above and whether this level may override it. `400` without a level; `404` for a Flight the caller cannot see |
+| `PUT /api/v1/variables/{name}` | `signed-in` | `variable.set` | Sets a variable: `{level, scope, environment, type, of, value, description}`. Types: `string`, `number`, `boolean`, `list`, `map`, `secret` (a reference `{store, key, field}`, never text) and `connection` (a name, with `of`). A name keeps one type everywhere. Who: an operator of the Flight, or an admin of the Squadron's Flights, or of every Flight for the Wing and the installation. `409` when a lock above forbids it, naming the level and who can change it |
 | `DELETE /api/v1/variables/{name}` | `signed-in` | `variable.delete` | Deletes a variable at a level (`?level=&scope=&environment=`); what it overrode applies again |
-| `PUT /api/v1/variables/{name}/lock` | `signed-in` | `variable.lock` | Locks it: `{level, scope, environment, reason}`; a reason is required. Needs an admin at that level (of the project, at a project). Answers the variable and the nearer settings now ignored |
+| `PUT /api/v1/variables/{name}/lock` | `signed-in` | `variable.lock` | Locks it: `{level, scope, environment, reason}`; a reason is required. Needs an admin at that level (of the Flight, at a Flight). Answers the variable and the nearer settings now ignored |
 | `DELETE /api/v1/variables/{name}/lock` | `signed-in` | `variable.unlock` | Removes the lock |
-| `GET /api/v1/projects/{name}/variables` | `project-viewer` | — | Every variable in effect for a project, optionally `?environment=`, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why |
+| `GET /api/v1/projects/{name}/variables` | `project-viewer` | — | Every variable in effect for a Flight, optionally `?environment=`, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why |
 | `GET /api/v1/runs/{id}/variables` | `run-viewer` | — | The variables the Sortie used, as recorded when it was created; a re-run shows the original's |
 
 ## Switches (feature toggles) {#feature-toggles}
 
-A toggle is a value an application reads at run time, so that a feature can be turned on, off or rolled out to a share of users without a deployment. It belongs to a project, or is shared from a Squadron, the Wing or the installation (the levels variables have). Each Airfield has its own state; safeguards (a reason, an approval in a protected Airfield) are on by default. See the [guide](../guide/feature-toggles.md). People and agents use the routes of the first table; applications use the SDK routes of the second, with an SDK key and nothing else.
+A toggle is a value an application reads at run time, so that a feature can be turned on, off or rolled out to a share of users without a deployment. It belongs to a Flight, or is shared from a Squadron, the Wing or the installation (the levels variables have). Each Airfield has its own state; safeguards (a reason, an approval in a protected Airfield) are on by default. See the [guide](../guide/feature-toggles.md). People and agents use the routes of the first table; applications use the SDK routes of the second, with an SDK key and nothing else.
 
 | Route | Who | Audit action | What it does |
 |---|---|---|---|
-| `GET /api/v1/projects/{name}/toggles` | `project-viewer` | — | The project's toggles with their state in each Airfield (`environments`), stale mentions and changes waiting (`waiting`). A toggle defined at a level above the project shows with `inherited: true`. |
-| `POST /api/v1/projects/{name}/toggles` | `project-operator` | `toggle.create` | Makes a toggle: `{key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}`. Types `boolean`, `string`, `number`, `json`. It starts off in every Airfield. At a level above the project it needs an administrator of that level. `409` if the key exists, or is locked above. |
+| `GET /api/v1/projects/{name}/toggles` | `project-viewer` | — | The Flight's toggles with their state in each Airfield (`environments`), stale mentions and changes waiting (`waiting`). A toggle defined at a level above the Flight shows with `inherited: true`. |
+| `POST /api/v1/projects/{name}/toggles` | `project-operator` | `toggle.create` | Makes a toggle: `{key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}`. Types `boolean`, `string`, `number`, `json`. It starts off in every Airfield. At a level above the Flight it needs an administrator of that level. `409` if the key exists, or is locked above. |
 | `GET /api/v1/projects/{name}/toggles/{key}` | `project-viewer` | — | One toggle: its definition, each Airfield's state and rules, lock, stale mentions, when it was last evaluated. |
 | `PATCH /api/v1/projects/{name}/toggles/{key}` | `project-operator` | `toggle.update` | Changes the definition (`description`, `owner`, `kind`, `expires`, `tags`, `default`, `safe_value`, `client_visible`); never the type or the key. `400` for a client-visible toggle that needs one that is not. |
 | `DELETE /api/v1/projects/{name}/toggles/{key}` | `project-operator` | `toggle.delete` | Removes the toggle with its states; `?reason=` is required. The removal is kept in the history and can be reverted. |
-| `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `project-operator` | `toggle.lock` | Locks a toggle shared from a level above its projects: `{reason}`. Needs an administrator of that level. |
+| `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `project-operator` | `toggle.lock` | Locks a toggle shared from a level above its Flights: `{reason}`. Needs an administrator of that level. |
 | `DELETE /api/v1/projects/{name}/toggles/{key}/lock` | `project-operator` | `toggle.unlock` | Removes the lock. |
 | `PUT /api/v1/projects/{name}/toggles/{key}/environments/{env}` | `project-operator` | `toggle.set` | Sets what the toggle does in an Airfield: `{state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}`. Needs the operator role in the Airfield. `400` without a reason when the safeguard asks for one; `202` with `waiting: true` when it needs approval first; with `at` (RFC 3339) `202` with the scheduled change. |
 | `GET /api/v1/projects/{name}/toggles/{key}/history` | `project-viewer` | — | Every change to the toggle, newest first (`?environment=&limit=`): who, when, why, how, before and after, approvals, and what it reverted. |
@@ -706,16 +706,16 @@ A toggle is a value an application reads at run time, so that a feature can be t
 | `POST /api/v1/projects/{name}/toggle-revert-since` | `project-operator` | `toggle.revert_since` | Reverts every toggle change made in an Airfield since a time: `{environment, since, reason, dry_run}`. What a Return to base page offers. |
 | `GET /api/v1/projects/{name}/toggle-schedules` | `project-viewer` | — | Scheduled changes (`?toggle=`, `?all=true` for those that ran too). |
 | `DELETE /api/v1/projects/{name}/toggle-schedules/{id}` | `project-operator` | `toggle.schedule_cancel` | Cancels a scheduled change that has not run. |
-| `GET /api/v1/projects/{name}/toggle-segments` | `project-viewer` | — | The segments the project sees. |
+| `GET /api/v1/projects/{name}/toggle-segments` | `project-viewer` | — | The segments the Flight sees. |
 | `PUT /api/v1/projects/{name}/toggle-segments/{segment}` | `project-operator` | `toggle.segment_set` | Makes or replaces a segment: `{included, excluded, rules: [{clauses}], description, reason}`. |
 | `DELETE /api/v1/projects/{name}/toggle-segments/{segment}` | `project-operator` | `toggle.segment_delete` | Removes a segment (`?reason=` required); `409` while a rule names it. |
 | `GET /api/v1/projects/{name}/toggle-safeguards` | `project-viewer` | — | The safeguards in each Airfield and which level set each. |
-| `PUT /api/v1/projects/{name}/toggle-safeguards` | `project-operator` | `toggle.safeguards_set` | Sets safeguards at the project (or `level`/`scope`): `{environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}`. Needs the admin role on the project (the level's admin above it). Turning one down needs a `reason`; `409` for one a level above locked. |
-| `GET /api/v1/projects/{name}/toggle-keys` | `project-operator` | — | The SDK keys of the project (`?environment=`): kind, prefix, expiry, last use. Never a secret. |
+| `PUT /api/v1/projects/{name}/toggle-safeguards` | `project-operator` | `toggle.safeguards_set` | Sets safeguards at the Flight (or `level`/`scope`): `{environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}`. Needs the admin role on the Flight (the level's admin above it). Turning one down needs a `reason`; `409` for one a level above locked. |
+| `GET /api/v1/projects/{name}/toggle-keys` | `project-operator` | — | The SDK keys of the Flight (`?environment=`): kind, prefix, expiry, last use. Never a secret. |
 | `POST /api/v1/projects/{name}/toggle-keys` | `project-operator` | `toggle.key_create` | Makes an SDK key: `{environment, kind (server or client), name, origins}`. Needs the admin role. The key's text is in `key`, shown once. |
 | `POST /api/v1/projects/{name}/toggle-keys/{id}/rotate` | `project-operator` | `toggle.key_rotate` | Makes a new key like the old one: `{overlap_hours}`; the old one works until then (default 24 h). Needs the admin role. |
 | `DELETE /api/v1/projects/{name}/toggle-keys/{id}` | `project-operator` | `toggle.key_revoke` | Ends a key at once. Needs the admin role. |
-| `GET /api/v1/projects/{name}/toggle-file` | `project-viewer` | — | The project's own toggles and segments as a YAML file (`file`), conventionally `.launchway/toggles.yaml`. |
+| `GET /api/v1/projects/{name}/toggle-file` | `project-viewer` | — | The Flight's own toggles and segments as a YAML file (`file`), conventionally `.launchway/toggles.yaml`. |
 | `POST /api/v1/projects/{name}/toggle-plan` | `project-viewer` | `toggle.plan` | How a file differs from the live state: `{file}`. `drift` lists `add`, `change` and `only_live`. Changes nothing. |
 | `POST /api/v1/projects/{name}/toggle-apply` | `project-operator` | `toggle.apply` | Makes the live state match the file: `{file, reason, origin}`. Each change goes through the safeguards; those that need approval wait (`waiting`). Never removes what the file leaves out. |
 
@@ -731,7 +731,7 @@ The routes for applications, which prove themselves with an SDK key (`Authorizat
 
 ## Repositories (Git hosting)
 
-Only with the Base setting `forge.hosting` on (Configuration, Base settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).
+Only with the Base setting `forge.hosting` on (Configuration, Base settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' Flight patterns match that path (`jkhunter/*`).
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
@@ -762,7 +762,7 @@ A mirror is shown as `id`, `repository`, `direction`, `url`, `credential` (where
 
 ### Importing repositories (Git hosting)
 
-Getting existing repositories into Launchway, safely, before anything is switched over. A **connection** names the server they are on: its `kind` (`gitea` or `forgejo`, whose REST API lists the repositories; or `plain`, a list of addresses you give), its `base_url` and a credential reference (`{"env": "NAME"}` or `{"file": "/path"}`, never a value). An **import** makes each repository here with the same owner, name and visibility, copies every branch, tag and note, checks the copy ref by ref, and by default leaves it a pull mirror (the staged move). It can be run again: a repository already made as a mirror of the same address is resumed, one that exists in any other state is left alone, so an import never overwrites a repository that has content of its own. The connection's credential is sent only to the connection's own host; an internal address is refused unless `forge.mirror_allow` lists it (the refusal says so). All of these need the admin role on every project, and a server with `forge.hosting` off answers `404 feature_off`.
+Getting existing repositories into Launchway, safely, before anything is switched over. A **connection** names the server they are on: its `kind` (`gitea` or `forgejo`, whose REST API lists the repositories; or `plain`, a list of addresses you give), its `base_url` and a credential reference (`{"env": "NAME"}` or `{"file": "/path"}`, never a value). An **import** makes each repository here with the same owner, name and visibility, copies every branch, tag and note, checks the copy ref by ref, and by default leaves it a pull mirror (the staged move). It can be run again: a repository already made as a mirror of the same address is resumed, one that exists in any other state is left alone, so an import never overwrites a repository that has content of its own. The connection's credential is sent only to the connection's own host; an internal address is refused unless `forge.mirror_allow` lists it (the refusal says so). All of these need the admin role on every Flight, and a server with `forge.hosting` off answers `404 feature_off`.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
@@ -807,7 +807,7 @@ The browser's walk-through after the first administrator. It asks the server wha
 | `POST /api/v1/repositories/{owner}/{name}/branches` | `repo-operator` | `repository.branch_create` | Make a branch: `{"name", "from"}` where `from` is a branch, tag or commit (default: the default branch). The branch rules of a push apply, so a protected name is for administrators; a mirror or archived repository takes none. Answers 201 `{"name", "commit"}`; 409 when the name or a part of it is taken. |
 | `DELETE /api/v1/repositories/{owner}/{name}/branches` | `repo-operator` | `repository.branch_delete` | Delete the branch named by `?name=`. Never the default branch; protected branches are for administrators. Answers `{"name", "was", "undo"}`: the commit it pointed at and the command that brings it back. The audit detail holds the same commit. |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `repo-viewer` | — | The tags, newest first: `{"items": [{"name", "commit", "subject", "annotated", "message", "tagger", "committed_at"}], "total", "truncated"}`; `?q=` and `?limit=` as for branches. |
-| `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `repo-viewer` | — | One commit (a full or abbreviated name, branch or tag): `{"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}`; the Sorties are those of projects the caller may see that were started for this commit. |
+| `GET /api/v1/repositories/{owner}/{name}/commits/{sha}` | `repo-viewer` | — | One commit (a full or abbreviated name, branch or tag): `{"commit": {...as in the log, with "parent_shas", the whole "message"}, "runs": [...]}`; the Sorties are those of Flights the caller may see that were started for this commit. |
 | `GET /api/v1/repositories/{owner}/{name}/diff` | `repo-viewer` | — | The files changed from `?from=` to `?to=` (commits, branches or tags; `from=root` is the empty tree): `{"files", "total", "additions", "deletions", "truncated", "next_offset"}`, paged by `?offset=` and `?limit=` (at most 500). Pinned to a full commit name, the answer is cacheable for ever. |
 | `GET /api/v1/repositories/{owner}/{name}/diff/patch` | `repo-viewer` | — | The unified patch of one or more files (`?path=`, repeatable) between `?from=` and `?to=`, as for a pull request: a file over the size limits is held back (`held`) until `?full=1`. |
 | `GET /api/v1/repositories/{owner}/{name}/blame` | `repo-viewer` | — | Who last changed each line of `?path=` at `?ref=`, for lines `?from=` to `?to=` (at most 1000 per answer; `next` is where the next range starts): `{"lines": [{"n", "sha", "text"}], "commits": {sha: {"author", "at", "subject", "previous", "previous_path"}}, "total"}`; `previous` is the commit before that change, for blaming the file as it was. A file over 1 MiB or a binary file is refused. Limited to 120 a minute per person. |
@@ -926,7 +926,7 @@ One graph from code to what is built from it to what it needs and where it runs:
 | `GET /api/v1/graph/placement` | `signed-in` | — | `?ref=`: the machines and platforms that satisfy each component (`fits`), near misses with what is missing, and `gaps`. |
 | `GET /api/v1/graph/specification` | `signed-in` | — | `?ref=` (repeat for components that run on one machine), `headroom=` percent (default 25), `format=yaml`: a neutral machine specification with totals, headroom, provenance and conflicts. An export; nothing is provisioned. |
 | `GET /api/v1/graph/reach` | `signed-in` | — | `?ref=` a package: the versions in use that have known advisories, what uses each, and the deployments that run them. Needs vulnerability data on the server; `note` says when there is none. |
-| `POST /api/v1/graph/rescan` | `admin` | `graph.rescan` | Reads every repository, project and the installation again. |
+| `POST /api/v1/graph/rescan` | `admin` | `graph.rescan` | Reads every repository, Flight and the installation again. |
 | `POST /api/v1/graph/rebuild` | `admin` | `graph.rebuild` | Clears the graph and reads everything again; the result equals what incremental updates built. Overrides are kept. |
 | `POST /api/v1/repositories/{owner}/{name}/graph/refresh` | `repo-operator` | `graph.refresh` | Reads the repository again now (pushes do this by themselves). |
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `repo-operator` | `graph.requirements.propose` | `{"content", "title"}`: opens a pull request that makes `.launchway/requirements.yaml` what `content` says; the file is checked first (`422` with what is wrong), and nothing lands until a person merges it. `404 feature_off` without Git hosting. |
@@ -963,24 +963,24 @@ The create body:
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/runners` | `any-viewer` | — | The Stations that have contacted the server: `id`, `name`, `executor`, `version`, `last_seen`, `online`, their pool, labels and whether they are enrolled (with the key's fingerprint and age), and for launch Stations their targets. |
-| `GET /api/v1/runner-pools` | `any-viewer` | — | The Flight lines (`runner_pools` in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity. |
+| `GET /api/v1/runner-pools` | `any-viewer` | — | The Ramps (`runner_pools` in the configuration, and the default pool): name, kind, Flights, events and whether the pool requires identity. |
 | `GET /api/v1/runner-join-tokens` | `signed-in` | — | The join tokens that are still usable, never their values. Needs the role `runner_admin` names. |
 | `POST /api/v1/runner-join-tokens` | `signed-in` | `runner.join_token.create` | Makes a join token for a pool: `{"pool", "labels", "description", "max_uses", "ttl", "ephemeral"}` (`ttl` such as `1h`, the default; at most 7 days). Answers `201` with the value (`lwj_…`) in `token`, shown once: only its hash is stored. Needs the role `runner_admin` names. |
 | `POST /api/v1/runner-join-tokens/{id}/revoke` | `signed-in` | `runner.join_token.revoke` | Revokes a join token. |
 | `POST /api/v1/runners/{id}/revoke` | `signed-in` | `runner.revoke` | Revokes an enrolled Station: every server refuses it from then on, and the steps it held are queued again. |
 | `POST /api/v1/runners/{id}/rotate` | `signed-in` | `runner.rotate` | Asks an enrolled Station to move to a new key at its next request. |
 
-Making and revoking join tokens, and revoking and rotating Stations, need the role that `runner_admin` names on every project (admin by default); the handlers check it after the access class. See [Stations on other machines and clusters](../guide/runner-identity.md).
+Making and revoking join tokens, and revoking and rotating Stations, need the role that `runner_admin` names on every Flight (admin by default); the handlers check it after the access class. See [Stations on other machines and clusters](../guide/runner-identity.md).
 
 ## Verifications and AI
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/runs/{id}/verifications` | `run-viewer` | — | A Sortie's verifications: each interval's readings, the verdict and its reason in words, log clusters, and any explanation. |
-| `GET /api/v1/verifications` | `signed-in` | — | Recent verifications of the projects the caller may see: `?environment=`, `?project=`, `?service=`, `?limit=`. |
+| `GET /api/v1/verifications` | `signed-in` | — | Recent verifications of the Flights the caller may see: `?environment=`, `?project=`, `?service=`, `?limit=`. |
 | `GET /api/v1/runs/{id}/steps/{step}/verify/controls` | `run-viewer` | — | Whether the caller could mark the verification passed or failed now, and why not, in plain words. |
 | `POST /api/v1/runs/{id}/steps/{step}/verify/override` | `run-operator` | `verification.override` | Marks a running or paused verification passed or failed, with a reason: `{"outcome", "reason"}` where `outcome` is `passed` or `failed`. On a protected Airfield the person who started the run may not mark it passed. |
-| `GET /api/v1/health-sources` | `signed-in` | — | The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached. |
+| `GET /api/v1/health-sources` | `signed-in` | — | The health sources the caller's Flights may use, by name, type and Flights; never where they are or how they are reached. |
 | `GET /api/v1/ai/models` | `signed-in` | — | The configured models the caller may use: name, limits and today's use, never endpoints or keys; and `server_can_explain`. |
 | `GET /api/v1/runs/{id}/steps/{step}/explanations` | `run-viewer` | — | The explanations models gave of a failed step. |
 | `POST /api/v1/runs/{id}/steps/{step}/explain` | `run-operator` | `step.explain` | Asks a configured model (`{"model"}`) to explain a failed step from its log tail, failed tests and findings, redacted. `409` when the server has no model or no key store for it. |
@@ -988,10 +988,10 @@ Making and revoking join tokens, and revoking and rotating Stations, need the ro
 ## Work tracking
 
 Items, boards, sprints, charts, settings, the inbox and agents. Who may do what is decided by the store, not
-by the route class: seeing work needs the viewer role on the Project, changing it the operator role, and
+by the route class: seeing work needs the viewer role on the Flight, changing it the operator role, and
 settings, agent registration and imports the admin role (see [Roles and permissions](roles.md#work-tracking)).
-A Squadron's work is open to people who may act on any of its Projects; a Wing's and the Base's to people who
-may act on any Project. Scopes are written `project:owner/name`, `unit:name`, `organization` or `installation`.
+A Squadron's work is open to people who may act on any of its Flights; a Wing's and the Base's to people who
+may act on any Flight. Scopes are written `project:owner/name`, `unit:name`, `organization` or `installation`.
 Routes under `/api/v1/work/agent/` are the calls an agent makes with its `lwa_` token; the rest are for people (an agent
 token is offered the item routes only for the work it holds). The guides are [tracking work](../guide/tracking-work.md),
 [boards and sprints](../guide/boards-and-sprints.md), [work and code](../guide/work-and-code.md) and
@@ -1003,7 +1003,7 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `POST /api/v1/work/items` | `signed-in` | `work.create` | Creates an item: `{scope, type, title, body, state, priority, estimate, labels, assignees, parent, milestone, sprint, criteria, custom, confidential, …}`..  `201`. |
 | `GET /api/v1/work/items/{ref}` | `signed-in` | — | One item with its comments count, links, code, criteria, claim and, once merged, [where the fix is running](../guide/work-and-code.md#where-the-fix-is-running). `{ref}` is `PAY-12`. `404` for one you may not see. |
 | `PATCH /api/v1/work/items/{ref}` | `signed-in` | `work.update` | Changes fields, labels, assignees, criteria, state, parent, milestone, sprint, or watching. `expected_version` makes it fail with `409` if the item changed. The workflow and the agent rules apply. |
-| `POST /api/v1/work/items/{ref}/rank` | `signed-in` | `work.rank` | Puts the item `top`, `bottom`, `before` or `after` another item of the same Project (`{where, other}`). Not for agents. |
+| `POST /api/v1/work/items/{ref}/rank` | `signed-in` | `work.rank` | Puts the item `top`, `bottom`, `before` or `after` another item of the same Flight (`{where, other}`). Not for agents. |
 | `POST /api/v1/work/items/{ref}/move` | `signed-in` | `work.move` | Moves a card: `{state, before}`. The same call the drag, the menu and the keyboard make. |
 | `POST /api/v1/work/items/{ref}/take-over` | `signed-in` | `work.take_over` | A person takes the item from an agent: the lease ends, the person is the assignee, the agent's branch stays. |
 | `GET /api/v1/work/items/{ref}/history` | `signed-in` | — | The item's history, oldest first: who (person, agent or system), how, what changed. |
@@ -1048,11 +1048,11 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `GET /api/v1/work/agents` | `signed-in` | — | The agents you may see, with what each holds, took today and has waiting. |
 | `POST /api/v1/work/agents` | `signed-in` | `work.agent_create` | Registers an agent and answers its token **once**. Needs a person who maintains the scope; `403` for anyone else. `201`. |
 | `GET /api/v1/work/agents/{name}` | `signed-in` | — | One agent. |
-| `PATCH /api/v1/work/agents/{name}` | `signed-in` | `work.agent_update` | Changes an agent's projects, types, labels, limits, budgets, model, class or owner, or switches it off (`disabled`): its token stops working at once and what it holds returns to Ready. |
+| `PATCH /api/v1/work/agents/{name}` | `signed-in` | `work.agent_update` | Changes an agent's Flights, types, labels, limits, budgets, model, class or owner, or switches it off (`disabled`): its token stops working at once and what it holds returns to Ready. |
 | `DELETE /api/v1/work/agents/{name}` | `signed-in` | `work.agent_delete` | Deletes an agent. |
 | `POST /api/v1/work/agents/{name}/rotate-token` | `signed-in` | `work.agent_rotate` | Replaces the token and answers the new one once; the old one stops working. |
 | `GET /api/v1/work/agents/{name}/actions` | `signed-in` | — | What the agent did lately: claims, heartbeats, hand-backs, reviews. |
-| `GET /api/v1/work/spend` | `signed-in` | — | What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items. |
+| `GET /api/v1/work/spend` | `signed-in` | — | What agents reported spending: each agent over 24 hours against its budget, each Flight over all time, and the costliest items. |
 | `POST /api/v1/work/autonomy/clear-pause` | `signed-in` | `work.autonomy_clear_pause` | A person who maintains the scope lets autonomy resume `{scope, reason}`. |
 | `GET /api/v1/work/samples` | `signed-in` | — | Merges an agent approved that were flagged for a person to look at, those not yet looked at unless `?all=true`. |
 | `POST /api/v1/work/samples/{id}/complete` | `signed-in` | `work.sample_complete` | Records that a maintainer looked at a flagged merge. |
@@ -1110,7 +1110,7 @@ event: run
 data: {"id":"run_…","project":"demo-app","number":3,"status":"running",…}
 ```
 
-Without parameters it sends `run` events (Debriefs) of the projects the caller may see. With `?run=<id>` it sends only that run's changes, including its log lines. With sign-in on, the session or token is checked again at every ping, and the stream ends when it is no longer valid. A client that falls behind is disconnected: reconnect and fetch again. Proxies must not buffer this route (the server sends `X-Accel-Buffering: no`). The message types are listed in [Events and audit trail](events.md).
+Without parameters it sends `run` events (Debriefs) of the Flights the caller may see. With `?run=<id>` it sends only that run's changes, including its log lines. With sign-in on, the session or token is checked again at every ping, and the stream ends when it is no longer valid. A client that falls behind is disconnected: reconnect and fetch again. Proxies must not buffer this route (the server sends `X-Accel-Buffering: no`). The message types are listed in [Events and audit trail](events.md).
 
 ```sh
 curl -N http://127.0.0.1:8080/api/v1/stream
@@ -1118,14 +1118,14 @@ curl -N http://127.0.0.1:8080/api/v1/stream
 
 ## Webhooks
 
-Webhook routes need no session or token. A caller proves itself with a secret the project's configuration names (an environment variable or a file). A caller that cannot prove itself, a project without the hook, and an unknown project all get the same answer, `404 {"error": "not found"}`. Refused calls count towards the [failure limit](#too-many-failures) and are recorded in the Logbook.
+Webhook routes need no session or token. A caller proves itself with a secret the Flight's configuration names (an environment variable or a file). A caller that cannot prove itself, a Flight without the hook, and an unknown Flight all get the same answer, `404 {"error": "not found"}`. Refused calls count towards the [failure limit](#too-many-failures) and are recorded in the Logbook.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `POST /api/v1/projects/{name}/git-hook` | `public` | — | A Git host's push or pull-request webhook: makes the server poll the project at once. Recorded as `webhook.git`. |
+| `POST /api/v1/projects/{name}/git-hook` | `public` | — | A Git host's push or pull-request webhook: makes the server poll the Flight at once. Recorded as `webhook.git`. |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | `public` | — | Starts a run of a pipeline's webhook trigger, with inputs mapped from the JSON body. Recorded as `webhook.run`. |
 
-**Git hook.** Configure `git_webhook: { kind, secret_env }` on the project. The server checks each call the way its host signs it:
+**Git hook.** Configure `git_webhook: { kind, secret_env }` on the Flight. The server checks each call the way its host signs it:
 
 | `kind` | Checked header | Delivery ID |
 |---|---|---|
@@ -1135,7 +1135,7 @@ Webhook routes need no session or token. A caller proves itself with a secret th
 
 It answers `202` with `{"status": "polling"}`; `{"status": "already received"}` for a delivery ID seen before; `{"status": "ignored", "event": "…"}` for an event that cannot move a ref. The body may be up to 25 MiB. The poll stays the source of truth: a call only makes it happen sooner.
 
-**Webhook trigger.** The pipeline declares the trigger, and the project's configuration names its secret under `webhooks: { <trigger>: { token_env } }` or `{ hmac_secret_env }`. A caller sends either:
+**Webhook trigger.** The pipeline declares the trigger, and the Flight's configuration names its secret under `webhooks: { <trigger>: { token_env } }` or `{ hmac_secret_env }`. A caller sends either:
 
 - `Authorization: Bearer <token>`, or
 - `X-Launchway-Timestamp: <Unix seconds>` and `X-Launchway-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<body>">`, with a timestamp within five minutes. A signed request is accepted once; a repeat answers `409`.
@@ -1144,7 +1144,7 @@ The body is JSON of at most 64 KiB. `Idempotency-Key: <up to 200 printable chara
 
 ## Station API {#runner-api}
 
-The routes under `/api/runner/v1/` are for Launchway Stations only. People and scripts never call them. They are authenticated by `Authorization: Bearer <token>`: the shared Station token (`LAUNCHWAY_RUNNER_TOKEN`, or the token the server keeps in its database), or a launch Flight line's own token (`runner_pools` in the server configuration). Any other token answers `401 {"error": "a valid runner token is required"}`. All Station connections are outbound from the Station to the server.
+The routes under `/api/runner/v1/` are for Launchway Stations only. People and scripts never call them. They are authenticated by `Authorization: Bearer <token>`: the shared Station token (`LAUNCHWAY_RUNNER_TOKEN`, or the token the server keeps in its database), or a launch Ramp's own token (`runner_pools` in the server configuration). Any other token answers `401 {"error": "a valid runner token is required"}`. All Station connections are outbound from the Station to the server.
 
 In outline, a Station long-polls for work (`lease`), says the step started (`start`), reports while it runs (`heartbeat`, `logs`; the answer says whether the step was canceled), uploads and fetches Cargo in chunks, and reports how the step ended (`finish`). A Station that stops says so (`leave`), so that others can take over its work at once. Launch Stations, which hold a pool's token, take only launch and Return to base work, watch the deployments of their targets and report what they observe, and carry out people's deployment commands. The shared token cannot take launch work, and a pool's token can take nothing else (`403`).
 
@@ -1162,7 +1162,7 @@ In outline, a Station long-polls for work (`lease`), says the step started (`sta
 | `POST /api/runner/v1/artifacts/commit` | `runner` | — | Finishes a Cargo upload. |
 | `POST /api/runner/v1/artifacts/download` | `runner` | — | Fetches a file of a Cargo for a step's `fetch:`. |
 | `POST /api/runner/v1/caches/lookup` | `runner` | — | Asks for the entry a step with a `cache:` should restore: the exact key in the Sortie's own scope and then the default scope, or with `fallback: latest` the newest entry of the name and platform. Answers `{"entry"}` or nothing, with a `reason` when caching is off. |
-| `POST /api/runner/v1/caches/begin` | `runner` | — | Declares an entry to save (name, key, platform, size, SHA-256). `{"exists": true}` when an entry with that key is kept already (entries are never changed) or being saved by another Sortie; `403` when the policy or the Sortie's scope forbids saving, `413` when the entry is over the limits or does not fit the project's quota. The entry's bytes count against the quota from here, ending the project's least recently used entries to make room (those of pull requests and branches first) and reported as `evicted`. |
+| `POST /api/runner/v1/caches/begin` | `runner` | — | Declares an entry to save (name, key, platform, size, SHA-256). `{"exists": true}` when an entry with that key is kept already (entries are never changed) or being saved by another Sortie; `403` when the policy or the Sortie's scope forbids saving, `413` when the entry is over the limits or does not fit the Flight's quota. The entry's bytes count against the quota from here, ending the Flight's least recently used entries to make room (those of pull requests and branches first) and reported as `evicted`. |
 | `PUT /api/runner/v1/caches/chunk` | `runner` | — | Uploads one chunk of an entry. It is its own route, not the Cargo', because an entry is one archive with rows and limits of its own. |
 | `POST /api/runner/v1/caches/commit` | `runner` | — | Keeps an entry whose bytes have all arrived. |
 | `POST /api/runner/v1/caches/download` | `runner` | — | Restores an entry the step's lookup may return, from an offset. |
@@ -1186,13 +1186,13 @@ The request and response bodies of these routes are internal to Launchway and ma
 
 ## Configuration as code
 
-Reports of Ansible and plan steps, the project's Configuration page, and the built-in Terraform/OpenTofu state. The tools run in step containers; these routes keep and serve what they produced. A step keeps its report files as the Cargo (artifact) `launchway-config`; the server reads them once, redacts them again, and stores the parsed report with the Sortie. State holds secrets in clear text by design of its format: it is sealed in the database, a server with no root key refuses it (`503` on the protocol, `409` elsewhere), and only `pull` returns it, with a reason.
+Reports of Ansible and plan steps, the Flight's Configuration page, and the built-in Terraform/OpenTofu state. The tools run in step containers; these routes keep and serve what they produced. A step keeps its report files as the Cargo (artifact) `launchway-config`; the server reads them once, redacts them again, and stores the parsed report with the Sortie. State holds secrets in clear text by design of its format: it is sealed in the database, a server with no root key refuses it (`503` on the protocol, `409` elsewhere), and only `pull` returns it, with a reason.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/runs/{id}/config-reports` | `run-viewer` | — | The Sortie's reports: `step`, `kind` (`ansible` or `plan`), `status`, `recap` (for Ansible `12 hosts: 9 changed, 3 ok, 0 failed`; in check mode `would change`), `check`, `environment`, `commit`. |
 | `GET /api/v1/runs/{id}/config-reports/{step}` | `run-viewer` | — | One report with its `summary` (failure, hosts to run again, drift) and `document` (plays, tasks and hosts; or the plan's resources with attribute differences and risk). `?kind=` picks one when a step has both. No secret value is ever in it: `no_log` results, sensitive plan values and credential-like text are removed before it is stored. |
-| `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` | `run-operator` | `config.rerun_failed` | Starts a run of the same project and branch with the input `limit` set to the hosts that failed or were unreachable. `409` if none did. |
+| `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` | `run-operator` | `config.rerun_failed` | Starts a run of the same Flight and branch with the input `limit` set to the hosts that failed or were unreachable. `409` if none did. |
 | `GET /api/v1/projects/{name}/configuration` | `project-viewer` | — | The Configuration page: per Airfield the last apply, the last check-mode run (drift), the last plan, and the state workspaces. |
 | `GET /api/v1/projects/{name}/state` | `project-viewer` | — | The state workspaces: `name`, `serial`, `version`, `lock`; and whether this server can seal state (`sealed`). |
 | `GET /api/v1/projects/{name}/state/{workspace}` | `project-viewer` | — | Resources (address, provider, instances) and output names (with `sensitive`) of the newest version, or of `?version=`. Never a value. |
@@ -1202,13 +1202,13 @@ Reports of Ansible and plan steps, the project's Configuration page, and the bui
 | `POST /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.lock` | Locks the workspace by hand: `{"reason"}`. `423` if it is locked. |
 | `DELETE /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.unlock` | Releases a lock whoever holds it; `?reason=` is required. `409` while the Sortie that holds it is still going. |
 | `POST /api/v1/projects/{name}/state/{workspace}/rollback` | `project-operator` | `state.rollback` | `{"version", "reason"}`: stores that version as the newest, with a higher serial. Changes the stored state only; no real resource changes. `423` while locked. |
-| `GET /api/state/v1/{project}/{workspace}` | `public` | — | The Terraform/OpenTofu `http` backend: the current state, `404` if none. HTTP basic credentials: the password is a Sortie's state credential (`lwst_...`, one workspace of one project, until the Sortie ends) or an API token with the viewer role. |
+| `GET /api/state/v1/{project}/{workspace}` | `public` | — | The Terraform/OpenTofu `http` backend: the current state, `404` if none. HTTP basic credentials: the password is a Sortie's state credential (`lwst_...`, one workspace of one Flight, until the Sortie ends) or an API token with the viewer role. |
 | `POST /api/state/v1/{project}/{workspace}` | `public` | — | Stores the state (`?ID=` the lock id). `409` for an older serial, another lineage or the same serial with other content; `423` under another's lock; operator role or a read-write run credential. |
 | `PUT /api/state/v1/{project}/{workspace}` | `public` | — | The same as `POST`. |
 | `DELETE /api/state/v1/{project}/{workspace}` | `public` | — | Removes the workspace and its versions; refused while locked. |
 | `LOCK /api/state/v1/{project}/{workspace}/lock` | `public` | — | Takes the lock with the client's lock document (an `ID`), audited as `state.lock`. `423` answers with the holder's document. A lock whose run has ended is released first. |
 | `UNLOCK /api/state/v1/{project}/{workspace}/lock` | `public` | — | Releases the lock the client holds under its `ID`, audited as `state.unlock`. |
-| `POST /api/runner/v1/config/state-credential` | `runner` | — | A Station (runner), under a lease, asks for the credential of one workspace of the lease's project: valid for that run only, read-only for pull request and draft runs. |
+| `POST /api/runner/v1/config/state-credential` | `runner` | — | A Station (runner), under a lease, asks for the credential of one workspace of the lease's Flight: valid for that run only, read-only for pull request and draft runs. |
 
 ## What next
 

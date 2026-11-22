@@ -20,16 +20,16 @@ Three rules keep this safe:
 | Key | Default word | Plain word | What it means |
 |---|---|---|---|
 | `installation` | **Base** | Installation | The whole installation, and every customer's own walled-off space on the hosted service: the top level. |
-| `organization` | **Wing** | Organization | The group that owns the projects: the second level. |
-| `unit` | **Squadron** | Team | An optional group of projects with shared settings: the third level. |
-| `project` | **Project** | Project | One repository and its pipeline: the fourth level. |
+| `organization` | **Wing** | Organization | The group that owns the Squadrons: the second level. |
+| `unit` | **Squadron** | Team | A named folder of Flights with its own people, settings, measures and cards: the third level. |
+| `project` | **Flight** | Codebase | One repository and its pipelines: the fourth level. |
 
 ### Work
 
 | Key | Default word | Plain word | What it means |
 |---|---|---|---|
 | `runner` | **Station** | Runner | A machine or service that does the work of a pipeline's steps. |
-| `runner_group` | **Flight line** | Runner group | A group of runners that share a purpose, such as every runner that can build images. |
+| `runner_group` | **Ramp** | Ramp | A group of runners that share a purpose, such as every runner that can build images. |
 | `run` | **Sortie** | Run | One execution of a pipeline, from the first step to the last. |
 | `queue` | **Holding pattern** | Queue | Where runs wait until a runner or a slot is free, and the reason each one is waiting. |
 | `run_log` | **Flight recorder** | Run log | The recorded output of every step of a run, kept so you can read what happened. |
@@ -55,7 +55,7 @@ Three rules keep this safe:
 | `go` | **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. |
 | `no_go` | **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. |
 | `hold` | **Hold** | Freeze | A time when changes may not go out. |
-| `flight_plan` | **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of project, with a few things to fill in. |
+| `flight_plan` | **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of Flight, with a few things to fill in. |
 | `maneuver` | **Maneuver** | Step template | A reusable step, or a few steps, that a pipeline uses by name: build an image, deliver to an environment. |
 | `hangar` | **Hangar** | Template library | The library of Flight plans and Maneuvers that ships with Launchway, and the page that shows it. |
 | `payload` | **Payload** | Contents | What a change delivers. |
@@ -69,11 +69,11 @@ Three rules keep this safe:
 | `home` | **Tower** | Home | The first page: what needs you now, and a map of everything Launchway holds. |
 | `monitoring` | **Radar** | Monitoring / Monitoring | Health, metrics and the map of how services talk to each other. |
 | `notifications` | **Comms / Comms** | Notifications / Notifications | Messages Launchway sends when something needs attention, and where they go. |
-| `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. It is also the name of the area that holds them with the images your pipelines build and their components: Images, Components and the built-in store are its tabs. |
+| `registry` | **Depot** | Registry | Launchway's built-in store for container images and charts. |
 | `artifact` | **Cargo / Cargo** | Artifact | A file or image a pipeline builds and keeps, such as a package or container image. |
 | `standards` | **Standing orders / Standing orders** | Standards / Standards | The checks every repository gets without asking, and the gates that block a change that introduces a serious problem. |
 | `scan` | **Inspection** | Security scan | The stage Standing orders add to every run: the security checks, then one verdict on what the change introduces. |
-| `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a project uses, opened as pull requests. |
+| `dependency_updates` | **Maintenance / Maintenance** | Dependency updates / Dependency updates | Proposed updates to the libraries a Flight uses, opened as pull requests. |
 | `chaos_test` | **Drill** | Chaos test | A planned failure, such as stopping a service, to prove the system recovers. |
 | `learn` | **Flight school** | Learn | Short lessons that teach Launchway by doing. |
 | `first_run` | **In-processing** | Setup | The guided setup the first time Launchway starts. |
@@ -84,10 +84,10 @@ Three rules keep this safe:
 
 | Key | Default word | Plain word | What it means |
 |---|---|---|---|
-| `owner` | **Commander** | Owner | Can do everything, including who may do what. The stored role is owner. |
-| `approver` | **Controller** | Approver | Decides whether a change may go on. The stored role is approver. |
-| `developer` | **Pilot** | Developer | Writes code and starts runs. The stored role is developer. |
-| `viewer` | **Observer** | Viewer | Can read everything and change nothing. The stored role is viewer. |
+| `owner` | **Commander** | Owner | Can do everything, including who may do what. Today this is the admin role: the stored roles are viewer, operator and admin, and there is no separate owner role. |
+| `approver` | **Controller** | Approver | Decides whether a change may go on. Today a person who may approve holds the operator role: there is no separate approver role yet. |
+| `developer` | **Pilot** | Developer | Writes code and starts runs. Today a person who writes code and starts runs holds the operator role: there is no separate developer role. |
+| `viewer` | **Observer** | Viewer | Can read everything and change nothing. The stored role is viewer, as the word says. |
 
 ### Statuses
 

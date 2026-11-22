@@ -42,7 +42,7 @@ describe("the variables hierarchy", () => {
     expect(await screen.findByText("replicas")).toBeInTheDocument();
     const struck = document.querySelectorAll(".vr-chain s");
     expect([...struck].map((s) => s.textContent)).toEqual(["3", "1"]);
-    expect(screen.getByText("from Project shop")).toBeInTheDocument();
+    expect(screen.getByText("from Flight shop")).toBeInTheDocument();
   });
 
   it("disables override with the reason when a lock above forbids it, and names who locked it", async () => {

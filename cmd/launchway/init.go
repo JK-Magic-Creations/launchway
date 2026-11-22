@@ -42,7 +42,7 @@ func cmdInit(args []string) error {
 	}
 	d := starters.Detect(files, read)
 	if d == nil {
-		fmt.Println("Nothing here says what kind of project this is (no go.mod, pyproject.toml, package.json, pom.xml, build.gradle, Chart.yaml, Dockerfile or index.html at the top).")
+		fmt.Println("Nothing here says what kind of Flight this is (no go.mod, pyproject.toml, package.json, pom.xml, build.gradle, Chart.yaml, Dockerfile or index.html at the top).")
 		fmt.Println("Write a pipeline by hand: https://jk-magic-creations.github.io/launchway/tutorials/first-pipeline, or run it from a subdirectory.")
 		return cliErr{1, ""}
 	}

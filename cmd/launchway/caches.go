@@ -11,17 +11,17 @@ import (
 )
 
 const cachesUsage = `Usage:
-  launchway caches list PROJECT [--json]              a project's build caches, and the quota they count against
-  launchway caches delete PROJECT --name N | --id ID  end one cache entry, or every entry of a cache
-  launchway caches policy get [PROJECT] [--json]      whether caches are kept, and how much
-  launchway caches policy set [PROJECT]               change the policy (administrators)
+  launchway caches list FLIGHT [--json]              a Flight's build caches, and the quota they count against
+  launchway caches delete FLIGHT --name N | --id ID  end one cache entry, or every entry of a cache
+  launchway caches policy get [FLIGHT] [--json]      whether caches are kept, and how much
+  launchway caches policy set [FLIGHT]               change the policy (administrators)
                      [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N]
-  launchway caches policy clear PROJECT               drop a project's own policy (administrators)
+  launchway caches policy clear FLIGHT               drop a Flight's own policy (administrators)
 
-Listing needs the rights to read the project, deleting those to operate it, and the
+Listing needs the rights to read the Flight, deleting those to operate it, and the
 policy is an administrator's. Deleting is recorded in the audit trail; the next run that
-wanted the entry starts without it and saves it again. Without a project, policy get and
-set are the installation's; with one, the project's own policy (an override of the
+wanted the entry starts without it and saves it again. Without a Flight, policy get and
+set are the installation's; with one, the Flight's own policy (an override of the
 installation's), and policy clear removes it.
 `
 
@@ -68,7 +68,7 @@ func (cl *client) cachesList(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway caches list PROJECT [--json]")
+		return usageErr("launchway caches list FLIGHT [--json]")
 	}
 	var l engine.CacheList
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/caches", nil, &l); err != nil {
@@ -76,7 +76,7 @@ func (cl *client) cachesList(args []string) error {
 	}
 	return cl.print(l, *asJSON, func() {
 		if !l.Policy.Enabled {
-			fmt.Fprintln(cl.out, "Caching is turned off for this project (cache policy).")
+			fmt.Fprintln(cl.out, "Caching is turned off for this Flight (cache policy).")
 		}
 		if len(l.Entries) == 0 {
 			fmt.Fprintln(cl.out, "Nothing is cached.")
@@ -111,7 +111,7 @@ func (cl *client) cachesDelete(args []string) error {
 		return err
 	}
 	if len(pos) != 1 || (*name == "") == (*id == "") {
-		return usageErr("launchway caches delete PROJECT --name N | --id ID")
+		return usageErr("launchway caches delete FLIGHT --name N | --id ID")
 	}
 	path := "/api/v1/projects/" + url.PathEscape(pos[0]) + "/caches"
 	if *id != "" {
@@ -156,7 +156,7 @@ func printPolicy(cl *client, v engine.CachePolicyView) {
 	} else {
 		fmt.Fprintf(cl.out, "Caching is on (%s). ", v.Source)
 	}
-	fmt.Fprintf(cl.out, "A project keeps at most %g GiB, an entry at most %g GiB, and an entry nobody restores is ended after %d days; a restore of one older than %d days counts as a miss and the step rebuilds it.\n",
+	fmt.Fprintf(cl.out, "A Flight keeps at most %g GiB, an entry at most %g GiB, and an entry nobody restores is ended after %d days; a restore of one older than %d days counts as a miss and the step rebuilds it.\n",
 		v.MaxProjectGiB, v.MaxEntryGiB, v.IdleDays, v.MaxAgeDays)
 }
 
@@ -168,7 +168,7 @@ func (cl *client) cachesPolicyGet(args []string) error {
 		return err
 	}
 	if len(pos) > 1 {
-		return usageErr("launchway caches policy get [PROJECT] [--json]")
+		return usageErr("launchway caches policy get [FLIGHT] [--json]")
 	}
 	project := ""
 	if len(pos) == 1 {
@@ -184,7 +184,7 @@ func (cl *client) cachesPolicyGet(args []string) error {
 func (cl *client) cachesPolicySet(args []string) error {
 	fs := flag.NewFlagSet("caches policy set", flag.ContinueOnError)
 	enabled := fs.Bool("enabled", true, "whether caches are kept at all")
-	maxProject := fs.Float64("max-project-gib", 0, "how much one project's entries may add up to, in GiB")
+	maxProject := fs.Float64("max-project-gib", 0, "how much one Flight's entries may add up to, in GiB")
 	maxEntry := fs.Float64("max-entry-gib", 0, "the most one entry may hold, in GiB")
 	idle := fs.Int("idle-days", 0, "how long an entry nobody restored is kept")
 	maxAge := fs.Int("max-age-days", 0, "how old an entry may be before a restore treats it as missing and the step rebuilds it")
@@ -195,7 +195,7 @@ func (cl *client) cachesPolicySet(args []string) error {
 	}
 	given := visited(fs)
 	if len(pos) > 1 || (!given["enabled"] && !given["max-project-gib"] && !given["max-entry-gib"] && !given["idle-days"] && !given["max-age-days"]) {
-		return usageErr("launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N]")
+		return usageErr("launchway caches policy set [FLIGHT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N]")
 	}
 	body := map[string]any{}
 	if given["enabled"] {
@@ -232,7 +232,7 @@ func (cl *client) cachesPolicyClear(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway caches policy clear PROJECT")
+		return usageErr("launchway caches policy clear FLIGHT")
 	}
 	var v engine.CachePolicyView
 	if err := cl.call("DELETE", policyPath(pos[0]), nil, &v); err != nil {

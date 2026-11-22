@@ -24,7 +24,7 @@ or replace it. It is for operators.
 | Build caches | The same. The cached archives are not encrypted, and cache entries are not signed; see [build caches](build-caches.md#what-a-cache-entry-is-not-yet) |
 | Hosted Git repository packs | The same |
 | Depot (registry) images, charts and other OCI Cargo (the [built-in Depot](registry.md)) | The same. Layers, configs and manifests are stored as pushed; `launchway doctor registry` says so |
-| Run metadata, project names, states, counts, the Logbook | These are searched, so they stay readable; use database and volume encryption |
+| Run metadata, Flight (codebase) names, states, counts, the Logbook | These are searched, so they stay readable; use database and volume encryption |
 
 The next slice adds per-object encryption of Cargo, logs, caches, Git packs and Depot blobs under the same
 keys. Until then, **encrypt the database volume and the Cargo store as well**: Launchway cannot see

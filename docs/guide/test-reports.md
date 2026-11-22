@@ -2,7 +2,7 @@
 
 The report of a Sortie's tests is the [Debrief](debrief.md).
 
-How Launchway reads test result files and coverage, and what the Tests tab and the project Tests page show.
+How Launchway reads test result files and coverage, and what the Tests tab and the Flight (codebase) Tests page show.
 
 A step can say which test result files it writes, and Launchway reads them when the step ends,
 **whether it passed or failed** (a failing test step is the case that matters), was canceled or
@@ -51,13 +51,13 @@ container; those files are the test data in `internal/testreport/testdata/real` 
 | `go test -json` | Go | Go 1.27 | Results, panics, build failures, output |
 | Cucumber JSON | Karate, cucumber-js, Cucumber-JVM, SpecFlow and others | Karate 2.1.4 and 1.5.2, cucumber-js 13.3.0 | Features and scenarios, every step with its status and time, tags, doc strings and tables, embedded screenshots and text; Karate's HTTP calls as formatted requests and responses |
 | Karate JSON | Karate 1.x (`*.karate-json.txt`) and Karate 2's event stream (`karate-events.jsonl`) | Karate 1.5.2 and 2.1.4 | As Cucumber JSON |
-| Playwright JSON | Playwright's `json` reporter | Playwright 1.65.1 | Each test in each project (browser), retries and flaky tests, steps, screenshots, videos and traces, tags and annotations |
+| Playwright JSON | Playwright's `json` reporter | Playwright 1.65.1 | Each test in each Flight (browser), retries and flaky tests, steps, screenshots, videos and traces, tags and annotations |
 | mochawesome | Cypress and Mocha with mochawesome (merged or one file per spec) | mochawesome 8.1.1 with Cypress 16.3.0 | Suites, tests, errors with stack, screenshots named in the context |
 | CTRF | Reporters for Playwright, Jest, Vitest, Cypress, WebdriverIO, k6 and others (`ctrf-report.json`) | playwright-ctrf-json-reporter 0.2.0, jest-ctrf-json-reporter 0.2.0 | Tests, suites, retries and flaky, tags, browser, attachments, steps |
 | TestNG XML | TestNG (`testng-results.xml`) | TestNG 7.12.0 | Classes and methods, groups as tags, parameters, failed configuration methods |
 | NUnit 3 XML | NUnit (console or NunitXml.TestLogger) | NUnit 4.2.2 with NunitXml.TestLogger 8.1.0 | Fixtures and cases, categories as tags, properties, attachments, output |
 | xUnit.net v2 XML | xunit.console, XunitXml.TestLogger | xunit 2.9.2 with XunitXml.TestLogger 8.1.0 | Tests, traits (`Category` as tags), skip reasons, output |
-| TRX | `dotnet test --logger trx`, Visual Studio | .NET SDK 9.0.321 (xUnit and NUnit projects) | Results and data-driven inner results, categories, output, result files as attachments |
+| TRX | `dotnet test --logger trx`, Visual Studio | .NET SDK 9.0.321 (xUnit and NUnit Flights) | Results and data-driven inner results, categories, output, result files as attachments |
 | TAP 13/14 | `node --test --test-reporter=tap`, Bats, `prove`, many others | Node 24.22.3, Bats 1.14.0 | Tests and subtests, `# SKIP` and `# TODO`, YAML diagnostics as message and stack |
 | Robot Framework `output.xml` | Robot Framework 6 and 7 | Robot Framework 7.5.1 | Suites and tests, tags, every keyword as a step, failure messages, embedded screenshots |
 
@@ -131,7 +131,7 @@ dotnet:
 ## What you see
 
 - **The Tests tab** of a Sortie (run) shows the totals, a pass rate and a bar, then every result, failures
-  first. Results can be filtered by status, tag, suite and browser (or Playwright project),
+  first. Results can be filtered by status, tag, suite and browser (or Playwright Flight),
   searched, sorted by time, and grouped by step, suite or browser. A strip compares the run with
   the previous run of the same branch: **new failures** (they passed then), **fixed** and **still
   failing**. Each result opens to its message and stack trace, captured output, properties, earlier
@@ -141,10 +141,10 @@ dotnet:
   `npx playwright show-trace`), text inline. Its history on the branch is a strip of its last
   results and a sparkline of its time. A test that failed and then passed on a retry, of the step
   or inside the tool, is **flaky**.
-- **A project's Tests page** shows a branch's totals, time and coverage over its last runs, the
+- **A Flight's Tests page** shows a branch's totals, time and coverage over its last runs, the
   tests that fail most, flaky tests (they passed and failed on the same commit, or passed only on a
   retry), the slowest, and each test's history.
-- A test is known by its suite, name and file, and its browser or project when it has one, so its
+- A test is known by its suite, name and file, and its browser or Flight when it has one, so its
   history follows it from run to run, separately in each browser.
 
 ## Attachments
@@ -157,7 +157,7 @@ leads outside the directory (`..`, `/etc/passwd`) is listed with the reason and 
 Symbolic links are never followed when the directory is kept, on any executor. Attachments that
 reports carry inside them (Cucumber and Karate embeddings, Playwright bodies) are kept by the
 server as the Cargo `test-embedded`, at most 5 MiB each and 20 MiB per report. Both count
-toward the Sortie's and project's Cargo limits and expire like other Cargo.
+toward the Sortie's and Flight's Cargo limits and expire like other Cargo.
 
 Attachments are served by what their content is, not what the report says it is: PNG, JPEG, GIF
 and WebP images, WebM and MP4 videos and plain text are shown inline; everything else (HTML, SVG,
@@ -184,9 +184,9 @@ reports:
   ("Coverage too low (fail_under): line coverage is 71.4% (25 of 35), under the 80% this step
   requires"); a step whose reports cannot be read fails it too. Such a failure is not retried.
 - **The Coverage tab** of a Sortie shows lines (or statements), branches and functions, how they
-  changed since the previous run of the branch and against the project's default branch, each
+  changed since the previous run of the branch and against the Flight's default branch, each
   step's coverage and threshold, and a table of packages and files with their change.
-  A project's Tests page shows the trend.
+  A Flight's Tests page shows the trend.
 - Stations (runners) collect coverage like Debriefs (`runner.reports.*` limits). A Station older than this
   feature is not given a step that declares coverage.
 
@@ -240,7 +240,7 @@ the Reports tab: every attempt was blocked.
 
 ## API and command line
 
-Anyone who may see the Sortie or project:
+Anyone who may see the Sortie or Flight:
 
 - `GET /api/v1/runs/{id}/tests` (summary, step by step),
   `GET /api/v1/runs/{id}/tests/cases?status=failed|passed|skipped|flaky&q=&step=&tag=&suite=&variant=&sort=failures|slowest|name&limit=&offset=`
@@ -265,15 +265,15 @@ same transaction: messages cut to 2 KiB, traces to 8 KiB, captured output (only 
 failed) to its last 4 KiB, and steps, attachments and properties to at most 64 KiB a result and
 16 MiB an attempt (failing results first; a passing result's steps are the first thing left out).
 A step keeps at most 200 steps a result, 20 attachments, 20 tags and 20 properties. Launchway keeps
-runs forever (there is no Sortie retention yet), so individual results are bounded per project: when
-a project has more than `max_cases_per_project`, the oldest runs' results are removed first; their
+runs forever (there is no Sortie retention yet), so individual results are bounded per Flight: when
+a Flight has more than `max_cases_per_project`, the oldest runs' results are removed first; their
 totals stay, and the Sortie says so. Coverage files are bounded the same way.
 
 | Setting | Where | Default | Meaning |
 |---|---|---|---|
 | `tests.max_upload_mib` | server | 24 | MiB of report files accepted per step attempt; Stations are told and send no more |
 | `tests.max_cases_per_run` | server | 50000 | individual results one Sortie keeps; beyond it, only the totals |
-| `tests.max_cases_per_project` | server | 1000000 | individual results a project keeps; the oldest runs' go first |
+| `tests.max_cases_per_project` | server | 1000000 | individual results a Flight keeps; the oldest runs' go first |
 | `tests.max_age_days` | server | 180 | how long individual results and per-test statistics are kept; older ones go whatever the count |
 | `reports.max_attachment_files` | server | 2000 | files a step's attachments directory may hold |
 | `reports.max_attachment_mib` | server | 512 | MiB a step's attachments directory may hold |
@@ -281,7 +281,7 @@ totals stay, and the Sortie says so. Coverage files are bounded the same way.
 | `reports.max_html_mib` | server | 256 | MiB one HTML report may hold |
 | `reports.max_coverage_upload_mib` | server | 24 | MiB of coverage reports accepted per step attempt |
 | `reports.max_coverage_files_per_run` | server | 20000 | source files' coverage one Sortie keeps; beyond it, only the totals |
-| `reports.max_coverage_files_per_project` | server | 2000000 | source files' coverage a project keeps; the oldest runs' go first |
+| `reports.max_coverage_files_per_project` | server | 2000000 | source files' coverage a Flight keeps; the oldest runs' go first |
 | `reports.origin` | server | unset | a separate origin that alone serves HTML reports |
 | `runner.reports.max_files` | Station | 100 | files collected per step attempt (the first, in name order), for tests and for coverage |
 | `runner.reports.max_file_mib` | Station | 10 | MiB read of one file; a larger one is cut, and what was read is still used |

@@ -14,13 +14,13 @@ import (
 )
 
 const eventSourcesUsage = `Usage:
-  launchway event-sources list PROJECT [--json]
-  launchway event-sources create PROJECT --name NAME [--map INPUT=EXPRESSION ...] [--filter EXPR] [--dedupe-key EXPR]
+  launchway event-sources list FLIGHT [--json]
+  launchway event-sources create FLIGHT --name NAME [--map INPUT=EXPRESSION ...] [--filter EXPR] [--dedupe-key EXPR]
                                 [--schema-file FILE] [--ref REF] [--debounce SECONDS | --batch SECONDS]
                                 [--max-body BYTES] [--rate PER_MINUTE]     make a source; its signing secret is shown once
-  launchway event-sources change PROJECT NAME [the same flags] [--enable=false] [--rotate-secret]
-  launchway event-sources delete PROJECT NAME
-  launchway event-sources test PROJECT NAME --body FILE|-          judge a body as a call would be; nothing starts, nothing is recorded
+  launchway event-sources change FLIGHT NAME [the same flags] [--enable=false] [--rotate-secret]
+  launchway event-sources delete FLIGHT NAME
+  launchway event-sources test FLIGHT NAME --body FILE|-          judge a body as a call would be; nothing starts, nothing is recorded
 
 An event source is an address other systems call to start a run. The caller signs the body with HMAC-SHA256
 over "<timestamp>.<body>" (X-Launchway-Timestamp and X-Launchway-Signature: sha256=<hex>). Expressions are
@@ -67,7 +67,7 @@ func (cl *client) sourcesList(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which project: launchway event-sources list PROJECT")
+		return usageErr("say which Flight: launchway event-sources list FLIGHT")
 	}
 	var list []sourceRow
 	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/event-sources", nil, &list); err != nil {
@@ -125,13 +125,13 @@ func (cl *client) sourcesWrite(verb string, args []string) error {
 	switch verb {
 	case "create":
 		if len(pos) != 1 || *name == "" {
-			return usageErr("say the project and --name\n\n%s", eventSourcesUsage)
+			return usageErr("say the Flight and --name\n\n%s", eventSourcesUsage)
 		}
 		in["name"] = *name
 		path = "/api/v1/projects/" + url.PathEscape(pos[0]) + "/event-sources"
 	default:
 		if len(pos) != 2 {
-			return usageErr("say the project and the source: launchway event-sources change PROJECT NAME [flags]")
+			return usageErr("say the Flight and the source: launchway event-sources change FLIGHT NAME [flags]")
 		}
 		path = "/api/v1/projects/" + url.PathEscape(pos[0]) + "/event-sources/" + url.PathEscape(pos[1])
 		if *rotate {
@@ -192,7 +192,7 @@ func (cl *client) sourcesDelete(args []string) error {
 		return err
 	}
 	if len(pos) != 2 {
-		return usageErr("say the project and the source: launchway event-sources delete PROJECT NAME")
+		return usageErr("say the Flight and the source: launchway event-sources delete FLIGHT NAME")
 	}
 	if err := cl.call("DELETE", "/api/v1/projects/"+url.PathEscape(pos[0])+"/event-sources/"+url.PathEscape(pos[1]), nil, nil); err != nil {
 		return err
@@ -210,7 +210,7 @@ func (cl *client) sourcesTest(args []string) error {
 		return err
 	}
 	if len(pos) != 2 || *bodyFile == "" {
-		return usageErr("say the project, the source and --body\n\n%s", eventSourcesUsage)
+		return usageErr("say the Flight, the source and --body\n\n%s", eventSourcesUsage)
 	}
 	var b []byte
 	if *bodyFile == "-" {

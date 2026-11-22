@@ -30,7 +30,7 @@ flowchart TB
 | Part | What it does |
 |---|---|
 | Server | One program, `launchway server`: the web UI, the HTTP API, the Sortie engine, Git polling, schedules, the policy judge and, unless turned off, a built-in Station. |
-| Database | Holds everything durable: projects' state, runs as events, logs, test results, findings, approvals, sessions (as hashes), the Logbook. PostgreSQL for several servers; an embedded SQLite file for one. |
+| Database | Holds everything durable: each Flight's state, runs as events, logs, test results, findings, approvals, sessions (as hashes), the Logbook. PostgreSQL for several servers; an embedded SQLite file for one. |
 | Cargo (artifact) store | Files steps keep: a directory for one server, or S3-compatible object storage shared by several. |
 | Station | `launchway runner`: takes steps from a server and runs them in Podman or Docker containers, Kubernetes pods, or on its own machine. Looks up secrets itself. |
 | Deploy Station | A Station with a `deploy:` section, in or near a cluster: writes to the GitOps repository and talks to Argo CD and Argo Rollouts with its own identity. Never runs a script. |
@@ -158,7 +158,7 @@ flowchart LR
   token }`; the Station reads the value in its own network, gives it to the step, and replaces it
   with `***` in the log.
 - **Stations have identities.** A Station enrolled with a join token holds its own key, its steps'
-  leases are bound to it, and it takes only work of the projects its **pool** serves; its own
+  leases are bound to it, and it takes only work of the Flights its **pool** serves; its own
   `accept:` section limits further what it will run. A Station still on the shared Station token has
   no identity, so enrol Stations and require identity on their pools. Deploy work needs a pool
   token and is limited to that pool's targets. See

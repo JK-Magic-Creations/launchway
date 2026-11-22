@@ -15,7 +15,7 @@ flowchart TB
 
 ## What an Airfield holds {#what-an-environment-holds}
 
-An Airfield says which deploy target serves it (for example a Kubernetes cluster), which projects may
+An Airfield says which deploy target serves it (for example a Kubernetes cluster), which Flights (codebase) may
 deploy there and who may deploy, and whether it is **protected**. In a protected Airfield, the person
 who started a Sortie (run) cannot be the one who promotes it. Add one with the
 [Add an Airfield](app:/config/wizard/add-environment) wizard, and see them all under

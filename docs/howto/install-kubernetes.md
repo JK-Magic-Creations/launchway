@@ -129,7 +129,7 @@ workloads out of it.
 
 ## A Git repository the cluster can reach
 
-Every project's `repo` must be a URL that both the servers and the Stations can clone, such as
+Every Flight's `repo` must be a URL that both the servers and the Stations can clone, such as
 `https://git.example.com/team/payments.git`. For a quick trial without a Git host, the repository's
 test setup serves a small repository inside the cluster. It needs Podman on your machine to build
 the repository:
@@ -169,7 +169,7 @@ runner:
 ```
 
 Sign-in is required from the first moment: the chart's default is built-in accounts, and a one-time
-setup code makes the first administrator (below). Nothing else needs setting; projects, Git hosting
+setup code makes the first administrator (below). Nothing else needs setting; Flights (codebase), Git hosting
 and Stations are set up in the browser.
 
 Install the chart:
@@ -247,7 +247,7 @@ page in the UI shows the same list.
 
 ## Run a pipeline as pods
 
-Open **Projects → demo → Start a Sortie** in the UI, or start one over the API. Without sign-in, a
+Open **Flights → demo → Start a Sortie** in the UI, or start one over the API. Without sign-in, a
 request that changes something must carry the header `X-Launchway-CSRF: 1`:
 
 ```sh
@@ -473,7 +473,7 @@ with the runner-only chart `deploy/helm/launchway-runner` (released as
 ## Deploy Station {#deploy-runner}
 
 Deploy steps (`kind: deploy`) are done by a [deploy Station](../glossary.md#deploy-runner) with a
-Flight line (Station (runner) pool) token of its own, never by the build Stations. The chart can run one in the cluster that
+Ramp (Station (runner) pool) token of its own, never by the build Stations. The chart can run one in the cluster that
 Argo CD manages:
 
 ```yaml

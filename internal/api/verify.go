@@ -249,7 +249,7 @@ func (s *Server) explainStep(w http.ResponseWriter, r *http.Request) {
 	}
 	mask := verify.MaskWith([]string{key})
 	var b strings.Builder
-	fmt.Fprintf(&b, "Step %s (kind %s) of run #%d of project %s failed.\n\n<error>\n%s\n</error>\n", ctxIn.Step, ctxIn.Kind, ctxIn.RunNumber,
+	fmt.Fprintf(&b, "Step %s (kind %s) of run #%d of Flight %s failed.\n\n<error>\n%s\n</error>\n", ctxIn.Step, ctxIn.Kind, ctxIn.RunNumber,
 		ctxIn.Project, ctxIn.Error)
 	if len(ctxIn.FailedTests) > 0 {
 		b.WriteString("\n<failed_tests>\n" + strings.Join(ctxIn.FailedTests, "\n") + "\n</failed_tests>\n")

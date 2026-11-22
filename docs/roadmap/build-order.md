@@ -45,7 +45,7 @@ In nearly every area the order is the same: first see what is there, then explai
 | Part | Milestone | When |
 |---|---|---|
 | Host your code, run your pipelines | [1](milestone-1.md) | Now |
-| Share and reuse across projects | [2](milestone-2.md) | Next |
+| Share and reuse across Flights (codebase) | [2](milestone-2.md) | Next |
 | Zero-downtime delivery and Argo CD | [8](milestone-8.md) | Next |
 | Installing Launchway | [1](milestone-1.md) | Now |
 | Build tools and caches, the developer experience | [2](milestone-2.md) | Next |

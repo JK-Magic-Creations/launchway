@@ -289,7 +289,7 @@ func (s *Server) workGetSettings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) writeSettings(w http.ResponseWriter, r *http.Request, sc work.Scope) {
 	c := s.workCaller(r)
 	if !c.Read(sc) {
-		writeErr(w, http.StatusNotFound, "no such project")
+		writeErr(w, http.StatusNotFound, "no such {project}")
 		return
 	}
 	own, err := s.work().GetSettings(r.Context(), sc)

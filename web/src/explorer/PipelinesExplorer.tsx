@@ -59,6 +59,6 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
       onFavorite={(it, on) => { void org.favorite("project", it.id, on); announce(`${it.name} ${on ? "added to" : "removed from"} favorites.`); }}
       emptyHint={<>Folders group pipelines inside a {t.label("unit")} or {t.label("project")}. A name like <code>payments/api</code> makes folders by itself.</>}
       toolbar={undefined}
-      empty={<p>No pipelines yet. <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton></p>} />
+      empty={<p>No pipelines yet. <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton></p>} />
   );
 }

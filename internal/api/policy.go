@@ -116,7 +116,7 @@ func (s *Server) listWaivers(w http.ResponseWriter, r *http.Request) {
 	}
 	project := r.URL.Query().Get("project")
 	if project != "" && !s.authorize(id, auth.Read, project) {
-		writeErr(w, http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error())
+		writeErr(w, http.StatusNotFound, fmt.Errorf("%w: {project} %s", engine.ErrNotFound, project).Error())
 		return
 	}
 	ws, err := s.Engine.Waivers(engine.WaiverFilter{Project: project, Active: r.URL.Query().Get("active") == "1", Projects: only, Limit: n})

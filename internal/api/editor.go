@@ -47,7 +47,7 @@ func decodeEditor(w http.ResponseWriter, r *http.Request, v any, text *string) b
 // project's default branch), with the commit it came from.
 func (s *Server) readPipeline(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	f, err := s.Projects.ReadPipelineFile(r.Context(), r.PathValue("name"), r.URL.Query().Get("ref"))
@@ -62,7 +62,7 @@ func (s *Server) readPipeline(w http.ResponseWriter, r *http.Request) {
 // of a branch: {"ref": "main", "pipeline": "..."}.
 func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	var in struct {
@@ -102,7 +102,7 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 // caller: {"base_ref", "base_sha", "pipeline", "message", "branch", "force"}.
 func (s *Server) savePipeline(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	var in struct {

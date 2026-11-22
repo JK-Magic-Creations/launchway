@@ -17,7 +17,7 @@ var runnersUsage = themed(`Usage:
   launchway runners rotate RUNNER                   ask an enrolled {runner} to move to a new key
 
 Making join tokens, revoking and rotating need the role runner_admin names
-(admin by default) on every project.
+(admin by default) on every Flight.
 `)
 
 func cmdRunners(args []string) error {

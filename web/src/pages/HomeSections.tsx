@@ -181,7 +181,7 @@ function Favorites({ list, now }: { list: HomeProject[]; now: number }) {
 }
 
 function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; openCats: Record<string, boolean>; onToggle: (k: string, nowOpen: boolean) => void; now: number }) {
-  if (cats.length === 0) return <div className="sheet"><div className="sh-h"><h2 id="hm-categories">By category</h2></div><p className="sh-b faint">No project to show in this view.</p></div>;
+  if (cats.length === 0) return <div className="sheet"><div className="sh-h"><h2 id="hm-categories">By category</h2></div><p className="sh-b faint">{terms().say("No {project} to show in this view.")}</p></div>;
   return (
     <div>
       <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div>
@@ -195,7 +195,7 @@ function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; o
           <div key={c.id} className="hm-cat">
             <h3><button type="button" className="hm-cat-b" aria-expanded={!shut} aria-controls={`cat-${c.id}`} onClick={() => onToggle(c.id, isOpen)}>
               <span aria-hidden="true">{shut ? "▸" : "▾"}</span> {label}
-              <span className="faint small"> · {c.projects.length} {c.projects.length === 1 ? "project" : "projects"}</span>
+              <span className="faint small"> · {c.projects.length} {c.projects.length === 1 ? terms().say("{project}") : terms().say("{projects}")}</span>
               {c.needs > 0 && <span className="vchip bad">{c.needs} need a look</span>}
               {c.running > 0 && <span className="vchip run">{c.running} running</span>}
               {c.needs === 0 && c.failing === 0 && c.running === 0 && <span className="vchip ok">all passing</span>}

@@ -21,7 +21,7 @@ checks your answers, and shows what it will create before it creates anything.
 
 | Guide | For |
 |---|---|
-| [First-run setup](setup-first-run.md) | naming things, signing in, the first project |
+| [First-run setup](setup-first-run.md) | naming things, signing in, the first Flight (codebase) |
 | [Connect a repository](connect-repository.md) | a repository, its branch, how runs start, its pipeline |
 | [Add a Station (runner)](add-runner.md) | a pool, a join token and the install command |
 | [Add an Airfield (environment)](add-environment.md) | where deploys may go, and how protected it is |

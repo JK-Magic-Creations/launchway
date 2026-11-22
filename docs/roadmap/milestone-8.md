@@ -122,7 +122,7 @@ Go, go all the way, pause, resume, stop and go back, try again, skip a step, set
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every protection starts on and your team can tune or turn it off per project and Airfield; only a level above can require one. You stay in charge, and Launchway says plainly when a safeguard has been relaxed.
+Every protection starts on and your team can tune or turn it off per Flight and Airfield; only a level above can require one. You stay in charge, and Launchway says plainly when a safeguard has been relaxed.
 
 **Depends on:** Variables at levels.
 
@@ -452,7 +452,7 @@ Sync with a preview, refresh, stop a stuck sync, run a resource action, and paus
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An assistant writes an Application, an ApplicationSet or a Project into Git and opens a pull request, showing what will be created. Nothing is changed with a click against the cluster.
+An assistant writes an Application, an ApplicationSet or a Flight into Git and opens a pull request, showing what will be created. Nothing is changed with a click against the cluster.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -462,7 +462,7 @@ An assistant writes an Application, an ApplicationSet or a Project into Git and 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Discover the applications you already have and map them to projects and Airfields without changing them. Discovery is opt-in and read-only.
+Discover the applications you already have and map them to Flights and Airfields without changing them. Discovery is opt-in and read-only.
 
 **Depends on:** See every application and its tree.
 

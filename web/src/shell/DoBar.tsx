@@ -7,6 +7,7 @@ import type { Ctx } from "../nav/model";
 import { doItems, searchItems, type DoItem } from "./doItems";
 import { organizeApi, type SearchHit, type TrailEntry } from "../organizeApi";
 import { ago } from "../format";
+import { terms } from "../terms";
 
 const KIND: Record<string, string> = { project: "Pipelines", repository: "Repositories", folder: "Folders", run: "Sorties", pull: "Pull requests", person: "People" };
 
@@ -58,7 +59,7 @@ export function DoBar({ ctx, projects, onClose }: { ctx: Ctx; projects: Project[
       </div>
       <div className="visually-hidden" role="status" aria-live="polite">{found.length === 0 ? "No results" : `${found.length} ${found.length === 1 ? "result" : "results"}`}</div>
       <div className="res" id="do-results" role="listbox" aria-label="Results">
-        {found.length === 0 && <p className="faint nores">Nothing matches "{q}". Try a project's name, "add", "approve" or the name of a page.</p>}
+        {found.length === 0 && <p className="faint nores">Nothing matches "{q}{terms().say("\". Try a {project}'s name, \"add\", \"approve\" or the name of a page.")}</p>}
         {found.map((it, i) => (
           <a key={it.id} data-group={i === 0 || found[i - 1].group !== it.group ? it.group : undefined} id={"do-" + it.id} role="option" aria-selected={i === at} href={it.href} className={i === at ? "sel" : ""}
             onClick={(e) => { e.preventDefault(); go(it.href); }} onMouseMove={() => setAt(i)}>

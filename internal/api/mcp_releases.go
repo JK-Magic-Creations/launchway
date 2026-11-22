@@ -18,13 +18,13 @@ import (
 type relOut = map[string]any
 
 type relRef struct {
-	Project string `json:"project" jsonschema:"the project's name"`
+	Project string `json:"project" jsonschema:"the Flight's name"`
 	Version string `json:"version" jsonschema:"the release's version (or its tag)"`
 }
 
 func (r relRef) path(rest string) (string, error) {
 	if r.Project == "" || r.Version == "" {
-		return "", errors.New("say which release: project and version")
+		return "", errors.New("say which release: Flight and version")
 	}
 	return apiPath("/api/v1/projects/%s/releases/%s", r.Project, r.Version) + rest, nil
 }
@@ -37,9 +37,9 @@ func relCall(ctx context.Context, c *mcpCall, tool, method, path string, body an
 
 func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_releases", Annotations: readOnly("List releases"),
-		Description: "Releases of a project (or of every project you may see), newest first, with state (draft, candidate, published, yanked), version, commit, tag and who published. Drafts are shown only to operators."},
+		Description: "Releases of a Flight (or of every Flight you may see), newest first, with state (draft, candidate, published, yanked), version, commit, tag and who published. Drafts are shown only to operators."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project,omitempty" jsonschema:"limit to one project"`
+			Project string `json:"project,omitempty" jsonschema:"limit to one Flight"`
 			State   string `json:"state,omitempty" jsonschema:"draft, candidate, published or yanked"`
 		}) (relOut, error) {
 			q := url.Values{"project": {in.Project}, "state": {in.State}}
@@ -63,12 +63,12 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "propose_next_release_version", Annotations: readOnly("Propose the next version"),
 		Description: "Proposes the next version from the changes since the last release (conventional commit prefixes, labels on merged pull requests: breaking is major, feature is minor, anything else patch), with the reasoning for each change. A person confirms or overrides it; nothing is released by this call."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			From    string `json:"from,omitempty" jsonschema:"the branch, tag or commit to release; default the default branch"`
 			Pre     string `json:"pre,omitempty" jsonschema:"propose a pre-release with this label, such as rc"`
 		}) (relOut, error) {
 			if in.Project == "" {
-				return nil, errors.New("say which project")
+				return nil, errors.New("say which Flight")
 			}
 			q := url.Values{"from": {in.From}, "pre": {in.Pre}}
 			return relCall(ctx, c, "propose_next_release_version", http.MethodGet, apiPath("/api/v1/projects/%s/releases/next?", in.Project)+q.Encode(), nil)
@@ -76,7 +76,7 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "preview_release_notes", Annotations: readOnly("Preview release notes"),
 		Description: "Release notes generated from the merged pull requests and commits since the previous release, grouped as breaking changes, security, features, fixes, dependencies and other, with links and contributors. Nothing is saved."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			Version string `json:"version,omitempty" jsonschema:"the release's version, or its tag"`
 			To      string `json:"to,omitempty" jsonschema:"the branch, tag or commit the release is made from; default the default branch"`
 		}) (relOut, error) {
@@ -84,9 +84,9 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "preview_release_notes", http.MethodGet, apiPath("/api/v1/projects/%s/releases/notes?", in.Project)+q.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "compare_releases", Annotations: readOnly("Compare two releases"),
-		Description: "What differs between two releases of a project: the changes (pull requests and commits), the files changed, the files that look like deployment configuration, and the image digests of each."},
+		Description: "What differs between two releases of a Flight: the changes (pull requests and commits), the files changed, the files that look like deployment configuration, and the image digests of each."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			A       string `json:"a" jsonschema:"one version"`
 			B       string `json:"b" jsonschema:"the other version"`
 		}) (relOut, error) {
@@ -96,7 +96,7 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_release_checklist", Annotations: readOnly("Get a release checklist"),
 		Description: "A release judged for an Airfield: each line (state, notes, checks green on the commit, no blocking findings, soaked in the previous Airfield, clearances, change window, no freeze) with pass, fail or waiting and why, whether it is ready, and whether an administrator could override what stops it."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project" jsonschema:"the project's name"`
+			Project  string `json:"project" jsonschema:"the Flight's name"`
 			Version  string `json:"version" jsonschema:"the release's version, or its tag"`
 			Airfield string `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 		}) (relOut, error) {
@@ -107,7 +107,7 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "get_release_checklist", http.MethodGet, p, nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "get_release_matrix", Annotations: readOnly("Get the release matrix"),
-		Description: "Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, plus what the caller may promote next."},
+		Description: "Which release runs in which Airfield: for each Flight and Airfield the version, since when, who started it, its health and any launch in progress, plus what the caller may promote next."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ struct{}) (relOut, error) {
 			return relCall(ctx, c, "get_release_matrix", http.MethodGet, "/api/v1/release-matrix", nil)
 		})
@@ -121,9 +121,9 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "get_release_calendar", http.MethodGet, "/api/v1/release-calendar?"+q.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "get_release_report", Annotations: readOnly("Get the release report"),
-		Description: "What shipped and how delivery went over a period: when each release reached each Airfield, lead time from merge, failures and returns, and the four delivery measures (frequency, lead time, change failure rate, time to restore), overall, per Airfield and per project."},
+		Description: "What shipped and how delivery went over a period: when each release reached each Airfield, lead time from merge, failures and returns, and the four delivery measures (frequency, lead time, change failure rate, time to restore), overall, per Airfield and per Flight."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project,omitempty" jsonschema:"the project's name"`
+			Project string `json:"project,omitempty" jsonschema:"the Flight's name"`
 			From    string `json:"from,omitempty" jsonschema:"default 90 days before to"`
 			To      string `json:"to,omitempty" jsonschema:"default now"`
 		}) (relOut, error) {
@@ -131,9 +131,9 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "get_release_report", http.MethodGet, "/api/v1/release-report?"+q.Encode(), nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "get_release_settings", Annotations: readOnly("Get release settings"),
-		Description: "How a project's versions are written and ordered (semver, calver, natural, created), its tag prefix, changelog file and public-download setting, whether the installation allows public downloads, and its checklists per Airfield."},
+		Description: "How a Flight's versions are written and ordered (semver, calver, natural, created), its tag prefix, changelog file and public-download setting, whether the installation allows public downloads, and its checklists per Airfield."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 		}) (relOut, error) {
 			out, err := relCall(ctx, c, "get_release_settings", http.MethodGet, apiPath("/api/v1/projects/%s/release-settings", in.Project), nil)
 			if err != nil {
@@ -157,7 +157,7 @@ func addReleaseReadTools(srv *mcp.Server, c *mcpCall) {
 			return out, nil
 		})
 	addTool(srv, c, &mcp.Tool{Name: "get_release_formation", Annotations: readOnly("Get a formation"),
-		Description: "A formation (releases of several projects promoted together in an explicit order) with how each member stands: waiting, started, launched, failed or not started. Without a name, lists the formations."},
+		Description: "A formation (releases of several Flights promoted together in an explicit order) with how each member stands: waiting, started, launched, failed or not started. Without a name, lists the formations."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			Name string `json:"name,omitempty" jsonschema:"the formation's name or id"`
 		}) (relOut, error) {
@@ -178,7 +178,7 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 	addReleaseChangeTools2(srv, c)
 	addReleaseChangeTools3(srv, c)
 	type createIn struct {
-		Project       string `json:"project" jsonschema:"the project's name"`
+		Project       string `json:"project" jsonschema:"the Flight's name"`
 		Version       string `json:"version" jsonschema:"the new version; propose_next_release_version suggests one"`
 		From          string `json:"from,omitempty" jsonschema:"the branch, tag or commit to release; default the default branch"`
 		Adopt         string `json:"adopt,omitempty" jsonschema:"an existing annotated tag to release instead of creating one"`
@@ -197,7 +197,7 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "edit_release", Annotations: changes("Edit a draft release", false, true),
 		Description: "Changes the title or notes of a draft or candidate release; with regenerate_notes the notes are written again from the changes. A published release cannot be edited: a correction is a new release."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project         string  `json:"project" jsonschema:"the project's name"`
+			Project         string  `json:"project" jsonschema:"the Flight's name"`
 			Version         string  `json:"version" jsonschema:"the release's version, or its tag"`
 			Title           *string `json:"title,omitempty" jsonschema:"a short title for the release"`
 			Notes           *string `json:"notes,omitempty" jsonschema:"release notes in Markdown"`
@@ -220,7 +220,7 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "attach_release_assets", Annotations: changes("Attach assets to a release", false, true),
 		Description: "Copies files of a Sortie's Cargo into a draft or candidate release (checked against their SHA-256, kept with the release after the Cargo expires) and records the Sortie's image digests, SBOM and scan summaries, each with its provenance. The Sortie must have run at the release's commit. Assets are never replaced."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			Version string `json:"version" jsonschema:"the release's version, or its tag"`
 			RunID   string `json:"run_id" jsonschema:"the Sortie (run) id, run_…"`
 			Files   []struct {
@@ -245,7 +245,7 @@ func addReleaseChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "upload_release_file", Annotations: changes("Upload a release file", false, false),
 		Description: "Adds a small file (up to 8 MiB, as base64) to a draft or candidate release; larger files go through the HTTP API or launchway release assets add. The name must be new: assets are never replaced."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project       string `json:"project" jsonschema:"the project's name"`
+			Project       string `json:"project" jsonschema:"the Flight's name"`
 			Version       string `json:"version" jsonschema:"the release's version, or its tag"`
 			Name          string `json:"name" jsonschema:"the name of the file or formation"`
 			ContentBase64 string `json:"content_base64" jsonschema:"the file's content as base64"`
@@ -287,7 +287,7 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "withdraw_release", Annotations: changes("Withdraw a release", true, false),
 		Description: "Withdraws (yanks) a candidate or published release, with a reason that is recorded. It stays in the record and is no longer promoted."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			Version string `json:"version" jsonschema:"the release's version, or its tag"`
 			Reason  string `json:"reason" jsonschema:"why, in words; it is recorded"`
 		}) (relOut, error) {
@@ -307,9 +307,9 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "delete_draft_release", http.MethodDelete, p, nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "propose_release_changelog", Annotations: changes("Propose a changelog update", false, false),
-		Description: "Commits the release's notes at the top of the changelog file on a new branch and opens a pull request (never pushes to the base branch). Needs a project Launchway may write to."},
+		Description: "Commits the release's notes at the top of the changelog file on a new branch and opens a pull request (never pushes to the base branch). Needs a Flight Launchway may write to."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			Version string `json:"version" jsonschema:"the release's version, or its tag"`
 			Base    string `json:"base,omitempty" jsonschema:"the branch the changelog is changed on; default the release's branch"`
 		}) (relOut, error) {
@@ -320,9 +320,9 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "propose_release_changelog", http.MethodPost, p, map[string]any{"base": in.Base})
 		})
 	addTool(srv, c, &mcp.Tool{Name: "promote_release", Annotations: changes("Promote a release", false, false),
-		Description: "Promotes a release to an Airfield: builds nothing, starts the project's pipeline at the release's tag with the release's version and image digest, so exactly what was built is what is launched. The Airfield's checklist must pass; an administrator may override a window, a soak time or a freeze with a reason (override). The pipeline must take the inputs airfield and release (and digest)."},
+		Description: "Promotes a release to an Airfield: builds nothing, starts the Flight's pipeline at the release's tag with the release's version and image digest, so exactly what was built is what is launched. The Airfield's checklist must pass; an administrator may override a window, a soak time or a freeze with a reason (override). The pipeline must take the inputs airfield and release (and digest)."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project" jsonschema:"the project's name"`
+			Project  string `json:"project" jsonschema:"the Flight's name"`
 			Version  string `json:"version" jsonschema:"the release's version, or its tag"`
 			Airfield string `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 			Override string `json:"override,omitempty" jsonschema:"administrators only: why the checklist is overridden"`
@@ -336,7 +336,7 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "plan_release_promotion", Annotations: changes("Plan a promotion", false, false),
 		Description: "Writes a promotion on the calendar for a time. It is a reminder: Launchway does not start it by itself."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project" jsonschema:"the project's name"`
+			Project  string `json:"project" jsonschema:"the Flight's name"`
 			Version  string `json:"version" jsonschema:"the release's version, or its tag"`
 			Airfield string `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 			At       string `json:"at" jsonschema:"RFC 3339, such as 2026-11-24T14:00:00Z"`
@@ -351,7 +351,7 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "give_release_clearance", Annotations: changes("Give clearance", false, false),
 		Description: "Gives clearance for a release in an Airfield whose checklist asks for it. The person who published the release may not clear it."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project" jsonschema:"the project's name"`
+			Project  string `json:"project" jsonschema:"the Flight's name"`
 			Version  string `json:"version" jsonschema:"the release's version, or its tag"`
 			Airfield string `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 			Comment  string `json:"comment,omitempty" jsonschema:"a comment recorded with it"`
@@ -365,7 +365,7 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "return_to_base", Annotations: changes("Return to base", true, false),
 		Description: "Returns an Airfield to the release before the one it runs (or to a deployment or version named in to), using the existing rollback, with the same rules and a recorded reason."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project" jsonschema:"the project's name"`
+			Project  string `json:"project" jsonschema:"the Flight's name"`
 			Airfield string `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 			To       string `json:"to,omitempty" jsonschema:"the end time, as RFC 3339 or a date"`
 			Reason   string `json:"reason" jsonschema:"why, in words; it is recorded"`
@@ -377,13 +377,13 @@ func addReleaseChangeTools2(srv *mcp.Server, c *mcpCall) {
 
 func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "set_release_settings", Annotations: changes("Set release settings", false, true),
-		Description: "Sets how a project's versions are written and ordered (semver, calver, natural or created), the tag prefix, the changelog file, and whether published releases may be downloaded without signing in (only when the installation allows it). Project administrators only. The scheme cannot change once releases exist."},
+		Description: "Sets how a Flight's versions are written and ordered (semver, calver, natural or created), the tag prefix, the changelog file, and whether published releases may be downloaded without signing in (only when the installation allows it). Flight administrators only. The scheme cannot change once releases exist."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project   string `json:"project" jsonschema:"the project's name"`
+			Project   string `json:"project" jsonschema:"the Flight's name"`
 			Scheme    string `json:"scheme,omitempty" jsonschema:"semver, calver, natural or created"`
 			TagPrefix string `json:"tag_prefix,omitempty" jsonschema:"the tag prefix, such as v"`
 			Changelog string `json:"changelog,omitempty" jsonschema:"the changelog file path in the repository"`
-			Public    bool   `json:"public,omitempty" jsonschema:"allow public downloads of this project's published releases"`
+			Public    bool   `json:"public,omitempty" jsonschema:"allow public downloads of this Flight's published releases"`
 		}) (relOut, error) {
 			cur := relOut{}
 			if err := c.apiJSON(ctx, "set_release_settings", http.MethodGet, apiPath("/api/v1/projects/%s/release-settings", in.Project), nil, &cur); err != nil {
@@ -404,9 +404,9 @@ func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "set_release_settings", http.MethodPut, apiPath("/api/v1/projects/%s/release-settings", in.Project), body)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "set_release_checklist", Annotations: changes("Set a release checklist", false, true),
-		Description: "Sets what a release must pass to be promoted to an Airfield: required checks, notes, no blocking findings, clearances and their roles, soak time in the previous Airfield, the previous Airfield, and a change window (days, from, to, zone). Project administrators only."},
+		Description: "Sets what a release must pass to be promoted to an Airfield: required checks, notes, no blocking findings, clearances and their roles, soak time in the previous Airfield, the previous Airfield, and a change window (days, from, to, zone). Flight administrators only."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project          string   `json:"project" jsonschema:"the project's name"`
+			Project          string   `json:"project" jsonschema:"the Flight's name"`
 			Airfield         string   `json:"airfield" jsonschema:"the Airfield (environment) name, such as prod"`
 			RequireChecks    bool     `json:"require_checks,omitempty" jsonschema:"checks must be green on the release's commit"`
 			RequireNotes     bool     `json:"require_notes,omitempty" jsonschema:"the release must have notes"`
@@ -428,9 +428,9 @@ func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "set_release_checklist", http.MethodPut, apiPath("/api/v1/projects/%s/release-gates/%s", in.Project, in.Airfield), g)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "create_release_freeze", Annotations: changes("Create a freeze", false, false),
-		Description: "Freezes promotions for a project (or every project, for administrators of all), optionally in one Airfield, from a time to a time, with a reason. In a freeze nothing is promoted unless an administrator overrides with a reason. Members are told when it begins."},
+		Description: "Freezes promotions for a Flight (or every Flight, for administrators of all), optionally in one Airfield, from a time to a time, with a reason. In a freeze nothing is promoted unless an administrator overrides with a reason. Members are told when it begins."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project  string `json:"project,omitempty" jsonschema:"empty: every project"`
+			Project  string `json:"project,omitempty" jsonschema:"empty: every Flight"`
 			Airfield string `json:"airfield,omitempty" jsonschema:"empty: every Airfield"`
 			From     string `json:"from,omitempty" jsonschema:"default now"`
 			To       string `json:"to" jsonschema:"the end time, as RFC 3339 or a date"`
@@ -448,7 +448,7 @@ func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "remove_release_asset", Annotations: changes("Remove a release asset", true, true),
 		Description: "Removes an asset from a draft or candidate release. A published release's assets never change."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
-			Project string `json:"project" jsonschema:"the project's name"`
+			Project string `json:"project" jsonschema:"the Flight's name"`
 			Version string `json:"version" jsonschema:"the release's version, or its tag"`
 			Name    string `json:"name" jsonschema:"the name of the file or formation"`
 		}) (relOut, error) {
@@ -459,7 +459,7 @@ func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "remove_release_asset", http.MethodDelete, p, nil)
 		})
 	addTool(srv, c, &mcp.Tool{Name: "set_release_installation", Annotations: changes("Allow public release downloads", false, true),
-		Description: "Administrators of every project: says whether this installation allows public downloads of releases (default no). A project and a release must still ask for it."},
+		Description: "Administrators of every Flight: says whether this installation allows public downloads of releases (default no). A Flight and a release must still ask for it."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			PublicDownloads bool `json:"public_downloads" jsonschema:"whether this installation allows public downloads"`
 		}) (relOut, error) {
@@ -473,11 +473,11 @@ func addReleaseChangeTools3(srv *mcp.Server, c *mcpCall) {
 			return relCall(ctx, c, "advance_release_formation", http.MethodPost, apiPath("/api/v1/release-formations/%s/advance", in.Name), map[string]any{})
 		})
 	addTool(srv, c, &mcp.Tool{Name: "create_release_formation", Annotations: changes("Create a formation", false, false),
-		Description: "Groups published releases of several projects to be promoted together, in the order given (the explicit order; the dependency graph will propose it when it exists)."},
+		Description: "Groups published releases of several Flights to be promoted together, in the order given (the explicit order; the dependency graph will propose it when it exists)."},
 		mcpCallTimeout, func(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
 			Name     string   `json:"name" jsonschema:"the name of the file or formation"`
 			Note     string   `json:"note,omitempty" jsonschema:"a note shown on the calendar"`
-			Releases []string `json:"releases" jsonschema:"project@version, in promotion order"`
+			Releases []string `json:"releases" jsonschema:"Flight@version, in promotion order"`
 		}) (relOut, error) {
 			return relCall(ctx, c, "create_release_formation", http.MethodPost, "/api/v1/release-formations", map[string]any{"name": in.Name, "note": in.Note, "releases": in.Releases})
 		})

@@ -20,7 +20,7 @@ import (
 
 func addChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "start_run", Annotations: changes("Start a Sortie", false, false),
-		Description: "Start a run of a project's pipeline at a branch or tag, with input values. With pipeline_text, start a draft run instead: that uncommitted text runs against the branch's current commit, to try a pipeline before committing it (steps with a when run only if its event names draft; nothing deploys; secrets only if the project allows). Returns the Sortie's ID; then call wait_for_run."},
+		Description: "Start a run of a Flight's pipeline at a branch or tag, with input values. With pipeline_text, start a draft run instead: that uncommitted text runs against the branch's current commit, to try a pipeline before committing it (steps with a when run only if its event names draft; nothing deploys; secrets only if the Flight allows). Returns the Sortie's ID; then call wait_for_run."},
 		mcpCallTimeout, startRun)
 	addTool(srv, c, &mcp.Tool{Name: "cancel_run", Annotations: changes("Cancel a Sortie", true, true),
 		Description: "Cancel a Sortie that is still going: running steps are stopped and the rest do not start."},
@@ -37,8 +37,8 @@ func addChangeTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type startIn struct {
-	Project      string            `json:"project" jsonschema:"the project to start a run of"`
-	Ref          string            `json:"ref,omitempty" jsonschema:"a branch or tag; default the project's default branch"`
+	Project      string            `json:"project" jsonschema:"the Flight to start a run of"`
+	Ref          string            `json:"ref,omitempty" jsonschema:"a branch or tag; default the Flight's default branch"`
 	Inputs       map[string]any    `json:"inputs,omitempty" jsonschema:"values for the pipeline's inputs, by name (get_project lists them); the others take their defaults"`
 	Libraries    map[string]string `json:"libraries,omitempty" jsonschema:"use other versions of libraries the pipeline names: library name to tag, branch or commit"`
 	PipelineText string            `json:"pipeline_text,omitempty" jsonschema:"run this uncommitted pipeline text as a draft run instead of the committed file"`
@@ -54,7 +54,7 @@ type startOut struct {
 
 func startRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in startIn) (startOut, error) {
 	if in.Project == "" {
-		return startOut{}, errors.New("say which project")
+		return startOut{}, errors.New("say which Flight")
 	}
 	ref := in.Ref
 	if ref == "" {

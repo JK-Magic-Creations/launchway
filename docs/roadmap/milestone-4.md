@@ -19,7 +19,7 @@ Milestone 4 adds a Depot to the binary. Images, charts and other Cargo are store
 - A build pushes an image; policy refuses it because it is unsigned.
 - You promote the exact image tested in staging to production with no copy.
 - Retention cleans old images but keeps the one a cluster is running.
-- A project's packages tab shows its images and charts and where each runs.
+- A Flight's packages tab shows its images and charts and where each runs.
 
 ## How it fits together
 
@@ -96,7 +96,7 @@ Move an image from one Airfield to the next without copying or rebuilding it. Wh
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
+Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, Flight and repository level, with an exact preview before anything is deleted; an image an Airfield runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -146,7 +146,7 @@ Copy images to and from other registries on a rule. Useful for a disaster-recove
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A packages tab in each project that is a filtered view of the Depot, with per-package access. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a project's repositories. Per-package access inside a project is not built.
+A packages tab in each Flight that is a filtered view of the Depot, with per-package access. Every repository belongs to the Flight named by its first path component and follows the Flight's roles (viewer pulls, operator pushes, admin deletes); the Depot tab shows a Flight's repositories. Per-package access inside a Flight is not built.
 
 **Depends on:** A built-in OCI registry.
 
@@ -176,7 +176,7 @@ Language and system packages, such as for common programming languages, with cle
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Pushing to any OCI registry works today and stays first class beside the built-in one. Choose per project and move later.
+Pushing to any OCI registry works today and stays first class beside the built-in one. Choose per Flight and move later.
 
 [Read the documentation](../guide/images.md) · [Area page](registry.md)
 
@@ -200,7 +200,7 @@ Go and npm clients talk to Launchway directly, and Python, Maven, NuGet, Cargo a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A library page shows which projects fetched which version and which are behind. Comes from publish and fetch records.
+A library page shows which Flights fetched which version and which are behind. Comes from publish and fetch records.
 
 [Area page](dependency-order.md)
 

@@ -74,7 +74,7 @@ export function PipelineStep({ step }: { step: GuideStep }) {
       {!start?.available && <Unavailable action={start} />}
       {start?.available && overview && overview.available && <ConnectRepoWizard overview={overview} />}
       {start?.available && !overview && <p className="loading">Loading…</p>}
-      {start?.available && overview && !overview.available && <Empty title="This server keeps its configuration in its file">Add the project to the settings file.</Empty>}
+      {start?.available && overview && !overview.available && <Empty title="This server keeps its configuration in its file">{terms().say("Add the {project} to the settings file.")}</Empty>}
     </>
   );
 }

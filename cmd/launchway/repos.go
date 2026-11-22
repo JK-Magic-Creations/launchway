@@ -22,7 +22,7 @@ const reposUsage = `Usage:
 ` + reposKeysUsage + `
 Git hosting must be turned on (the installation setting forge.hosting); otherwise every
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
-come from the same role bindings as a project's, matched on that path. Changes are
+come from the same role bindings as a Flight's, matched on that path. Changes are
 recorded in the audit trail. Delete keeps the data and frees the name.
 ` + "\n" + reposMirrorUsage + reposArchiveUsage + reposFilesUsage + reposBrowseUsage
 

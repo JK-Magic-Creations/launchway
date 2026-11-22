@@ -69,7 +69,7 @@ func (s *Server) repositoryParam(w http.ResponseWriter, r *http.Request) (string
 		return "", false
 	}
 	if registry.ProjectOf(repo) != project {
-		writeErr(w, http.StatusNotFound, "no such repository in this project")
+		writeErr(w, http.StatusNotFound, "no such repository in this {project}")
 		return "", false
 	}
 	return repo, true
@@ -86,7 +86,7 @@ func (s *Server) mayAdminProject(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if !s.authorize(id, auth.AdministerProject, r.PathValue("name")) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "you need the admin role on " + r.PathValue("name") + " to do this",
-			"next": "Ask a project administrator, or have one change the policy."})
+			"next": "Ask a {project} administrator, or have one change the policy."})
 		return false
 	}
 	return true
@@ -218,7 +218,7 @@ func (s *Server) registryGetPolicy(w http.ResponseWriter, r *http.Request) {
 		scope = registry.ScopeInstallation
 	}
 	if scope != registry.ScopeInstallation && scope != registry.ScopeOrganization {
-		writeErr(w, http.StatusBadRequest, "this route sets the installation's or an organization's policy; a project's is under /api/v1/projects/{name}/registry/policy")
+		writeErr(w, http.StatusBadRequest, "this route sets the installation's or an organization's policy; a {project}'s is under /api/v1/projects/{name}/registry/policy")
 		return
 	}
 	p, set, err := s.Registry.Svc.GetPolicy(r.Context(), scope, name)
@@ -244,7 +244,7 @@ func (s *Server) registrySetPolicy(w http.ResponseWriter, r *http.Request) {
 		in.Scope = registry.ScopeInstallation
 	}
 	if in.Scope != registry.ScopeInstallation && in.Scope != registry.ScopeOrganization {
-		writeErr(w, http.StatusBadRequest, "scope is installation or organization here; a project's policy is under /api/v1/projects/{name}/registry/policy")
+		writeErr(w, http.StatusBadRequest, "scope is installation or organization here; a {project}'s policy is under /api/v1/projects/{name}/registry/policy")
 		return
 	}
 	setAudit(r, in.Scope+" "+in.Name, "")
@@ -408,7 +408,7 @@ func (s *Server) projectRegistryPolicy(w http.ResponseWriter, r *http.Request) {
 	scope, name := registry.ScopeProject, project
 	if repo := r.URL.Query().Get("repository"); repo != "" {
 		if registry.ProjectOf(repo) != project {
-			writeErr(w, http.StatusNotFound, "no such repository in this project")
+			writeErr(w, http.StatusNotFound, "no such repository in this {project}")
 			return
 		}
 		scope, name = registry.ScopeRepository, repo
@@ -438,7 +438,7 @@ func (s *Server) setProjectRegistryPolicy(w http.ResponseWriter, r *http.Request
 	scope, name := registry.ScopeProject, project
 	if repo := r.URL.Query().Get("repository"); repo != "" {
 		if registry.ProjectOf(repo) != project {
-			writeErr(w, http.StatusNotFound, "no such repository in this project")
+			writeErr(w, http.StatusNotFound, "no such repository in this {project}")
 			return
 		}
 		scope, name = registry.ScopeRepository, repo
@@ -450,8 +450,8 @@ func (s *Server) setProjectRegistryPolicy(w http.ResponseWriter, r *http.Request
 		if id != nil && !s.authorize(id, auth.Administer, "") {
 			cur, _ := s.Registry.Svc.EffectivePolicy(r.Context(), project)
 			if *in.QuotaBytes == 0 || (cur.QuotaBytes >= 0 && *in.QuotaBytes > cur.QuotaBytes) {
-				writeJSON(w, http.StatusForbidden, map[string]string{"error": "only an administrator of the installation may raise a project's quota",
-					"next": "Lower the quota here, or ask an installation administrator to raise it (PUT /api/v1/registry/policy with a project policy)."})
+				writeJSON(w, http.StatusForbidden, map[string]string{"error": "only an administrator of the installation may raise a {project}'s quota",
+					"next": "Lower the quota here, or ask an installation administrator to raise it (PUT /api/v1/registry/policy with a {project} policy)."})
 				return
 			}
 		}

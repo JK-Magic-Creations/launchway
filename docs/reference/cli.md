@@ -115,7 +115,7 @@ launchway: refusing to listen on 0.0.0.0:8080 without sign-in.
 On `SIGINT` or `SIGTERM` it stops gracefully: `/readyz` answers `503` at once, it waits `server.drain_delay`, stops the built-in Station, and gives requests in flight up to 15 seconds. Steps in progress run again when a server starts. See [the server configuration](server-config.md).
 
 > [!WARNING]
-> Because a missing configuration file is not an error, a typo in `--config` starts a server with the defaults (no projects, data in `./launchway-data`). Check the project count in the start-up message.
+> Because a missing configuration file is not an error, a typo in `--config` starts a server with the defaults (no Flights (codebase), data in `./launchway-data`). Check the Flight count in the start-up message.
 
 ## launchway Station {#launchway-runner}
 
@@ -131,7 +131,7 @@ With `--join`, the Station enrols once: it makes a key that never leaves it (`<d
 | Flag | Default | Meaning |
 |---|---|---|
 | `--server` | `LAUNCHWAY_SERVER`, then `server:` in `--config` | The server URL. Required. |
-| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared Station token, or a Flight line's token. Never read from the file. Give this or `--join`, not both; neither is needed once the Station is enrolled. |
+| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared Station token, or a Ramp's token. Never read from the file. Give this or `--join`, not both; neither is needed once the Station is enrolled. |
 | `--join` | `LAUNCHWAY_JOIN` | A join token, to enrol this Station once and give it an identity of its own. Never read from the file. |
 | `--labels` | `labels:` in the file | Labels this Station has, separated by commas, such as `arm64,gpu`. |
 | `--config` | none | A YAML file of Station settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the Station is a launch Station. |
@@ -177,7 +177,7 @@ launchway run [--file F] [--executor E] [-i name=value ...] [flags]
 | `--images-config` | none | A file with an `images:` section (builders and Depots (registries)), as in a Station's configuration. Required if a step builds an image. |
 | `--k8s-context`, `--k8s-namespace`, `--k8s-unrestricted` | | As for `launchway runner`. |
 
-The run is recorded as project `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.
+The run is recorded as Flight `local`, event `manual`, with the current Git branch and commit if the directory is a Git repository. Everything it keeps lives in a temporary directory that is removed at the end. `NO_COLOR` turns color off.
 
 ```sh
 launchway run -i target=prod
@@ -216,7 +216,7 @@ launchway validate .launchway/pipeline.yaml --library platform=../pipeline-libra
 launchway validate .launchway/pipeline.yaml --library platform=../pipeline-library --resolved
 ```
 
-With `--project NAME` the server you are signed in to checks the file for that project as well, as its editor does: the libraries templates use, the limits the installation sets (such as `max_run_timeout`), and what the project must have for the pipeline to work. It warns, for example, that a pipeline that filters pull requests by their target branch (`on.pull_request.into`) will run none in a project with no forge connection. Warnings are printed to standard error and do not change the exit code; problems do.
+With `--project NAME` the server you are signed in to checks the file for that Flight as well, as its editor does: the libraries templates use, the limits the installation sets (such as `max_run_timeout`), and what the Flight must have for the pipeline to work. It warns, for example, that a pipeline that filters pull requests by their target branch (`on.pull_request.into`) will run none in a Flight with no forge connection. Warnings are printed to standard error and do not change the exit code; problems do.
 
 ```sh
 launchway validate
@@ -347,7 +347,7 @@ Starts and follows runs on a server. `launchway runs` alone prints a summary of 
 
 ### launchway runs start
 
-Starts a run of a project.
+Starts a run of a Flight.
 
 ```text
 launchway runs start PROJECT [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
@@ -355,7 +355,7 @@ launchway runs start PROJECT [--ref R] [-i name=value ...] [--wait] [--timeout D
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--ref` | the project's default branch | The branch or tag to run. |
+| `--ref` | the Flight's default branch | The branch or tag to run. |
 | `-i` | none | An input value, `name=value`. Once for each input; a list input as `name=a,b,c`. The same name twice is refused. |
 | `--wait` | off | Wait for the run to finish, printing each step as its status changes, and exit with its outcome. |
 | `--timeout` | none | With `--wait`, stop waiting after this long, such as `10m`. The Sortie goes on. |
@@ -401,7 +401,7 @@ launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--project` | every project you may see | Only this project's runs. |
+| `--project` | every Flight you may see | Only this Flight's runs. |
 | `--status` | any | Only runs with this status: `queued`, `running`, `succeeded`, `failed` or `canceled`. |
 | `--lane` | any | Only runs in the [lane](pipeline.md#lane) of this name. |
 | `--limit` | `20` | At most this many (the server allows up to 500). |
@@ -417,7 +417,7 @@ run_06gzde1rb0s24hb652q0 demo-app         #3     failed     manual       main   
 run_06gzde0f5gjz0scwmhz0 demo-app         #2     failed     manual       main           2026-11-19 20:10:20
 ```
 
-The columns are the Sortie ID, project, number, status, event, branch or tag, and when it was created.
+The columns are the Sortie ID, Flight, number, status, event, branch or tag, and when it was created.
 
 ### launchway runs show
 
@@ -534,7 +534,7 @@ The same operation is `POST /api/v1/runs/{id}/rerun`, and the MCP tool `retry_ru
 
 ### launchway runs lanes
 
-Lists a project's [lanes](pipeline.md#lane) that have a Sortie going or runs waiting.
+Lists a Flight's [lanes](pipeline.md#lane) that have a Sortie going or runs waiting.
 
 ```text
 launchway runs lanes PROJECT [--json]
@@ -571,7 +571,7 @@ The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
 
 ## launchway debrief and launchway tests
 
-The report of a Sortie's tests, and what the history of a project's tests says. See [The Debrief](../guide/debrief.md).
+The report of a Sortie's tests, and what the history of a Flight's tests says. See [The Debrief](../guide/debrief.md).
 
 | Command | What it does |
 |---|---|
@@ -634,7 +634,7 @@ launchway waivers list [--project P] [--active] [--json]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--project` | every project you may see | Only this project's waivers. |
+| `--project` | every Flight you may see | Only this Flight's waivers. |
 | `--active` | off | Only waivers in force. |
 | `--json` | off | Print JSON. |
 
@@ -802,11 +802,11 @@ launchway health-sources [--json]
 launchway models [--json]
 ```
 
-`health-sources` lists the health sources your projects may name in verify steps, by name, type and projects. `models` lists the AI models your projects may name, with their limits and today's use. Neither shows where a source or model is or how it is reached, and nothing else if none is configured.
+`health-sources` lists the health sources your Flights may name in verify steps, by name, type and Flights. `models` lists the AI models your Flights may name, with their limits and today's use. Neither shows where a source or model is or how it is reached, and nothing else if none is configured.
 
 ## launchway Stations {#launchway-runners}
 
-Lists Stations and manages their enrolment. Making join tokens, revoking and rotating need the role `runner_admin` names (`admin` by default) on every project. See [Stations on other machines and clusters](../guide/runner-identity.md).
+Lists Stations and manages their enrolment. Making join tokens, revoking and rotating need the role `runner_admin` names (`admin` by default) on every Flight. See [Stations on other machines and clusters](../guide/runner-identity.md).
 
 ```text
 launchway runners list [--json]
@@ -826,7 +826,7 @@ launchway runners rotate RUNNER
 
 ## launchway config
 
-Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, Airfields, Flight lines (Station (runner) pools), role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the Logbook.
+Reads and changes the [configuration objects](config-objects.md) kept in the database: Flights, libraries, Airfields, Ramps (Station (runner) pools), role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every Flight; changes are recorded in the object's history and the Logbook.
 
 ```text
 launchway config overview [--json]
@@ -865,7 +865,7 @@ The same operations are the MCP tools `list_config`, `get_config`, `put_config`,
 
 ## launchway step-resources
 
-Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a Sortie starts.
+Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every Flight and is recorded in the Logbook (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a Sortie starts.
 
 ```text
 launchway step-resources get [--json]
@@ -883,7 +883,7 @@ Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi`
 
 ## launchway run-limits
 
-Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the Logbook (`run_limits.set`). The values live in the database, so a change applies to every server at once.
+Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every Flight and is recorded in the Logbook (`run_limits.set`). The values live in the database, so a change applies to every server at once.
 
 ```text
 launchway run-limits get [--json]
@@ -911,7 +911,7 @@ launchway events replay EVENT
 
 ## launchway run-triggers
 
-Start a run of one project when another project's run or launch ends. See [Triggers on results](../guide/result-triggers.md).
+Start a run of one Flight when another Flight's run or launch ends. See [Triggers on results](../guide/result-triggers.md).
 
 ```text
 launchway run-triggers list PROJECT [--json]
@@ -923,11 +923,11 @@ launchway run-triggers allowed UPSTREAM [--json]
 launchway run-triggers revoke UPSTREAM DOWNSTREAM
 ```
 
-`graph` shows the projects the [software graph](../guide/software-graph.md#start-dependents-after-a-push) says PROJECT depends on, in build order, whether each has allowed it and whether a trigger exists; with `--create` it makes a trigger named `graph-UPSTREAM` for each that has allowed it. `allow`, `allowed` and `revoke` are the upstream project's (its operators decide who may trigger on it); `create`, `list` and `delete` are the downstream project's. The same are the `run-triggers` and `run-trigger-allows` routes of the [HTTP API](http-api.md) and the MCP tools `list_run_triggers`, `create_run_trigger`, `delete_run_trigger`, `list_run_trigger_allows`, `allow_run_triggers` and `revoke_run_triggers`.
+`graph` shows the Flights the [software graph](../guide/software-graph.md#start-dependents-after-a-push) says Flight depends on, in build order, whether each has allowed it and whether a trigger exists; with `--create` it makes a trigger named `graph-UPSTREAM` for each that has allowed it. `allow`, `allowed` and `revoke` are the upstream Flight's (its operators decide who may trigger on it); `create`, `list` and `delete` are the downstream Flight's. The same are the `run-triggers` and `run-trigger-allows` routes of the [HTTP API](http-api.md) and the MCP tools `list_run_triggers`, `create_run_trigger`, `delete_run_trigger`, `list_run_trigger_allows`, `allow_run_triggers` and `revoke_run_triggers`.
 
 ## launchway event-sources
 
-Incoming webhook sources of a project. See [Event sources](../guide/event-sources.md).
+Incoming webhook sources of a Flight. See [Event sources](../guide/event-sources.md).
 
 ```text
 launchway event-sources list PROJECT [--json]
@@ -942,7 +942,7 @@ launchway event-sources test PROJECT NAME --body FILE|-
 
 ## launchway caches
 
-Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the Logbook as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.
+Shows a Flight's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the Flight, deleting those to operate it (it is recorded in the Logbook as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one Flight.
 
 ```text
 launchway caches list PROJECT [--json]
@@ -954,17 +954,17 @@ launchway caches policy clear PROJECT [--json]
 
 | Command | What it does |
 |---|---|
-| `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the Sortie that wrote it) and the total against the project's quota |
+| `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the Sortie that wrote it) and the total against the Flight's quota |
 | `delete` | Ends one entry by `--id`, or every entry of a cache by `--name` (all scopes and keys). The next Sortie that wanted it starts without it and saves it again |
-| `policy get` | Prints the installation's policy, or the one that applies to a project |
-| `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2), `idle_days` (default 7) and `max_age_days` (default 7: how old an entry may be before a restore treats it as missing); a flag you leave out keeps its value. With a project, it sets that project's own policy |
-| `policy clear` | Removes a project's own policy, so the installation's applies again |
+| `policy get` | Prints the installation's policy, or the one that applies to a Flight |
+| `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2), `idle_days` (default 7) and `max_age_days` (default 7: how old an entry may be before a restore treats it as missing); a flag you leave out keeps its value. With a Flight, it sets that Flight's own policy |
+| `policy clear` | Removes a Flight's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
 ## launchway Depot {#launchway-registry}
 
-Shows what the built-in OCI registry holds, deletes images, and shows and changes its quota, retention and immutable-tag policy. A repository is `PROJECT/NAME`, the project first. Reading needs the viewer role on the project; deleting, policy changes and retention runs the admin role of the project; garbage collection and the installation's policy an administrator's. Everything that changes something is recorded in the Logbook (`registry.image_delete`, `registry.tag_delete`, `registry.policy`, `registry.retention_run`, `registry.gc_run`). See [the Depot guide](../guide/registry.md).
+Shows what the built-in OCI registry holds, deletes images, and shows and changes its quota, retention and immutable-tag policy. A repository is `PROJECT/NAME`, the Flight first. Reading needs the viewer role on the Flight; deleting, policy changes and retention runs the admin role of the Flight; garbage collection and the installation's policy an administrator's. Everything that changes something is recorded in the Logbook (`registry.image_delete`, `registry.tag_delete`, `registry.policy`, `registry.retention_run`, `registry.gc_run`). See [the Depot guide](../guide/registry.md).
 
 ```text
 launchway registry status [--json]
@@ -981,20 +981,20 @@ launchway registry gc [--dry-run] [--last] [--json]
 | Command | What it does |
 |---|---|
 | `status` | The Depot's address, how to log in, its limits, how many repositories you may see, and what protects blobs at rest (Launchway does not encrypt them in this release) |
-| `list` | With a project, its repositories with images, tags and bytes, and usage against the quota; with a repository, its images: tags, digest, size, platforms, who pushed it (and which run), signature, SBOM and vulnerability summary, and the pull reference to copy |
+| `list` | With a Flight, its repositories with images, tags and bytes, and usage against the quota; with a repository, its images: tags, digest, size, platforms, who pushed it (and which run), signature, SBOM and vulnerability summary, and the pull reference to copy |
 | `tags` | The repository's tags and the digest each points at |
 | `inspect` | One image or Cargo, by tag or digest, with its manifest |
 | `delete` | Deletes an image by tag or digest, with its tags, signatures and SBOMs; `--tag` deletes only the tag. Refused for an immutable tag and for an image a deployment uses. The bytes go at the next collection |
 | `retention` | Previews what the retention rules would delete (nothing is deleted); `--run` deletes it |
 | `policy get` | The policy set at a level and the effective values after the levels are combined |
-| `policy set` | Replaces the policy at a level: the quota, the retention rule (keep the newest N tagged images, keep tags matching patterns, delete untagged images older than D days), the immutable tag patterns and which projects' runs may pull. Without a project it is the installation's |
+| `policy set` | Replaces the policy at a level: the quota, the retention rule (keep the newest N tagged images, keep tags matching patterns, delete untagged images older than D days), the immutable tag patterns and which Flights' runs may pull. Without a Flight it is the installation's |
 | `gc` | Collects garbage: blobs and uploads nothing refers to. `--dry-run` lists what would go; `--last` shows the last report |
 
 The same operations are the routes under [Built-in Depot](http-api.md#built-in-registry) in the HTTP API, and the MCP tools `registry_status`, `list_registry_images`, `inspect_registry_image`, `delete_registry_image`, `get_registry_policy`, `set_registry_policy`, `preview_registry_retention`, `run_registry_retention` and `registry_gc`. Pushing and pulling are done with the clients you already have (`docker`, `podman`, `skopeo`, `helm`), with an API token as the password.
 
 ## launchway standards
 
-Shows and changes Standing orders: the checks every repository gets, with where each setting comes from. Reading needs the rights to read the project (or any project, for a level); changing a level needs to administer that level (an admin of the project at a project). The API refuses a value weaker than a lock above, with the sentence that names the lock.
+Shows and changes Standing orders: the checks every repository gets, with where each setting comes from. Reading needs the rights to read the Flight (or any Flight, for a level); changing a level needs to administer that level (an admin of the Flight at a Flight). The API refuses a value weaker than a lock above, with the sentence that names the lock.
 
 ```text
 launchway standards show PROJECT [--json]
@@ -1007,7 +1007,7 @@ launchway standards profile [--json]
 
 | Command | What it does |
 |---|---|
-| `show` | For a project: each check, its state, where the state comes from, what a lock above holds, the gates, license lists, exemptions and notices. With `--level`, the settings that level has |
+| `show` | For a Flight: each check, its state, where the state comes from, what a lock above holds, the gates, license lists, exemptions and notices. With `--level`, the settings that level has |
 | `set` | Changes a level's settings: `check.secrets=block`, `gate.fail_on=critical`, `gate.require_fix=false`, `gate.default_branch=block`, `gate.incomplete=fail`, `licenses.deny=GPL-3.0-only,AGPL-3.0`, `licenses.allow=...`, `off=true --reason "..."` (switches Standing orders off for the level; recorded in the Logbook). `--lock` and `--unlock` set and remove locks |
 | `explain` | Why a setting has the value it has: every level that sets it, which one won, and any lock |
 | `coverage` | Which repositories of a level have which checks in effect, and their open findings |
@@ -1015,7 +1015,7 @@ launchway standards profile [--json]
 
 ## launchway findings
 
-What the checks found. `list` and `show` read the findings the default branch has had; `accept` and `reopen` need the operator role on the project; `inspect` shows a Sortie's Inspection.
+What the checks found. `list` and `show` read the findings the default branch has had; `accept` and `reopen` need the operator role on the Flight; `inspect` shows a Sortie's Inspection.
 
 ```text
 launchway findings list PROJECT [--status open|fixed|accepted|all] [--severity S,S] [--check ID] [--q TEXT] [--oldest] [--json]
@@ -1038,7 +1038,7 @@ The same operations are the routes under [Standing orders](http-api.md#standing-
 
 ## launchway variables
 
-Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a Sortie starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
+Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a Flight. The nearest setting wins: what is given when a Sortie starts, then the pipeline file's own `with:`, then the Flight, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the Flight, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
 
 ```text
 launchway variables list --installation|--organization|--unit U|--project P [--environment E] [--json]
@@ -1056,7 +1056,7 @@ The same operations are the routes under [Variables](http-api.md#variables) in t
 
 Switches (feature toggles): make them, change what they do in an Airfield, read their history, revert, and manage the keys
 applications use. See the [guide](../guide/feature-toggles.md). Every change is audited (`toggle.*`) and goes through the
-project's safeguards: a reason, and in a protected Airfield another person's approval (the command says when a change
+Flight's safeguards: a reason, and in a protected Airfield another person's approval (the command says when a change
 waits, and who approves it).
 
 ```
@@ -1172,7 +1172,7 @@ The same report as `status` is `GET /api/v1/encryption` in the [HTTP API](http-a
 
 ## launchway repos
 
-Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the Base setting `forge.hosting`, in Configuration under Base settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a project's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the Logbook (`repository.create`, `repository.update`, `repository.delete`).
+Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the Base setting `forge.hosting`, in Configuration under Base settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a Flight's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the Logbook (`repository.create`, `repository.update`, `repository.delete`).
 
 ```text
 launchway repos list [--json]

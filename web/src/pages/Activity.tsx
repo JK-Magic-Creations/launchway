@@ -103,9 +103,9 @@ function RunsActivity() {
           {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
         </div>}
         {(projects.data?.length ?? 0) > 1 && (
-          <label className="select"><span className="visually-hidden">Project</span>
+          <label className="select"><span className="visually-hidden">{terms().say("{Project}")}</span>
             <select value={project} onChange={(e) => setProject(e.target.value, "push")}>
-              <option value="">All projects</option>
+              <option value="">{terms().say("All {projects}")}</option>
               {projects.data!.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
             </select>
           </label>

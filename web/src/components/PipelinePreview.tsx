@@ -52,8 +52,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
             )}
             {unexpanded > 0 && (
               <p className="sub">{unexpanded === 1 ? "One step uses a template; it is" : `${unexpanded} steps use templates; they are`} drawn
-                as one node{unexpanded === 1 ? "" : " each"}, not expanded. Templates come from the server's libraries, which are read when a pipeline is
-                checked for a project, or here with Expand templates.</p>
+                as one node{unexpanded === 1 ? "" : " each"}{terms().say(", not expanded. Templates come from the server's libraries, which are read when a pipeline is checked for a {project}, or here with Expand templates.")}</p>
             )}
             {notes}
           </section>

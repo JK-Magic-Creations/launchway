@@ -88,7 +88,7 @@ the values they would have. Its log stays in the Sortie where it ran, which the 
 - Approvals after the step wait for a decision again. Approvals before it are reused with the
   decision made in the original, shown with who made it.
 - A draft run's re-run is a draft run of the same text, with the same rules.
-- Re-running needs the operator role on the project (and, for a draft, the right to start drafts),
+- Re-running needs the operator role on the Flight (and, for a draft, the right to start drafts),
   and is recorded in the Logbook as `run.rerun`, with the original run, the step and the new
   run.
 - **Files are not reused.** A re-run starts from a fresh checkout, so files that reused steps wrote

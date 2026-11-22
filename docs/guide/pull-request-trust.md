@@ -11,17 +11,17 @@ mode** until a maintainer has looked.
   name matches `automation.accounts` (by default `*[bot]`, `dependabot*`, `renovate*`,
   `github-actions*`, `release-please*`, `launchway-updater*`; matching ignores case). Accounts that a forge hosted by
   Launchway marks as bots count too.
-- A pull request from a **fork**, where the forge says so. (A project that is polled from another
+- A pull request from a **fork**, where the forge says so. (A Flight (codebase) that is polled from another
   Git host cannot tell a fork from a branch, so only the automation list applies there.)
 
 The policy is `pull_requests.untrusted`: `restrict` (the default) or `allow`, in the installation
-settings, with a project able to override it.
+settings, with a Flight able to override it.
 
 ## What a restricted run may not do
 
 | Restriction | What happens |
 |---|---|
-| Secrets | No step reads one, even if the project sets `pull_requests.secrets: true`. A step that asks for one fails at once with the reason, and is never handed to a Station (runner) |
+| Secrets | No step reads one, even if the Flight sets `pull_requests.secrets: true`. A step that asks for one fails at once with the reason, and is never handed to a Station (runner) |
 | Launches | Launch, Return to base (rollback) and rollout steps are skipped, with the skip kind `restricted` and the reason |
 | Caches | The Sortie restores the default branch's cache and saves none |
 | Depot (registry) | Image steps build and scan, never push (as for every pull request), and use no pull credentials |

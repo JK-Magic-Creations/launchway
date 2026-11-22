@@ -6,6 +6,7 @@ import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { useInstallation } from "../guided/facts";
 import { useCrumbLabel } from "../nav/crumbs";
 import { PageTabs, useTab } from "../components/PageTabs";
+import { terms } from "../terms";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -41,7 +42,7 @@ export function TemplatePage({ library, name }: { library: string; name: string 
         <dl className="glance-grid">
           <div><dt>What is this?</dt><dd>{tpl.description || "A template with no description."}</dd></div>
           <div><dt>Where does it come from?</dt><dd>The Git repository of the library <Mono>{library}</Mono>, version <Mono>{data.version}</Mono>.</dd></div>
-          <div><dt>Who uses it?</dt><dd>{users.length === 0 ? "No project on this server uses it yet." : users.map((p, i) => <span key={p.name}>{i > 0 && ", "}<EntityLink kind="project" name={p.name} /></span>)}</dd></div>
+          <div><dt>Who uses it?</dt><dd>{users.length === 0 ? terms().say("No {project} on this server uses it yet.") : users.map((p, i) => <span key={p.name}>{i > 0 && ", "}<EntityLink kind="project" name={p.name} /></span>)}</dd></div>
           <div><dt>What happened to it recently?</dt><dd>{data.versions.length > 0 ? <>{data.versions.length} version{data.versions.length > 1 ? "s" : ""} exist; this page shows <Mono>{data.version}</Mono>.</> : "It has no tagged versions."}</dd></div>
           <div><dt>What can I do with it?</dt><dd className="glance-actions"><button type="button" className="linkbtn" onClick={() => setTab("interface")}>See what it takes</button><button type="button" className="linkbtn" onClick={() => setTab("versions")}>See its versions</button></dd></div>
         </dl>
@@ -97,7 +98,7 @@ export function TemplatePage({ library, name }: { library: string; name: string 
       {tab === "used" && (
         <section className="card" aria-label="Used by">
           <h2 className="h-sm">Used by</h2>
-          {users.length === 0 ? <p className="faint">No project on this server pins this template. A project that does is listed here with the version it uses.</p> : (
+          {users.length === 0 ? <p className="faint">{terms().say("No {project} on this server pins this template. A {project} that does is listed here with the version it uses.")}</p> : (
             <ul className="guided-list">{users.map((p) => (
               <li key={p.name}><EntityLink kind="project" name={p.name} /><span className="guided-grow faint">pinned to <Mono>{p.pipeline?.version}</Mono></span></li>
             ))}</ul>

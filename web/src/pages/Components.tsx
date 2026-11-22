@@ -50,7 +50,7 @@ export function ComponentsPage() {
 
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which projects use it, at which version, on which branch.")} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Components" sentence={terms().say("Find the {runs} whose software bill of materials lists a component: which {projects} use it, at which version, on which branch.")} />
 
       <form className="card compform" role="search" onSubmit={submit}>
         <label className="field">
@@ -68,7 +68,7 @@ export function ComponentsPage() {
       <ErrorBox error={error} />
       {!asked.name && (
         <Empty title={terms().say("Search the SBOMs your {runs} report")}>
-          Type a component's name above, such as a library your projects depend on.
+          {terms().say("Type a component's name above, such as a library your {projects} depend on.")}
           <FindingsHowTo compact />
         </Empty>
       )}
@@ -79,7 +79,7 @@ export function ComponentsPage() {
       )}
       {data && data.hits.length > 0 && (
         <>
-          <section className="card" aria-label="Projects">
+          <section className="card" aria-label={terms().say("{Projects}")}>
             <h2 className="h-sm">{data.projects.length} project{data.projects.length === 1 ? " uses" : "s use"} {asked.name}{asked.version ? ` ${asked.version}` : ""}</h2>
             <ul className="compprojects">
               {data.projects.map((p) => (
@@ -94,7 +94,7 @@ export function ComponentsPage() {
           <section aria-label={terms().say("{Runs}")}>
             <div className="table-scroll card card-flush">
               <table className="inputs-table comptable">
-                <thead><tr><th>Project</th><th>{terms().say("{Run}")}</th><th>Branch</th><th>Step</th><th>Name</th><th>Version</th><th>Licenses</th><th>When</th></tr></thead>
+                <thead><tr><th>{terms().say("{Project}")}</th><th>{terms().say("{Run}")}</th><th>Branch</th><th>Step</th><th>Name</th><th>Version</th><th>Licenses</th><th>When</th></tr></thead>
                 <tbody>
                   {data.hits.map((h, i) => (
                     <tr key={h.run_id + h.step + i}>

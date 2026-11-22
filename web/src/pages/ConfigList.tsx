@@ -89,8 +89,8 @@ function summary(kind: string, o: ConfigObject): string {
   switch (kind) {
     case "project": return [s.repo, s.branch && `branch ${s.branch}`, s.pipeline?.template && `template ${s.pipeline.library}/${s.pipeline.template}`].filter(Boolean).join(" · ");
     case "library": return s.repo ?? "";
-    case "environment": return [`target ${s.target ?? "?"}`, s.projects?.length && `projects ${list(s.projects)}`, s.protected && "protected"].filter(Boolean).join(" · ");
-    case "runner-pool": return s.kind === "build" ? `build pool for ${list(s.projects) || "no projects"}` : terms().say(`{deploy:do} pool for ${list(s.targets) || "no targets"}`);
+    case "environment": return [`target ${s.target ?? "?"}`, s.projects?.length && terms().say(`{projects} ${list(s.projects)}`), s.protected && "protected"].filter(Boolean).join(" · ");
+    case "runner-pool": return s.kind === "build" ? `build pool for ${list(s.projects) || terms().say("no {projects}")}` : terms().say(`{deploy:do} pool for ${list(s.targets) || "no targets"}`);
     case "role-binding": return `${s.group ? "group " + s.group : "user " + (s.user ?? "?")} is ${s.role ?? "?"}${s.projects?.length ? " on " + list(s.projects) : " everywhere"}`;
     case "policy": return [s.mode, Object.keys(s.rules ?? {}).join(", ")].filter(Boolean).join(" · ");
     case "policy-source": return `${s.library ?? "?"}@${s.version ?? "?"}`;

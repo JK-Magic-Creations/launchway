@@ -26,17 +26,17 @@ the server has sign-in and a Cargo store; `registry.enabled: false` turns it off
 Nothing is anonymous: every request needs credentials, and with sign-in off the Depot answers `503` rather than
 be open to everyone who can reach the server.
 
-A repository is named `PROJECT/NAME`, with the project first: pushing to `registry.example.com/shop/api` makes
-the repository `shop/api` in the project `shop`. Launchway's roles on the project decide:
+A repository is named `PROJECT/NAME`, with the Flight (codebase) first: pushing to `registry.example.com/shop/api` makes
+the repository `shop/api` in the Flight `shop`. Launchway's roles on the Flight decide:
 
-| Role on the project | Depot |
+| Role on the Flight | Depot |
 |---|---|
 | viewer | pull, list, inspect |
 | operator | and push (and cancel an upload) |
 | admin | and delete images and tags, set the rules, run retention |
 
 A repository someone may not pull is answered exactly like one that does not exist. A token limited to some
-projects (`projects:` on the token) is limited in the Depot too.
+Flights (`projects:` on the token) is limited in the Depot too.
 
 **People** log in with an API token as the password; the user name is anything:
 
@@ -53,11 +53,11 @@ except on a loopback listener or with `registry.allow_insecure_http` for a priva
 **Pipelines** need no password. An image step that names no Depot (or `registry: launchway`) pushes here; the
 server hands the step the address and a credential made for that one Sortie (run). The credential
 
-- pulls the project's own repositories, and those of another project only if that project's policy lists the
-  pulling project in `pull_from`;
-- pushes only to repositories of its own project, and never for a pull-request or draft run;
+- pulls the Flight's own repositories, and those of another Flight only if that Flight's policy lists the
+  pulling Flight in `pull_from`;
+- pushes only to repositories of its own Flight, and never for a pull-request or draft run;
 - expires with the Sortie's time limit and stops working when the Sortie ends;
-- is never stored: it is a signature over the project, the Sortie and an expiry.
+- is never stored: it is a signature over the Flight, the Sortie and an expiry.
 
 ```yaml
 steps:
@@ -77,26 +77,26 @@ scan result and each platform's SBOM are attached as OCI referrers (manifests wh
 
 ## Looking at it
 
-The **Depot** tab of Images lists a project's repositories against its quota, and each repository's images:
+The **Depot** tab of Images lists a Flight's repositories against its quota, and each repository's images:
 tags, digest, size, platforms, who pushed it (and from which run), whether it is signed, has a bill of materials,
 what the scan found, and a pull reference to copy. The command line and the MCP server show the same
 (`launchway registry list`, `registry inspect`, `registry tags`).
 
 ## Keeping it in order
 
-- **Quota.** A project may store 20 GiB by default (`registry.default_quota_gib`); a Wing may have one too.
+- **Quota.** A Flight may store 20 GiB by default (`registry.default_quota_gib`); a Wing may have one too.
   A distinct layer counts once however many images use it. A push over the quota is refused with a plain
   sentence that says what to do.
 - **Immutable tags.** Tags matching a pattern (`v*`) cannot be pointed at another image or deleted once pushed. A pattern
   set at a wider level cannot be removed nearer.
-- **Retention.** Rules per installation, project or repository: keep the newest N tagged images, keep tags matching
+- **Retention.** Rules per installation, Flight or repository: keep the newest N tagged images, keep tags matching
   patterns, delete untagged images older than D days. `launchway registry retention PROJECT` previews exactly what
   would go; `--run` deletes it. An image an Airfield (environment) runs (its version is the image's digest or tag) is never
   deleted, by retention or by hand. Retention and garbage collection also run on a schedule (`registry.maintain_every`).
 - **Garbage collection.** Mark and sweep with a grace period (`registry.gc_grace`, an hour): blobs no manifest needs are
   removed only after nothing has touched them for that long, and each delete re-checks that, so a push in progress
   is never collected under its own feet. `launchway registry gc --dry-run` lists what would go. One server collects at a time.
-- **Limits.** Largest blob and manifest, requests a minute per caller, repositories per project, tags per repository.
+- **Limits.** Largest blob and manifest, requests a minute per caller, repositories per Flight, tags per repository.
 - **Wings.** Identical layers are stored once inside a Wing and never shared across two; a
   cross-repository mount works only inside one.
 

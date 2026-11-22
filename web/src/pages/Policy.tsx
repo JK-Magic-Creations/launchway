@@ -43,7 +43,7 @@ export function PolicyPage() {
 
       {failing.map((s) => (
         <div key={s.name} className="callout callout-bad" role="alert">
-          <strong>Policy source {s.name} is failing closed.</strong> {s.error}. Until it loads, every run of {s.projects.length ? s.projects.join(", ") : "every project"} is refused at each policy point.
+          <strong>Policy source {s.name} is failing closed.</strong> {s.error}. Until it loads, every run of {s.projects.length ? s.projects.join(", ") : terms().say("every {project}")} is refused at each policy point.
         </div>
       ))}
 
@@ -82,7 +82,7 @@ export function PolicyPage() {
             <button type="button" className={"chip" + (!active ? " chip-on" : "")} aria-pressed={!active} onClick={() => setActive(false)}>All</button>
           </div>
         </div>
-        <p className="sub small">{terms().say("A waiver lets one rule of one policy pass for a project (or one {run}, {environment} or finding) until it expires. Every waiver is in the")} {terms().lower("logbook")} and shown wherever the verdict it changed is.</p>
+        <p className="sub small">{terms().say("A waiver lets one rule of one policy pass for a {project} (or one {run}, {environment} or finding) until it expires. Every waiver is in the")} {terms().lower("logbook")} and shown wherever the verdict it changed is.</p>
         {waivers.waivers.length
           ? <WaiverList waivers={waivers.waivers} mayRevoke={(w) => waivers.waive_projects.includes(w.project)} onChange={load} />
           : <p className="faint">{active ? "No waiver is in force." : "No waivers."}</p>}
@@ -153,7 +153,7 @@ function GrantPicker({ projects, rules, onPick }: { projects: string[]; rules: R
       e.preventDefault();
       onPick({ project, policy, rule, deployRule: deployRules.includes(rule) });
     }}>
-      <label className="field"><span>Project</span>
+      <label className="field"><span>{terms().say("{Project}")}</span>
         <select value={project} onChange={(e) => setProject(e.target.value)}>{projects.map((p) => <option key={p}>{p}</option>)}</select>
       </label>
       <label className="field"><span>Policy</span>

@@ -22,7 +22,7 @@ func (c *Config) relativeToFile(path string) error {
 	for i, p := range c.Projects {
 		if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
 			if pp.On.Push != nil || pp.On.PullRequest.Kind != 0 {
-				return fmt.Errorf("%s: project %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
+				return fmt.Errorf("%s: Flight %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
 			}
 			pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
 		}

@@ -7,7 +7,7 @@ digests its Sortie built, and a record of who did each step.
 ## One release, many Airfields
 
 The thing that moves from Airfield to Airfield is the release. Nothing is built again on the way: a promotion
-starts the project's pipeline at the release's tag with the release's version and image digest, so the thing that
+starts the Flight's pipeline at the release's tag with the release's version and image digest, so the thing that
 passed in `dev` is exactly the thing that arrives in `prod`.
 
 ## Fixed once published

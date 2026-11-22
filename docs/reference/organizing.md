@@ -4,7 +4,7 @@ The API behind the [explorer](../guide/organizing.md) and the [Tower](../guide/h
 
 ## Scopes
 
-A shared folder or layout lives at a scope: `base`, `organization`, `unit:<name>` or `project:<name>` (the API names of Base, Wing, Squadron and Project). A person may arrange at `base` or `organization` when they are an admin of everything, at `unit:x` when they are admin of every project in it, and at `project:x` when they are admin of that project. A folder at a Squadron scope holds only that Squadron's items.
+A shared folder or layout lives at a scope: `base`, `organization`, `unit:<name>` or `project:<name>` (the API names of Base, Wing, Squadron and Flight (codebase)). A person may arrange at `base` or `organization` when they are an admin of everything, at `unit:x` when they are admin of every Flight in it, and at `project:x` when they are admin of that Flight. A folder at a Squadron scope holds only that Squadron's items.
 
 ## Areas
 
@@ -29,11 +29,11 @@ and an import adds and updates, never deletes.
 
 ## Search
 
-`GET /api/v1/search?q=` returns `hits` ranked by `score`: projects, repositories, folders and Sorties the caller may read. A Sortie matches by number, commit prefix (four or more hex digits) or branch, within the last 90 days. Names are ranked over the permission-filtered list in memory, not in an external search service.
+`GET /api/v1/search?q=` returns `hits` ranked by `score`: Flights, repositories, folders and Sorties the caller may read. A Sortie matches by number, commit prefix (four or more hex digits) or branch, within the last 90 days. Names are ranked over the permission-filtered list in memory, not in an external search service.
 
 ## The trail
 
-`GET /api/v1/activity` is the caller's own trail and no route takes a user name. `PUT /api/v1/activity` notes an entry (`kind`: `run`, `project`, `pipeline`, `repository`, `pull`, `deployment`, `settings` or `page`; `obj`, `title`, `href` on this server, `action`, `state`); a Sortie's project is read from the Sortie. At most 400 entries are kept for a person and an entry older than the retention is neither listed nor kept. Entries for a project the caller can no longer read, and settings pages for a caller who is not an administrator, are left out of every answer.
+`GET /api/v1/activity` is the caller's own trail and no route takes a user name. `PUT /api/v1/activity` notes an entry (`kind`: `run`, `project`, `pipeline`, `repository`, `pull`, `deployment`, `settings` or `page`; `obj`, `title`, `href` on this server, `action`, `state`); a Sortie's Flight is read from the Sortie. At most 400 entries are kept for a person and an entry older than the retention is neither listed nor kept. Entries for a Flight the caller can no longer read, and settings pages for a caller who is not an administrator, are left out of every answer.
 
 ## Audit actions
 

@@ -58,7 +58,7 @@ type FollowPlan struct {
 func (s *Server) followPlan(ctx context.Context, id *identity, project string) (FollowPlan, error) {
 	plan := FollowPlan{Project: project, Items: []FollowItem{}}
 	if s.Graph.ProjectRepos == nil {
-		plan.Note = "No project is tied to a repository on this server, so the graph cannot tell what this one depends on."
+		plan.Note = "No Flight is tied to a repository on this server, so the graph cannot tell what this one depends on."
 		return plan, nil
 	}
 	repos, err := s.Graph.ProjectRepos(ctx)
@@ -67,7 +67,7 @@ func (s *Server) followPlan(ctx context.Context, id *identity, project string) (
 	}
 	repo := repos[project]
 	if repo == "" {
-		plan.Note = "This project does not build a repository hosted here, so the graph has nothing to say about what it depends on."
+		plan.Note = "This Flight does not build a repository hosted here, so the graph has nothing to say about what it depends on."
 		return plan, nil
 	}
 	plan.Repository = repo
@@ -115,7 +115,7 @@ func (s *Server) followPlan(ctx context.Context, id *identity, project string) (
 			case !it.Allowed:
 				it.Note = fmt.Sprintf("%s has not allowed %s to trigger on its results; an operator of %s allows it (launchway run-triggers allow %s %s).", up, project, up, up, project)
 			default:
-				it.Note = "Would be made: start a run of this project when a run of " + up + " ends well."
+				it.Note = "Would be made: start a run of this Flight when a run of " + up + " ends well."
 			}
 			plan.Items = append(plan.Items, it)
 		}
@@ -128,7 +128,7 @@ func (s *Server) followPlan(ctx context.Context, id *identity, project string) (
 		return a.UpstreamProject < b.UpstreamProject
 	})
 	if len(plan.Items) == 0 {
-		plan.Note = "The graph sees nothing this project depends on among the repositories hosted here."
+		plan.Note = "The graph sees nothing this Flight depends on among the repositories hosted here."
 	}
 	return plan, nil
 }
@@ -168,7 +168,7 @@ func (s *Server) graphFollowCreate(w http.ResponseWriter, r *http.Request) {
 			it.Note = "Not made: " + err.Error()
 			continue
 		}
-		it.Trigger, it.Created, it.Note = t.Name, true, "Made: a run of this project starts when a run of "+it.UpstreamProject+" ends well."
+		it.Trigger, it.Created, it.Note = t.Name, true, "Made: a run of this Flight starts when a run of "+it.UpstreamProject+" ends well."
 		made++
 	}
 	setAudit(r, name, fmt.Sprintf("%d result triggers made from the software graph's dependencies of %s", made, plan.Repository))
@@ -179,13 +179,13 @@ func (s *Server) graphFollowCreate(w http.ResponseWriter, r *http.Request) {
 
 func addGraphFollowTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_graph_run_triggers", Annotations: readOnly("What following the graph would trigger"),
-		Description: "For a project: the projects the software graph says its repository depends on, in build order, whether each has allowed this project to trigger on its results, and whether a trigger already exists. Nothing is made."},
+		Description: "For a Flight: the Flights the software graph says its repository depends on, in build order, whether each has allowed this Flight to trigger on its results, and whether a trigger already exists. Nothing is made."},
 		mcpCallTimeout, getGraphRunTriggers)
 	if !c.mayOperate {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "follow_graph_with_run_triggers", Annotations: changes("Make result triggers from the software graph", false, false),
-		Description: "Make this project start a run when a run of each project it depends on (by the software graph) ends well, for those that have allowed it. Providers build before consumers because each result starts the next level. Nothing is made unless this is called."},
+		Description: "Make this Flight start a run when a run of each Flight it depends on (by the software graph) ends well, for those that have allowed it. Providers build before consumers because each result starts the next level. Nothing is made unless this is called."},
 		mcpCallTimeout, followGraphWithRunTriggers)
 }
 

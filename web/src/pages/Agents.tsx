@@ -81,9 +81,7 @@ export function AgentsPage() {
 
   return (
     <div className="page agents">
-      <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>AI agents and assistants can use Launchway through the Model Context Protocol (MCP): find projects, write and
-            check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every
-            change it makes is in the {terms().lower("logbook")} with the token's name.</>} />
+      <PageHead eyebrow="Settings" title={<>Connect an agent</>} sentence={<>{terms().say("AI agents can use Launchway through the Model Context Protocol (MCP): find {projects}, write and check pipelines, start runs, watch them and find out why they failed. An agent can do exactly what its token allows, and every change it makes is in the")} {terms().lower("logbook")} with the token's name.</>} />
 
       <section className="card agents-step" aria-labelledby="agents-1">
         <h2 id="agents-1" className="h-sm"><span className="agents-num" aria-hidden="true">1</span>Make a token for the agent</h2>
@@ -99,8 +97,8 @@ export function AgentsPage() {
                   <option value="">Same as mine{limits?.your_role ? ` (${limits.your_role})` : ""}</option>
                   {roles.map((r) => <option key={r} value={r}>{roleName(r)}</option>)}
                 </select></label>
-              <label className="field"><span>Projects</span>
-                <input value={projects} placeholder="every project, or: pay-*, web" onChange={(e) => setProjects(e.target.value)} /></label>
+              <label className="field"><span>{terms().say("{Projects}")}</span>
+                <input value={projects} placeholder={terms().say("every {project}, or: pay-*, web")} onChange={(e) => setProjects(e.target.value)} /></label>
               <label className="field"><span>Expires after</span>
                 <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
                   {[1, 7, 30, 90].filter((d) => d <= maxDays).map((d) => <option key={d} value={d}>{d} days</option>)}
@@ -141,8 +139,7 @@ export function AgentsPage() {
       <section className="card agents-step" aria-labelledby="agents-3">
         <h2 id="agents-3" className="h-sm"><span className="agents-num" aria-hidden="true">3</span>Check that it answers</h2>
         <CopyBlock label="From a terminal" text={check} />
-        <p className="sub">Then ask the agent something like “why did the last run of my project fail?”. It finds its way from what the
-          server tells it: how pipelines are written, which tools to call, and in which order.</p>
+        <p className="sub">{terms().say("Then ask the agent something like “why did the last run of my {project} fail?”. It finds its way from what the server tells it: how pipelines are written, which tools to call, and in which order.")}</p>
       </section>
 
       <section className="card agents-step" aria-labelledby="agents-4">

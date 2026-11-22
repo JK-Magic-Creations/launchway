@@ -17,9 +17,9 @@ const ctx = (m = me()) => ({ me: m, facts: NO_FACTS });
 describe("the do bar's search", () => {
   const items = doItems(ctx(), [project({ name: "shop-api", last_run: run({ status: "failed", number: 7, id: "run_7" }) }), project({ name: "shop-web" })]);
   it("offers the actions and wizards that exist, and nothing for a person who may not configure", () => {
-    expect(searchItems(items, "").map((i) => i.label)).toContain("Add a project");
+    expect(searchItems(items, "").map((i) => i.label)).toContain("Add a Flight");
     const viewer = doItems(ctx(me({ admin: false })), []);
-    expect(viewer.map((i) => i.label)).not.toContain("Add a project");
+    expect(viewer.map((i) => i.label)).not.toContain("Add a Flight");
     expect(viewer.map((i) => i.label)).toContain("Decide what is waiting");
   });
   it("finds a project by name and the failed run of one", () => {

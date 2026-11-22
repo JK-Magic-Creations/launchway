@@ -45,7 +45,7 @@ Ideas that grow naturally from one connected platform.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See what each service, team and Airfield costs to run, next to what it delivers. Includes the cost of Flight lines.
+See what each service, team and Airfield costs to run, next to what it delivers. Includes the cost of Ramps.
 
 **Depends on:** The software graph.
 
@@ -70,7 +70,7 @@ Chat approvals, feature-flag mitigation and more event sources. Added by demand.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A forum for projects and shareable snippets. Optional and off by default.
+A forum for Flights and shareable snippets. Optional and off by default.
 
 **Depends on:** Built-in Git hosting.
 
@@ -79,7 +79,7 @@ A forum for projects and shareable snippets. Optional and off by default.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Ready-made Airfields to work on a project from a browser. Reuses preview Airfields.
+Ready-made Airfields to work on a Flight from a browser. Reuses preview Airfields.
 
 **Depends on:** Preview Airfields.
 

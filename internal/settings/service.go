@@ -571,10 +571,10 @@ func checkOwn(k *Kind, v any) error {
 
 func checkPattern(p string) error {
 	if p == "" {
-		return errors.New("an empty project pattern")
+		return errors.New("an empty Flight pattern")
 	}
 	if _, err := pathMatch(p, ""); err != nil {
-		return fmt.Errorf("%q is not a valid project pattern", p)
+		return fmt.Errorf("%q is not a valid Flight pattern", p)
 	}
 	return nil
 }

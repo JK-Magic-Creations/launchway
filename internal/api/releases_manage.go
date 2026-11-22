@@ -214,7 +214,7 @@ type promotion struct {
 func (s *Server) promoteOne(ctx context.Context, p promotion) (*engine.ReleasePromotion, *engine.RunSummary, int, error) {
 	rel := p.Release
 	if s.Projects == nil && s.Releases.Start == nil {
-		return nil, nil, http.StatusNotFound, errors.New("no projects are configured")
+		return nil, nil, http.StatusNotFound, errors.New("no Flights are configured")
 	}
 	ck, err := s.Engine.ReleaseChecklist(rel.ID, p.Airfield)
 	if err != nil {
@@ -472,9 +472,9 @@ func (s *Server) createFreeze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := identityFrom(r)
-	setAudit(r, nonEmpty(in.Project, "every project")+" / "+nonEmpty(in.Airfield, "every Airfield"), clip(in.Reason, 300))
+	setAudit(r, nonEmpty(in.Project, "every Flight")+" / "+nonEmpty(in.Airfield, "every Airfield"), clip(in.Reason, 300))
 	if in.Project == "" && !s.authorize(id, auth.Administer, "") {
-		writeErr(w, http.StatusForbidden, "only an administrator of every project may freeze every project; freeze one project you administer instead")
+		writeErr(w, http.StatusForbidden, "only an administrator of every {project} may freeze every {project}; freeze one {project} you administer instead")
 		return
 	}
 	if in.Project != "" && !s.isProjectAdmin(id, in.Project) {
@@ -509,7 +509,7 @@ func (s *Server) cancelFreeze(w http.ResponseWriter, r *http.Request) {
 		}
 		okay := (f.Project == "" && s.authorize(id, auth.Administer, "")) || (f.Project != "" && s.isProjectAdmin(id, f.Project))
 		if !okay {
-			writeErr(w, http.StatusForbidden, "you may not cancel this freeze: it takes the admin role on its project (or on every project for a freeze of all)")
+			writeErr(w, http.StatusForbidden, "you may not cancel this freeze: it takes the admin role on its {project} (or on every {project} for a freeze of all)")
 			return
 		}
 		setAudit(r, f.ID, "canceled")
@@ -688,7 +688,7 @@ func (s *Server) createFormation(w http.ResponseWriter, r *http.Request) {
 	for _, ref := range in.Releases {
 		project, version, ok := strings.Cut(ref, "@")
 		if !ok || project == "" || version == "" {
-			writeErr(w, http.StatusBadRequest, fmt.Sprintf("write each release as project@version, such as api@2.0.0; %q is not", ref))
+			writeErr(w, http.StatusBadRequest, fmt.Sprintf("write each release as {project}@version, such as api@2.0.0; %q is not", ref))
 			return
 		}
 		if !s.authorize(id, auth.Operate, project) {

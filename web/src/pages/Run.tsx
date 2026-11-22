@@ -956,12 +956,12 @@ function DefinitionTab({ run }: { run: RunDetail }) {
             : <Link href={editHref} className="btn btn-sm">Edit this pipeline</Link>)}
         </div>
         {file?.origin === "server" && (
-          <p className="sub">The repository had no pipeline file at <Mono>{shortSha(run.sha)}</Mono>{terms().say(", so this is what ran: the project's configuration, kept with the {run}. A")} <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.</p>
+          <p className="sub">The repository had no pipeline file at <Mono>{shortSha(run.sha)}</Mono>{terms().say(", so this is what ran: the {project}'s configuration, kept with the {run}. A")} <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.</p>
         )}
         {file?.draft && (
           <p className="sub">{terms().say("Not in Git: it was typed in the editor and is kept only with this {run}. It is named")} <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
         )}
-        {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
+        {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">{terms().say("The file is only kept for runs from a Git {project}.")}</p> : <div className="loading">Loading…</div>}
       </section>
       <section className="card">
         <h2 className="h-sm">The graph it produced</h2>

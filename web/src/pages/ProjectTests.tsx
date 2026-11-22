@@ -62,7 +62,7 @@ function ProjectResultsPage({ name }: { name: string }) {
           </div>
         )} />
 
-      <ErrorBox error={error instanceof ApiError && error.status === 404 ? `There is no project called ${name}, or you may not see it.` : error} />
+      <ErrorBox error={error instanceof ApiError && error.status === 404 ? terms().say(`There is no {project} called ${name}, or you may not see it.`) : error} />
       {test && <HistoryPanel project={name} testKey={test} gref={data?.ref ?? ""} onClose={() => go({ test: "" })} />}
       {!data && !error && <div className="loading">Loading…</div>}
       {data && withTests.length === 0 && (

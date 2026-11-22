@@ -101,7 +101,7 @@ lists every variable a step receives.
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `defaults` | mapping | none | What every script step takes unless it says otherwise: image, Airfield (environment), timeout, retry, caches; see [Defaults](#defaults) |
 | `runner` | mapping | none | Which Stations (runners) may run the pipeline's steps; see [Station](#runner) |
-| `lane` | mapping | none | Makes runs of the project take turns, and says what a Sortie that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
+| `lane` | mapping | none | Makes runs of the Flight (codebase) take turns, and says what a Sortie that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
 | `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A Sortie past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a Sortie's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display. Not with `uses` |
 | `uses` | `library/template` | none | A file that is only a use of one Flight plan: `uses: launchway/go-service`. It stands for a pipeline named `ci` that runs on pushes to `main` and on pull requests (docs-only changes skipped), superseding older Sorties, with one step `ci`; what the file writes itself (`pipeline`, `on`, `supersede`, `containers`) is kept. See [Starters](../guide/starters.md) |
@@ -167,9 +167,9 @@ steps:
 | `schedule` | list | none | Start runs at times written as cron expressions. At most 20 |
 | `webhook` | mapping, or a list of mappings | none | Let other systems start runs by calling a URL. At most 20 |
 
-The server polls each project's repository (every 30 seconds by default; see
+The server polls each Flight's repository (every 30 seconds by default; see
 [`projects[].poll`](server-config.md#projects)), so a push starts a run at the next poll, or at once
-when the Git host calls the project's Git webhook.
+when the Git host calls the Flight's Git webhook.
 
 ### Push
 
@@ -187,7 +187,7 @@ only; a tag push always runs.
 ### Pull request
 
 Pull-request runs run the pipeline at the pull request's head commit (`refs/pull/<n>/head`). They
-run only if the pipeline on the project's default branch also has `pull_request`, so a pull request
+run only if the pipeline on the Flight's default branch also has `pull_request`, so a pull request
 cannot turn pull-request runs on for itself. A pull request has no branch or tag of its own:
 `when: { branch: ... }` never matches a pull-request run, and `branches` and `tags` are not keys of
 `pull_request`. What it has is the branch it would land on, and `into` filters by that:
@@ -199,12 +199,12 @@ cannot turn pull-request runs on for itself. A pull request has no branch or tag
 | `paths` | [path patterns](#path-filters) | none | Run only if a file the pull request changed (since it left the target branch) matches one |
 | `paths_ignore` | [path patterns](#path-filters) | none | Run unless every file the pull request changed matches one. Not together with `paths` |
 
-The server sees only each pull request's head, so it learns the target from the project's **forge
+The server sees only each pull request's head, so it learns the target from the Flight's **forge
 connection**, and does so when it first sees each head, reading the pipeline on the default branch
-(the reviewed one) to know whether to filter. If the project has no forge connection, a pipeline
-with `into` runs no pull requests, and the project's recent pushes say so, once: *waiting: pull request
-#12 not run: the pipeline filters by target branch and the project has no forge connection*. The head
-is not marked as seen, so every poll looks at it again, and it runs once the project has a forge. If the forge
+(the reviewed one) to know whether to filter. If the Flight has no forge connection, a pipeline
+with `into` runs no pull requests, and the Flight's recent pushes say so, once: *waiting: pull request
+#12 not run: the pipeline filters by target branch and the Flight has no forge connection*. The head
+is not marked as seen, so every poll looks at it again, and it runs once the Flight has a forge. If the forge
 cannot be reached, the pull request is not run either (the server never runs unfiltered): the
 decision says *waiting: forge unreachable*, and the next poll tries again for as long as the head
 is the newest. The target is read once for each head; when a pull request is retargeted and its
@@ -237,7 +237,7 @@ Steps of pull-request runs may not read secrets unless the server's configuratio
 | `ref` | branch or tag | the default branch | The branch or tag whose pipeline runs |
 | `inputs` | mapping | none | Values for the pipeline's [inputs](#inputs), by input name; the others take their defaults. A list input takes a YAML list |
 
-Schedules are read only from the pipeline on the project's default branch. A time that does not
+Schedules are read only from the pipeline on the Flight's default branch. A time that does not
 exist because the clocks go forward is skipped; a time that happens twice fires once. Two identical
 entries are refused. Runs started by a schedule have the event `schedule`.
 
@@ -301,7 +301,7 @@ two, so a merge commit counts what it brings in); a **pull request** with the me
 target branch and its head. A Sortie starts when the filter says so, and when it cannot tell: the
 first push of a branch, a force-push that left the previous head out of the new history, more than
 1000 changed files, a tag push, or a git error all **run**. A Sortie that does not start leaves a
-decision in the project's recent pushes (outcome `skipped_paths`) that says why, for example *no
+decision in the Flight's recent pushes (outcome `skipped_paths`) that says why, for example *no
 changed file matches paths (src/**, go.mod); changed: README.md, docs/a.md*. A pull request whose
 head was kept from running this way satisfies the required checks of its target branch's merge
 rules: nothing needed to run. A step skipped by `changed` is shown as skipped (skip kind `paths`)
@@ -531,7 +531,7 @@ steps:
 | `users` | list of names | none | Users, as written in bindings. Any of them may decide |
 | `count` | whole number | `1` | How many distinct people must approve, 1 to 5. With `users` only, not more than the users listed |
 
-The caller must still have the operator role on the project (and on the Airfield, for an
+The caller must still have the operator role on the Flight (and on the Airfield, for an
 approval that names a deployment): `approvers` only narrows, never widens. It is judged by the
 server's engine for the web, the API, MCP and the command line alike, by name and groups at the
 time of the decision. Each approval is recorded (`step.approval_recorded`, with who, when and the
@@ -570,7 +570,7 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
-`POST /api/v1/validate?project=NAME` expand it. `launchway validate FILE --resolved` shows the steps that result, for the starters that ship with Launchway with no server (`--environment dev --environment prod:protected` and `--project-name NAME` stand in for what a server knows of the project, `--variable NAME=VALUE` for variables).
+`POST /api/v1/validate?project=NAME` expand it. `launchway validate FILE --resolved` shows the steps that result, for the starters that ship with Launchway with no server (`--environment dev --environment prod:protected` and `--project-name NAME` stand in for what a server knows of the Flight, `--variable NAME=VALUE` for variables).
 
 #### Changing what a template runs
 
@@ -633,7 +633,7 @@ Other output names are refused.
 <!-- keys: image-tag -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `registry` | name | `launchway` in `tags` (required in `cache`) | A Depot (registry) the Station's configuration names ([`images.registries`](runner-config.md#images)), in lower case; or `launchway`, the [built-in Depot](../guide/registry.md), which needs no Station configuration: the step gets its address and a credential made for the Sortie. A tag that names no Depot uses it, and its `repository` may leave out the project (`api` in project `cart` is `cart/api`) |
+| `registry` | name | `launchway` in `tags` (required in `cache`) | A Depot (registry) the Station's configuration names ([`images.registries`](runner-config.md#images)), in lower case; or `launchway`, the [built-in Depot](../guide/registry.md), which needs no Station configuration: the step gets its address and a credential made for the Sortie. A tag that names no Depot uses it, and its `repository` may leave out the Flight (`api` in Flight `cart` is `cart/api`) |
 | `repository` | text | required | The repository in that Depot, without the host, such as `team/app` |
 | `tag` | [value](#value-forms) | required | The tag, such as `latest` or `{ run: short_sha }` |
 
@@ -717,7 +717,7 @@ default `30m`, from `1m` to `24h`. Deploy steps cannot be repeated by `for_each`
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `environment` | name, or `{ input: name }` | required | One of the server's [Airfields](server-config.md#environments): it gives the lock and the record. `^[a-z0-9][a-z0-9-]{0,62}$`. `{ input: name }` takes it from a `choice` input whose options are all Airfield names |
-| `service` | name | the project's name | What is deployed there. `^[a-z0-9][a-z0-9-]{0,62}$` |
+| `service` | name | the Flight's name | What is deployed there. `^[a-z0-9][a-z0-9-]{0,62}$` |
 | `version` | [value](#value-forms) | `{ run: short_sha }` | What the Airfield's "current version" shows |
 | `argocd` | mapping | one of `argocd` or `fleet` | How to launch with Argo CD; see [Argo CD](#argo-cd) |
 | `fleet` | mapping | one of `argocd` or `fleet` | How to deliver to a fleet of hosts over SSH; see [Fleet](#fleet) |
@@ -1084,7 +1084,7 @@ An ai step asks a model one question: instructions, a prompt and inputs taken fr
 outputs and Cargo. It runs no script. The Station makes the call with a key from its own secret
 stores (`ai: true` in its configuration); the key never enters a step's container. The model's
 answer is untrusted text: it can become the step's outputs and a Cargo, never run anything. The
-model must be one of the server's [`ai.models`](server-config.md#ai-models) that the project may
+model must be one of the server's [`ai.models`](server-config.md#ai-models) that the Flight may
 use. `timeout` defaults to `10m`, from `10s` to `1h`. It may be in a template, where `model`, `instructions` and `prompt` may be `{ param: … }` and its inputs name steps of the same template; the model is checked against the server's Depot after expansion. It cannot be in a loop, and
 takes no `run`, `image`, `env`, `secrets`, `artifacts`, `reports` or `fetch`. It needs a server that
 knows ai steps (schema 19). See [AI models](../guide/ai.md).
@@ -1151,16 +1151,16 @@ steps:
 
 `runner` says which Stations may run the pipeline's steps. It is written once, for the whole
 pipeline, because a Sortie's steps share the workspace of the Station that took its first step. It
-needs a server that knows Flight lines (Station (runner) pools); see
+needs a server that knows Ramps (Station (runner) pools); see
 [Stations on other machines and clusters](../guide/runner-identity.md). Name a pool, labels, or both.
 
 <!-- keys: runner -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `pool` | name | any pool that serves the project | One of the server's [Flight lines](server-config.md#runner-pools); it must serve the project. Lower-case letters, digits, `.`, `_` and `-` |
+| `pool` | name | any pool that serves the Flight | One of the server's [Ramps](server-config.md#runner-pools); it must serve the Flight. Lower-case letters, digits, `.`, `_` and `-` |
 | `labels` | list | none | Labels a Station must all have, from its join token and its own [`labels`](runner-config.md). At most 16, each written as a pool name is |
 
-A Sortie that no Station may take says why on its page: no pool serves the project, the pool it asks for
+A Sortie that no Station may take says why on its page: no pool serves the Flight, the pool it asks for
 does not, or none of the Stations seen lately has the labels or accepts it.
 
 <!-- validate -->
@@ -1187,12 +1187,12 @@ Station that calls models).
 <!-- keys: step-runner -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `pool` | name | any pool that serves the project | A build pool that serves the project and the event. In a template it may be `{ param: name }` |
+| `pool` | name | any pool that serves the Flight | A build pool that serves the Flight and the event. In a template it may be `{ param: name }` |
 | `labels` | list | none | Labels a Station must all have. In a looped step an item may be `{ each: key }` (with `format`); in a template the list may be `{ param: name }` |
 
 A retry of the step reuses its workspace; a step whose labels no Station has waits ("waiting for a
 Station with labels arm64") and does not hold back steps that do not need it. A pool that does not
-exist or does not serve the project makes the pipeline invalid when the run is created.
+exist or does not serve the Flight makes the pipeline invalid when the run is created.
 
 <!-- validate -->
 ```yaml
@@ -1312,7 +1312,7 @@ round.
 
 A lane makes runs take turns: at most one run of a lane goes at a time. A Sortie that arrives while the
 lane is held waits its turn, replaces the Sortie that holds it, or is skipped. A lane belongs to one
-project; two pipelines of a project that give their lanes the same `name` (and `per`) share one.
+Flight; two pipelines of a Flight that give their lanes the same `name` (and `per`) share one.
 
 <!-- keys: lane -->
 | Key | Type | Default | Description |
@@ -1494,7 +1494,7 @@ step that needs the loop needs every member.
   An expanded step name may be at most 200 bytes.
 - `serial: true` makes each member wait for the member before it (not for its Returns to base, which are
   skipped when all went well), so the members go in the order of the lists and a failure ends the
-  line: how the starters deliver through a project's Airfields. A loop over a template may hold
+  line: how the starters deliver through a Flight's Airfields. A loop over a template may hold
   approval, launch, verify and Return to base steps.
 - Approval, image, launch, Return to base and rollout steps cannot be repeated. Fetching from a loop's
   members is not available yet.
@@ -1756,7 +1756,7 @@ that keeps build layers, is a different thing with a different shape.
 | `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read and that is younger than the maximum age. Set `max_age` with it |
 | `save` | text | `success` | After which outcomes the paths are saved: `success`, `always` (the step succeeded or failed) or `never` |
 | `sensitive` | boolean | `false` | `true`: the cache is never read outside the scope that wrote it. A pull request, another branch or a draft does not restore what the default branch saved, and an entry saved as sensitive stays unreadable to them even if their own pipeline says otherwise |
-| `share` | text | none | A group name, as for `name`. Caches of one project that name the same group, the same cache `name` and the same scope see each other's entries, whichever pipeline they are in. Without it a cache belongs to its pipeline: two pipelines that use one cache name do not share it |
+| `share` | text | none | A group name, as for `name`. Caches of one Flight that name the same group, the same cache `name` and the same scope see each other's entries, whichever pipeline they are in. Without it a cache belongs to its pipeline: two pipelines that use one cache name do not share it |
 | `max_age` | duration | the policy's, 7 days | How old an entry may be, counted from when it was made, before a restore treats it as missing and the step rebuilds it: `7d`, `36h`, `90m`; between 1 hour and 365 days. An administrator's cache policy sets the longest allowed |
 
 <!-- keys: cache-key -->
@@ -1801,7 +1801,7 @@ server decides it, not the Station:
 
 | Run | Reads | Writes |
 |---|---|---|
-| A push, schedule, webhook or manual run on the project's default branch | `default` | `default` |
+| A push, schedule, webhook or manual run on the Flight's default branch | `default` | `default` |
 | Another branch or a tag | its own scope (`ref:` and the full ref), then `default` | its own scope |
 | A pull request | `pull:<number>`, then `default` | `pull:<number>` |
 | A pull request from a fork | `pull:<number>` only | `pull:<number>` |
@@ -1810,10 +1810,10 @@ server decides it, not the Station:
 Within a scope, an entry belongs to its pipeline (or the `share` group the cache names), and a
 `sensitive` cache is read only from the scope that wrote it. So a pull request, which runs code from anyone who can open one, starts from what the default
 branch built but can never put anything where the default branch will read it. Nothing is shared
-between projects. How much a project keeps (10 GiB), how large one entry may be (2 GiB) and how long
+between Flights. How much a Flight keeps (10 GiB), how large one entry may be (2 GiB) and how long
 an entry nobody restored is kept (7 days) are the [cache policy](http-api.md#build-caches), set by an
-administrator in the database; when a save would pass the quota the project's least recently used
-entries are evicted (those of pull requests and branches before the default branch's), and with caching switched off for a project every lookup misses and nothing is
+administrator in the database; when a save would pass the quota the Flight's least recently used
+entries are evicted (those of pull requests and branches before the default branch's), and with caching switched off for a Flight every lookup misses and nothing is
 saved, while the pipeline still validates. The step's log says what happened to each cache
 (`Cache pip: restored key 3f9c… (exact, 118 MB, 4 s)`, `Cache pip: no entry; the step runs without
 it`, `Cache pip: saved 120 MB as key 3f9c…`, `Cache pip: not saved: …`), and the same is in the Sortie
@@ -1883,7 +1883,7 @@ A default can also be worked out. These forms are for string, number, boolean, A
 | `param` | list parameter name | required | The list, such as `overrides` |
 | `key` | text | required | The entry's key, with `{name}` filled in: `{environment}.application` |
 
-A parameter of type `output` takes a step's output from the file that uses the template: `with: { digest: { output: image.digest } }`. Starters also read what Launchway knows of the project through variables (`from: launchway_project`, `launchway_environments`, `launchway_protected`), which the Sortie records like any variable it used.
+A parameter of type `output` takes a step's output from the file that uses the template: `with: { digest: { output: image.digest } }`. Starters also read what Launchway knows of the Flight through variables (`from: launchway_project`, `launchway_environments`, `launchway_protected`), which the Sortie records like any variable it used.
 
 A parameter reaches the template in exactly three ways, all resolved when the run is created:
 every step of the template receives it as `PARAM_<NAME>` (names starting with `PARAM_` are reserved
@@ -1909,7 +1909,7 @@ change's `tag`, `digest` and `value` and a verify step's `params`; give the Airf
 application the `environment` and `application` parameter types. The names a step gives other steps
 (`needs`, `deployment`, `{ output: step.key }`) are the template's own, and become
 `<uses-step>/<step>` when the run is created. A template authorizes nothing: once expanded, every
-step is checked as if the pipeline had written it, so a project cannot use a template to reach an
+step is checked as if the pipeline had written it, so a Flight cannot use a template to reach an
 Airfield it is not listed for ([`projects`](server-config.md#environments)), policies apply to
 the deployment, and problems name the step by its expanded name. A template reads no Sortie inputs:
 `{ input: ... }` and

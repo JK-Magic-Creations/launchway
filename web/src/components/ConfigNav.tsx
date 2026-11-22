@@ -13,7 +13,7 @@ export const WIZARDS: WizardInfo[] = [
   { id: "add-environment", title: "Add an environment", kind: "environment", text: "Where deploy steps deploy: its target, who may deploy there, whether it is protected." },
   { id: "add-policy", title: "Add a policy", kind: "policy", text: "Rules runs must meet before they deploy or finish, enforced or only reported." },
   { id: "add-health-source", title: "Add a health source", kind: "health-source", text: "Metrics or logs that verify steps read to judge a deployment." },
-  { id: "add-model", title: "Add an AI model", kind: "model", text: "A model steps may ask, which projects may use it, and where its key is kept." },
+  { id: "add-model", title: "Add an AI model", kind: "model", text: "A model steps may ask, which {projects} may use it, and where its key is kept." },
 ];
 
 export function wizardFor(kind: string): WizardInfo | undefined {

@@ -15,14 +15,14 @@ import (
 
 func cmdValidate(args []string) error {
 	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
-	project := fs.String("project", "", "also check the file against this project on the server you are signed in to: its libraries, and whether it has what the pipeline needs, such as a forge")
+	project := fs.String("project", "", "also check the file against this Flight on the server you are signed in to: its libraries, and whether it has what the pipeline needs, such as a forge")
 	var libs libraryFlag
 	fs.Var(&libs, "library", "expand templates from a library directory, with no server: NAME=DIRECTORY, where NAME is what the pipeline's libraries section calls it (repeat for each library)")
 	var envs libraryFlag
-	fs.Var(&envs, "environment", "offline: pretend the project may deliver to this environment, in the order given: NAME, or NAME:protected for one that asks a person first (repeat for each; a server supplies the project's real ones)")
+	fs.Var(&envs, "environment", "offline: pretend the Flight may deliver to this environment, in the order given: NAME, or NAME:protected for one that asks a person first (repeat for each; a server supplies the Flight's real ones)")
 	var vars libraryFlag
-	fs.Var(&vars, "variable", "offline: a variable of the project's levels, NAME=VALUE (a list is written [a, b]); starters take image_namespace, registry, gitops_repo, delivery_overrides and health_path from them")
-	projectName := fs.String("project-name", "", "offline: the project's name, which starters take as the service's name")
+	fs.Var(&vars, "variable", "offline: a variable of the Flight's levels, NAME=VALUE (a list is written [a, b]); starters take image_namespace, registry, gitops_repo, delivery_overrides and health_path from them")
+	projectName := fs.String("project-name", "", "offline: the Flight's name, which starters take as the service's name")
 	resolved := fs.Bool("resolved", false, "print the resolved pipeline (templates expanded) as JSON; needs --library for each library the pipeline uses")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -97,7 +97,7 @@ func validateOnServer(path, project string) error {
 		if !got.OK {
 			return exitErr(1)
 		}
-		fmt.Printf("%s: accepted by the server for project %s\n", path, project)
+		fmt.Printf("%s: accepted by the server for Flight %s\n", path, project)
 		return nil
 	})
 }

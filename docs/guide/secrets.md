@@ -60,4 +60,4 @@ runner:
 
 A secret that does not exist or may not be read fails the step, naming the store and key. A store
 that cannot be reached (no answer, sealed, 5xx) is asked again for 30 seconds, and then the step is
-handed back to be run again later. `launchway run` uses the project name `local`.
+handed back to be run again later. `launchway run` uses the Flight (codebase) name `local`.

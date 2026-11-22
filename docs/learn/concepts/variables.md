@@ -37,7 +37,7 @@ runs. The value is not written to the pipeline, the database or the log. See [Se
 ## Variables set at a level
 
 The places above are inside one pipeline. A variable can also be set once at a **level**: the Base,
-a Wing, a Squadron or a project. Everything below gets it. A nearer level can set the same name to
+a Wing, a Squadron or a Flight (codebase). Everything below gets it. A nearer level can set the same name to
 override it, and a level above can lock it so nothing below can change it.
 
 ```mermaid
@@ -51,7 +51,7 @@ flowchart TB
 
 The rule is one sentence:
 
-**The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield (environment) being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
+**The nearest setting wins: what is given when a Sortie (run) starts, then the pipeline file's own `with:`, then the Flight, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the Airfield (environment) being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross Wings.
 
 If you write code, you already know it:
 
@@ -67,7 +67,7 @@ A pipeline takes a variable by naming it with `from:` on an input or a template 
 reaches a step just because its name matches. A step that deploys to `production` sees the variable set for
 `production` before the general one. A secret variable is a reference, never the secret.
 
-The page for a project shows each variable with where it comes from, the values it overrides struck
+The page for a Flight shows each variable with where it comes from, the values it overrides struck
 through in order, and who locked it; the same panel sits beside the pipeline editor and in the form that
 starts a Sortie, and a finished Sortie shows the variables it used as recorded. See
 [Variables at levels](../../guide/variables.md) for the types, the locks and the commands.

@@ -68,7 +68,7 @@ The packages of the code base and what the tests cover. For contributors.
 - verification: every statistic against known series, every kind of health source against a real or
   faked server, a deploy Station that dies mid-window, and an `ai` step against a fake model and a real
   small one (`make test-verify`, `make test-local-model`);
-- Station identities and pools: enrolment, leases bound to a Station, pools by project and event,
+- Station identities and pools: enrolment, leases bound to a Station, pools by Flight (codebase) and event,
   revocation and key rotation in the middle of a step, `accept:`, clock skew and proxies;
 - the MCP endpoint: every tool, rights, limits, origins, OAuth and untrusted text;
 - real containers (`make test-containers`);

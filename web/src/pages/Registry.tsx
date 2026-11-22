@@ -49,7 +49,7 @@ export function RegistryPage({ project }: { project?: string }) {
   const s = status.data!;
   return (
     <div className="page">
-      <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>; people with a role on the project see it, and nobody else does.</>} />
+      <PageHead eyebrow={terms().say("{Registry}")} title="Built-in store" sentence={<>Images and Helm charts pushed to <Mono>{s.host}</Mono>. A repository is named <Mono>project/name</Mono>{terms().say("; people with a role on the {project} see it, and nobody else does.")}</>} />
       <div className="grid g2">
         <Sheet title="Push and pull">
           <dl className="kvlist">
@@ -68,9 +68,9 @@ export function RegistryPage({ project }: { project?: string }) {
           </dl>
         </Sheet>
       </div>
-      <h2 className="h-sm">Project</h2>
-      {mine.length === 0 && <p className="faint">You have no role on any project, so there is nothing here to see.</p>}
-      <nav className="chips" aria-label="Projects">
+      <h2 className="h-sm">{terms().say("{Project}")}</h2>
+      {mine.length === 0 && <p className="faint">{terms().say("You have no role on any {project}, so there is nothing here to see.")}</p>}
+      <nav className="chips" aria-label={terms().say("{Projects}")}>
         {mine.map((p) => (
           <a key={p} className={"chip" + (p === project ? " chip-on" : "")} href={`/depot/store/${encodeURIComponent(p)}`} onClick={onLink} aria-current={p === project ? "page" : undefined}>{p}</a>
         ))}
@@ -210,7 +210,7 @@ function PolicyView({ project, registry, admin, onChanged }: { project: string; 
         <dt>Quota</dt><dd>{eff.quota_bytes < 0 ? "none" : bytes(eff.quota_bytes)} <span className="faint small">(set at {eff.quota_from} level; each distinct layer counts once)</span></dd>
         <dt>Retention</dt><dd>{retention || <span className="faint">no rule: nothing is deleted automatically</span>}</dd>
         <dt>Immutable tags</dt><dd>{eff.immutable_tags?.length ? eff.immutable_tags.map((t) => <Mono key={t}>{t} </Mono>) : <span className="faint">none: any tag may be pushed again</span>}</dd>
-        <dt>Pulled by runs of</dt><dd>{eff.pull_from?.length ? eff.pull_from.join(", ") : <span className="faint">only this project</span>}</dd>
+        <dt>Pulled by runs of</dt><dd>{eff.pull_from?.length ? eff.pull_from.join(", ") : <span className="faint">{terms().say("only this {project}")}</span>}</dd>
       </dl>
       {editing && (
         <form className="card compform" onSubmit={save}>

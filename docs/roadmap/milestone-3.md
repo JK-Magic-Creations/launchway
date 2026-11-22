@@ -724,7 +724,7 @@ Write extra policy rules in an open policy language alongside the built-in rules
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A bill of materials across every image as well as every project, with export. Searching components across projects already works. Pairs with the software graph.
+A bill of materials across every image as well as every Flight, with export. Searching components across Flights already works. Pairs with the software graph.
 
 **Depends on:** Findings and SBOMs per Sortie.
 

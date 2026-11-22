@@ -3,7 +3,7 @@
 This guide connects a [Station](../glossary.md#runner) on another machine, or in another Kubernetes
 cluster, to a Launchway server, so that steps run where the Station is. It is for operators. It also
 covers where the Station token comes from, the executors, health checks, what the network must allow,
-and deploy Stations with Flight line (Station (runner) pool) tokens.
+and deploy Stations with Ramp (Station (runner) pool) tokens.
 
 > **Verified** on 2026-11-19 against commit f717337: a server built from a clean clone, with its
 > built-in Station turned off, on SQLite on this machine; a second process, `launchway runner` with
@@ -31,8 +31,8 @@ and deploy Stations with Flight line (Station (runner) pool) tokens.
 > [!CAUTION]
 > A Station with the **shared Station token** has no identity of its own: the server cannot tell such
 > Stations apart, trusts the Station ID each one gives, and anyone who holds the token can take the
-> work of the pool it serves, with that project's checkout and the secrets its steps ask for from
-> the Station's own stores. Enrol Stations with a **join token** instead, give each pool the projects
+> work of the pool it serves, with that Flight's checkout and the secrets its steps ask for from
+> the Station's own stores. Enrol Stations with a **join token** instead, give each pool the Flights (codebase)
 > it serves, and set the Station's own `accept:` limits. See
 > [Stations on other machines and clusters](../guide/runner-identity.md). Connect Stations only to
 > servers you run and trust, and only Stations you run and trust to your server.
@@ -112,7 +112,7 @@ Other options (`sh install.sh --help` lists them all):
 
 | Option | What it does |
 |---|---|
-| `--token-file FILE` | use the shared Station token or a Flight line's token from a file instead of `--join` |
+| `--token-file FILE` | use the shared Station token or a Ramp's token from a file instead of `--join` |
 | `--name NAME`, `--concurrency N` | the Station's name (default: the host name) and how many steps it runs at once |
 | `--executor podman` or `docker` | run steps in containers; see the sandbox below |
 | `--proxy URL`, `--no-proxy LIST` | an HTTP proxy for the server, Git and secret stores |
@@ -332,11 +332,11 @@ token. In Kubernetes with the chart, put a join token in a Secret and set `runne
 The pools, the Station's own `accept:` limits, revoking and rotating keys are described in
 [Stations on other machines and clusters](../guide/runner-identity.md).
 
-## Deploy Stations and Flight lines {#deploy-runners-and-runner-pools}
+## Deploy Stations and Ramps {#deploy-runners-and-runner-pools}
 
 Deploy steps are done only by [deploy Stations](../glossary.md#deploy-runner): `launchway runner` with
 a `deploy:` section, in or near the cluster that Argo CD manages, holding the token of a
-[Flight line](../glossary.md#runner-pool). The shared Station token cannot take deploy work. The
+[Ramp](../glossary.md#runner-pool). The shared Station token cannot take deploy work. The
 server lists its pools, each with a token of its own (at least 32 characters, different from the
 shared token and every other pool's) and the targets it may serve:
 

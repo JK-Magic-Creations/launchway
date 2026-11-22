@@ -12,7 +12,7 @@ catalog.
    versions allowed, and so on).
 3. **Enforce, or only report?** *Enforce* stops a Sortie that breaks a rule. *Report* lets it through and
    records the verdict, which is the safe way to see what a policy would do before it blocks anyone.
-4. **To whom does it apply?** Projects, Airfields (environments), branches and events it covers; a rule about
+4. **To whom does it apply?** Flights (codebase), Airfields (environments), branches and events it covers; a rule about
    deploys may be limited to Airfields.
 
 ## What it creates

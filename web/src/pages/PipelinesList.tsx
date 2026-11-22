@@ -60,14 +60,14 @@ export function PipelinesPage() {
         actions={me?.runners ? <LinkButton href="/playground" icon="play">Try a pipeline without saving</LinkButton> : undefined} />
       {rows.length > 0 && (
         <Band cells={[
-          { key: "n", label: "Pipelines", value: rows.length, foot: "one for each project" },
+          { key: "n", label: "Pipelines", value: rows.length, foot: terms().say("one for each {project}") },
           { key: "run", label: "Running now", value: running, foot: running ? "work is moving" : "quiet" },
           { key: "bad", label: "Stopped", value: failing, foot: failing ? terms().say("last {run} failed") : "none", loud: failing ? "bad" : undefined },
         ]} />
       )}
       {rows.length === 0 ? (
-        <Sheet><EmptyState title="No pipelines yet" action={me?.admin ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined}>
-          {terms().say("Each project has a pipeline: its steps are read from the project's Git repository. Add a project and its pipeline appears here, with what starts it and every {run}'s result.")}
+        <Sheet><EmptyState title="No pipelines yet" action={me?.admin ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">{terms().say("Add a {project}")}</LinkButton> : undefined}>
+          {terms().say("Each {project} has a pipeline: its steps are read from the {project}'s Git repository. Add a {project} and its pipeline appears here, with what starts it and every {run}'s result.")}
         </EmptyState></Sheet>
       ) : (
         <Suspense fallback={flat}><PipelinesExplorer projects={rows} runs={all ?? []} now={now} me={me?.user ?? ""} /></Suspense>

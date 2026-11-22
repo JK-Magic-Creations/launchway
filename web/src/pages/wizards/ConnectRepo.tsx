@@ -25,7 +25,7 @@ export interface RepoFlow {
 }
 
 const POLLS = [
-  { value: "15s", label: "Every 15 seconds", help: "Runs start soonest. Each server asks the Git host four times a minute: fine for a few projects." },
+  { value: "15s", label: "Every 15 seconds", help: "Runs start soonest. Each server asks the Git host four times a minute: fine for a few repositories." },
   { value: "30s", label: "Every 30 seconds", help: "The usual choice: a run starts within half a minute of a push.", badge: "recommended" },
   { value: "2m", label: "Every 2 minutes", help: "Less load on the Git host; runs start up to two minutes after a push." },
   { value: "10m", label: "Every 10 minutes", help: "For repositories that change rarely, or a Git host that limits requests. A Git webhook can still make it look at once." },
@@ -228,19 +228,19 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
           help={<>A pipeline says what a run does: its steps, in order. Whatever you choose, a <span className="mono">.launchway/pipeline.yaml</span> committed to the repository later takes its place.</>}
           options={[
             { value: "template", label: "A template from a shared library", disabled: !libs?.length,
-              help: libs?.length ? "Your platform team's ready-made pipeline, kept in one place: when they improve it, every project using it gets the improvement at the version you choose. Nothing to commit to the repository."
+              help: libs?.length ? terms().say("Your platform team's ready-made pipeline, kept in one place: when they improve it, every {project} using it gets the improvement at the version you choose. Nothing to commit to the repository.")
                 : <>No libraries are set up on this server yet. <Link href="/config/libraries/new">Add a library</Link> first to use one.</> },
             { value: "file", label: "A pipeline file in the repository",
               help: <>The pipeline lives in Git, the team owns it and reviews changes to it like any other code; Launchway stores only the repository's address.{" "}
                 {check.result?.ok ? <PipelineFileState check={check.result} branch={effBranch} /> : null}</> },
             { value: "sample", label: `Start from a ${terms().lower("flight_plan")}`,
-              help: `A ${terms().lower("flight_plan")} is the ready-made pipeline for a kind of project. You get a minimal working pipeline to copy and commit to the repository as .launchway/pipeline.yaml, with the triggers you choose next. Launchway does not keep pipeline text: Git stays the only source. The pipeline editor can also save it for you, as a commit on a new branch.` },
+              help: terms().say(`A ${terms().lower("flight_plan")} is the ready-made pipeline for a kind of {project}. You get a minimal working pipeline to copy and commit to the repository as .launchway/pipeline.yaml, with the triggers you choose next. Launchway does not keep pipeline text: Git stays the only source. The pipeline editor can also save it for you, as a commit on a new branch.`) },
           ]} />
         {source === "template" && libs && libs.length > 0 && (
           <div className="cf-sub">
             <div className="cf-grid">
               <SelectInput label="Library" value={library} onChange={(v) => { setLibrary(v); setVersion(""); setTemplate(""); setWithVals({}); }} problems={by.library}
-                help="The libraries this server may fetch. They are fetched with the same Git access as projects."
+                help={terms().say("The libraries this server may fetch. They are fetched with the same Git access as {projects}.")}
                 options={[{ value: "", label: "Choose a library" }, ...libs.map((l) => ({ value: l.name, label: l.name }))]} />
               {library && tmpls.data && (
                 <>
@@ -361,7 +361,7 @@ export function PipelineToCommit({ flow }: { flow: RepoFlow }) {
       note={<>The file in the repository decides what starts runs: make sure its top has these lines (on the <span className="mono">{flow.branch}</span> branch).</>} />;
   }
   return <CopyBlock title=".launchway/pipeline.yaml" text={flow.pipelineText}
-    note={<>Commit this file to the <span className="mono">{flow.branch}</span> branch. Until it is there, runs of this project have no pipeline and fail at once.</>} />;
+    note={<>Commit this file to the <span className="mono">{flow.branch}</span> {terms().say("branch. Until it is there, runs of this {project} have no pipeline and fail at once.")}</>} />;
 }
 
 export function RunItNow({ name, branch }: { name: string; branch: string }) {

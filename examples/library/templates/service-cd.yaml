@@ -6,8 +6,8 @@
 # One use delivers to one environment, so a service that has a dev and a
 # production environment uses it twice, each with a `when` on its branch.
 # Every step is an ordinary step once expanded. A template authorises nothing:
-# the environment's `projects` list in the server's configuration, the deploy
-# runner's repositories and the policies decide whether this project may
+# the environment's `Flights` list in the server's configuration, the deploy
+# runner's repositories and the policies decide whether this Flight may
 # deploy here, exactly as if the pipeline had written the steps.
 #
 #   dev:
@@ -29,7 +29,7 @@ description: Build and push the image, deploy it to one environment with GitOps,
 params:
   environment:      { type: environment, description: "The environment to deploy to, one of the server's environments" }
   application:      { type: application, description: "The Argo CD application that runs the service there" }
-  service:          { type: string, default: "", description: "What the deployment is called in the environment; empty: the project's name. Two services of one project in one environment, such as a back end and a front end, give different names" }
+  service:          { type: string, default: "", description: "What the deployment is called in the environment; empty: the Flight's name. Two services of one Flight in one environment, such as a back end and a front end, give different names" }
   image_repository: { type: string, description: "The image's repository in the registry, without the host, such as team/shop" }
   manifest:         { type: string, description: "The file in the GitOps repository whose references to the image change, such as apps/shop/deployment.yaml" }
   workload:         { type: string, description: "The name of the workload Argo CD syncs and Launchway watches" }

@@ -644,7 +644,7 @@ func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	p, err := s.Projects.Get(r.PathValue("name"))
@@ -657,7 +657,7 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) projectRefs(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	refs, err := s.Projects.Refs(r.Context(), r.PathValue("name"))
@@ -673,7 +673,7 @@ func (s *Server) projectRefs(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 	if s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "no projects are configured")
+		writeErr(w, http.StatusNotFound, "no {projects} are configured")
 		return
 	}
 	var in struct {
@@ -852,7 +852,7 @@ func (s *Server) runPipelineFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if d.Source.Kind != "git" || s.Projects == nil {
-		writeErr(w, http.StatusNotFound, "the pipeline file is only kept for runs from a Git project")
+		writeErr(w, http.StatusNotFound, "the pipeline file is only kept for runs from a Git {project}")
 		return
 	}
 	text, err := s.Projects.ReadPipeline(r.Context(), d.Project, d.SHA)

@@ -1,14 +1,14 @@
 # Stations (runners) on other machines and clusters {#runners-on-other-machines-and-clusters}
 
-Flight lines (Station (runner) pools), join tokens, Station identities and the limits a Station sets for itself.
+Ramps (Station (runner) pools), join tokens, Station identities and the limits a Station sets for itself.
 
 A Station only ever connects out to the server, over HTTPS, so it can sit in any network that can
 reach the server: another machine, another cluster, a customer's data center. Each Station belongs
-to a **pool**, and a pool says which projects' work its Stations may take.
+to a **pool**, and a pool says whose Flights' work its Stations may take.
 
 ## Connecting a Station {#connecting-a-runner}
 
-Someone who manages Stations (the role `runner_admin` names on every project; admin by default)
+Someone who manages Stations (the role `runner_admin` names on every Flight; admin by default)
 makes a **join token** for a pool, on the Stations page (**Add a Station**), with
 `launchway runners join-token --pool web`, or with `POST /api/v1/runner-join-tokens`. It is shown
 once, stored only as a hash, lasts an hour by default (at most 7 days) and enrols one Station unless
@@ -56,17 +56,17 @@ runner_pools:
     targets: [prod-cluster]
 ```
 
-Without the default pool listed, it serves every project no other build pool serves. A Station is
+Without the default pool listed, it serves every Flight no other build pool serves. A Station is
 only ever given steps of Sorties (runs) its pool serves; the server checks it when it looks for work and
 again when it grants it, whatever the Station says. A pipeline may choose among the pools that serve
-its project, and ask for labels the Station must have:
+its Flight, and ask for labels the Station must have:
 
 ```yaml
 runner: { pool: gpu, labels: [cuda] }   # the whole pipeline: a run's steps share one workspace
 ```
 
 Labels come from the join token and from the Station (`labels:` in `runner.yaml`, or `--labels`).
-A Sortie that no Station may take says why on its page: no pool serves the project, the pool it asks
+A Sortie that no Station may take says why on its page: no pool serves the Flight, the pool it asks
 for does not, or none of the Stations seen lately has the labels or accepts it.
 
 ## Proxies and private certificates
@@ -108,8 +108,8 @@ running steps directly on its host when no Podman or Docker is found, unless `ex
 chosen.
 
 What `accept:` does **not** stop: a server that has been taken over can still run any script it
-likes for a project, repository and image the Station accepts, with that Station's network reach and
-the secrets its stores give those projects; it can choose which accepted commit runs, and replay an
+likes for a Flight, repository and image the Station accepts, with that Station's network reach and
+the secrets its stores give those Flights; it can choose which accepted commit runs, and replay an
 old one. Keep each Station's `accept:`, secret stores and network as narrow as its pool's work, and
 give production its own pool.
 
@@ -117,7 +117,7 @@ What the server checks of Stations: each enrolled Station's requests carry a sho
 token (15 minutes) that it gets by signing a 60-second assertion with its key; each assertion is
 accepted once, by any server. A step's lease belongs to the Station that took it: its logs, results,
 Cargo (artifacts) and heartbeats are refused from any other Station. A Station can only leave as itself, and
-only hears about runs of its pool's projects.
+only hears about runs of its pool's Flights.
 
 Station identities and join tokens need schema 20, and build pools and the pipeline key `runner:` need
 schema 21: use them once every server and Station is upgraded, and take them out before returning to base

@@ -53,7 +53,7 @@ export function AuditPage() {
       <PageHead eyebrow="Settings" title={<>{terms().label("logbook")}</>} sentence={<>Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</>} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
         <label className="field"><span>User</span><input value={draft.user} onChange={set("user")} /></label>
-        <label className="field"><span>Project</span><input value={draft.project} onChange={set("project")} /></label>
+        <label className="field"><span>{terms().say("{Project}")}</span><input value={draft.project} onChange={set("project")} /></label>
         <label className="field"><span>Action</span>
           <select value={draft.action} onChange={set("action")}>
             <option value="">Any</option>

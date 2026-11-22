@@ -1,7 +1,7 @@
 # Makes a release of the commit the run is for: a draft with notes written from the changes since
 # the last release and the Sortie's Cargo and image digests attached, then, as the steps are
 # arranged, a candidate, a clearance and publication. The steps run the launchway command, so the
-# image must have it, and the token (a Launchway API token that may operate the project) comes
+# image must have it, and the token (a Launchway API token that may operate the Flight) comes
 # from a secret store. A step that uses it:
 #
 #   release:
@@ -17,7 +17,7 @@ params:
   server:  { type: string, description: The address of the Launchway server }
   version: { type: string, default: "", description: The version to release; empty takes the tag the run is for }
   files:   { type: string, default: "", description: "Cargo files to attach, as artifact:path pairs separated by spaces" }
-  token_store: { type: string, default: vault, description: The secret store that holds a Launchway API token that may operate the project }
+  token_store: { type: string, default: vault, description: The secret store that holds a Launchway API token that may operate the Flight }
   token_key:   { type: string, default: ci/launchway, description: The token's key in the store }
   token_field: { type: string, default: token, description: The token's field }
   publish: { type: string, default: "false", options: ["true", "false"], description: Publish at once; false stops at a candidate }

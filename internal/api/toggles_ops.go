@@ -131,7 +131,7 @@ func (s *Server) setToggleSafeguards(w http.ResponseWriter, r *http.Request) {
 	}
 	if where.Level == togglestore.LevelProject {
 		if where.Scope != project {
-			writeErr(w, http.StatusNotFound, "not found: project "+where.Scope)
+			writeErr(w, http.StatusNotFound, "not found: {project} "+where.Scope)
 			return
 		}
 		if !s.authorize(identityFrom(r), auth.AdministerProject, project) {

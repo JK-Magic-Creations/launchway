@@ -37,7 +37,7 @@ describe("event sources", () => {
   it("says when the body to try is not JSON, and when a project has no sources", async () => {
     call.mockResolvedValue([]);
     render(<EventSources />);
-    expect(await screen.findByText("This project has no event sources.")).toBeInTheDocument();
+    expect(await screen.findByText("This Flight has no event sources.")).toBeInTheDocument();
     call.mockResolvedValue([source]);
     const again = render(<EventSources />);
     await waitFor(() => expect(again.getAllByText("deploy").length).toBeGreaterThan(0));

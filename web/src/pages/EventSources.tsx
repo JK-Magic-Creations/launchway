@@ -43,7 +43,7 @@ export default function EventSources() {
 
   return (
     <Sheet title="Event sources" actions={<span className="faint small">{terms().say("An address other systems call, signed, to start a {run}.")}</span>}>
-      <label className="field"><span>Project</span>
+      <label className="field"><span>{terms().say("{Project}")}</span>
         <select value={chosen} onChange={(e) => setProject(e.target.value)}>{(projects.data ?? []).map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
       </label>
       <ErrorBox error={err ?? list.error} />
@@ -76,7 +76,7 @@ export default function EventSources() {
             )}
           </li>
         ))}
-        {list.data && list.data.length === 0 && <li className="faint">This project has no event sources.</li>}
+        {list.data && list.data.length === 0 && <li className="faint">{terms().say("This {project} has no event sources.")}</li>}
       </ul>
       <form onSubmit={create}>
         <h3>New source</h3>

@@ -7,7 +7,7 @@ version 1 of the ruleset format (`"schema": 1`); a client that sees a higher sch
 ## Keys
 
 Every call carries an SDK key, made in the web page or with `launchway toggles keys create`, for one Airfield (environment) of
-one project: `Authorization: Bearer lwt_srv_...` (a **server key**, a secret) or `lwt_cli_...` (a **client key**,
+one Flight (codebase): `Authorization: Bearer lwt_srv_...` (a **server key**, a secret) or `lwt_cli_...` (a **client key**,
 public; `X-Launchway-Client-Id` carries it as well). A missing, unknown, revoked or expired key is `401` and says nothing
 about which. A call a key's kind may not make is `403`. `429` carries `Retry-After`.
 

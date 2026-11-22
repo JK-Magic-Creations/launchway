@@ -1,6 +1,6 @@
 # Verifying downloads
 
-How to check that a Launchway binary, package, chart or image is the one the project's release
+How to check that a Launchway binary, package, chart or image is the one the Flight's release
 workflow built from a tagged commit, and nothing else. For operators installing Launchway and for
 security reviewers.
 

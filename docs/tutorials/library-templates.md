@@ -6,7 +6,7 @@ teams. Takes about 20 minutes.
 
 > **Verified** on 2026-11-19 against commit f717337: the steps below with a local server, a
 > Station (runner) on the same machine and Podman. **Not verified:** a library on a Git host behind
-> credentials (it is fetched exactly as projects are).
+> credentials (it is fetched exactly as Flights (codebase) are).
 
 ## What you need
 
@@ -139,7 +139,7 @@ libraries:
 Steps that use templates are not expanded here: check the pipeline in a server's editor to see them.
 ```
 
-The server's editor (**Projects → hello → Edit pipeline**) shows the expanded graph as you type.
+The server's editor (**Flights → hello → Edit pipeline**) shows the expanded graph as you type.
 Commit:
 
 ```sh

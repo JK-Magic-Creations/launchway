@@ -12,8 +12,8 @@ const t = (label: string, slug: string, anchor?: string): LearnTarget => ({ labe
 /** Learn more, by the pattern of the page in the product (see nav/model.ts). */
 export const LEARN_FOR: Record<string, LearnTarget> = {
   "/": t("Learn more about the launch line", "concepts/launch-line"),
-  "/projects": t("Learn more about projects and pipelines", "concepts/pipelines-and-runs", "project"),
-  "/projects/:name": t("Learn more about projects and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/projects": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
+  "/projects/:name": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
   "/pipelines": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline": t("Learn more about pipelines", "concepts/pipelines-and-runs", "pipeline"),
   "/projects/:name/pipeline/edit": t("Read about editing pipelines", "guide/editor"),
@@ -58,7 +58,7 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
 /** The concept page behind each wizard. */
 export const WIZARD_LEARN: Record<string, LearnTarget> = {
   "first-run": t("Learn more about setting up", "howto/setup-first-run"),
-  "connect-repository": t("Learn more about projects and pipelines", "concepts/pipelines-and-runs", "project"),
+  "connect-repository": t("Learn more about {projects} and pipelines", "concepts/pipelines-and-runs", "project"),
   "add-runner": t("Learn more about {runners}", "concepts/pipelines-and-runs", "runner"),
   "add-environment": t("Learn more about {environments}", "concepts/environments-and-deployments"),
   "add-policy": t("Learn more about approvals and rules", "concepts/approvals", "rules-not-only-people"),

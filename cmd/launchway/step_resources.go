@@ -20,7 +20,7 @@ pipelines run as they did; --recommended opts in to what a new installation star
 
 A flag you give sets that value ("" clears it); the others keep what they are. Quantities are
 written as in a pipeline: 500m or 2 for CPU, 512Mi or 6Gi for memory. Changes need the admin
-role on every project and are recorded in the audit trail.
+role on every Flight and are recorded in the audit trail.
 `
 
 type stepResourceDefault struct {

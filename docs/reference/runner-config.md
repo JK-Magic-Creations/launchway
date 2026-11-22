@@ -50,7 +50,7 @@ A Station takes each setting from the first of:
 | `--config FILE` | | | none |
 
 The token is the shared Station token for build Stations, or a
-[Flight line's](server-config.md#runner-pools) token for a launch (deploy) Station. A Station enrolled with a
+[Ramp's](server-config.md#runner-pools) token for a launch (deploy) Station. A Station enrolled with a
 join token has no use for it: it keeps its identity (a key it made, under `<data>/identity`), and
 starts without `--join` or `--token`. See
 [Stations on other machines and clusters](../guide/runner-identity.md). Relative paths in the
@@ -145,7 +145,7 @@ any run of characters (slashes included) and `?` one character.
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `accept.projects` | list of patterns | any project | Projects whose work the Station takes |
+| `accept.projects` | list of patterns | any Flight (codebase) | Flights whose work the Station takes |
 | `accept.repositories` | list of patterns | any | Repositories it clones, as URLs without credentials such as `https://git.example.com/shop/*`: the Sortie's own and every library's |
 | `accept.images` | list of patterns | any | Images steps and their containers may use, written in full (`docker.io/library/golang:1.27`, not `golang:1.27`), such as `registry.example.com/*` or `docker.io/library/golang@sha256:*` |
 | `accept.images_by_digest` | boolean | `false` | Refuse images that are not pinned by digest (`name@sha256:…`) |
@@ -162,7 +162,7 @@ own (they become paths), and a Sortie whose source is a directory of another mac
 when it finds no Podman or Docker, unless `executor: host` is chosen.
 
 `accept` limits what work reaches the Station's network and secrets. It cannot make the work it does
-accept safe: a server that has been taken over can still send any script for a project, repository
+accept safe: a server that has been taken over can still send any script for a Flight, repository
 and image the Station accepts. Keep `accept`, the secret stores and the network as narrow as the
 pool's work.
 
@@ -275,7 +275,7 @@ up just before the step runs. A Station has only the stores you configure. See
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `secrets.<name>.type` | text | required | `env` (a variable of the Station process, not `LAUNCHWAY_*`), `file` (a file in a directory, such as a mounted Kubernetes Secret) or `vault` (a KV version 2 engine of HashiCorp Vault or OpenBao; references need `field`) |
-| `secrets.<name>.projects` | list of patterns | every project | The projects whose steps may read the store. `*` does not cross `/` |
+| `secrets.<name>.projects` | list of patterns | every Flight | The Flights whose steps may read the store. `*` does not cross `/` |
 | `secrets.<name>.keys` | list of patterns | every key | The keys that may be read |
 | `secrets.<name>.dir` | directory | required for `file` | The directory; nothing outside it can be read |
 | `secrets.<name>.address` | URL | required for `vault` | Such as `https://vault.example.com:8200` |
@@ -321,11 +321,11 @@ builds to and the Depots (registries) it pushes to. Unset, the Station takes no 
 | `images.builders[].server_name` | text | the address's host | The name in the daemon's certificate |
 | `images.builders[].insecure` | boolean | `false` | A `tcp://` daemon without TLS. For tests on one machine only |
 | `images.builders[].platforms` | list | every platform the daemon builds | The only platforms built here, such as `[linux/arm64]` |
-| `images.builders[].projects` | list of patterns | every project | The projects that may build here |
+| `images.builders[].projects` | list of patterns | every Flight | The Flights that may build here |
 | `images.max_context_mib` | whole number | `2048` | The largest build context a step may send. It is measured on what the ignore file keeps, not on the directory: see [What is sent as the build context](#image-build-context) |
 | `images.max_image_mib` | whole number | `20480` | The largest image (all platforms, compressed) accepted back from a builder |
 
-An image step uses the first builder that serves its project and every platform it asks for, or
+An image step uses the first builder that serves its Flight and every platform it asks for, or
 one builder per platform when no single one does.
 
 ### What is sent as the build context {#image-build-context}
@@ -379,10 +379,10 @@ Depots. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`. The name `launchway` is the [b
 | `images.registries.<name>.pull_credentials.password.store` | name | | |
 | `images.registries.<name>.pull_credentials.password.key` | text | | |
 | `images.registries.<name>.pull_credentials.password.field` | text | | |
-| `images.registries.<name>.pull_projects` | list of patterns | every project | The projects whose builds get `pull_credentials`. Needs `pull_credentials` |
+| `images.registries.<name>.pull_projects` | list of patterns | every Flight | The Flights whose builds get `pull_credentials`. Needs `pull_credentials` |
 | `images.registries.<name>.ca_file` | path | the system's | A CA the Station trusts for this Depot |
 | `images.registries.<name>.insecure` | boolean | `false` | Plain HTTP. Only for a Depot on the Station's machine or in tests |
-| `images.registries.<name>.push[].projects` | list of patterns | required | Projects a push rule allows |
+| `images.registries.<name>.push[].projects` | list of patterns | required | Flights a push rule allows |
 | `images.registries.<name>.push[].repositories` | list of patterns | required | Repositories they may push to, without the host: `team/shop`, `team/*` (one level) or `team/**` (any depth). Nothing is pushed without a rule |
 
 Pull-request and draft runs never push, never write the cache and never read `credentials`; they
@@ -404,7 +404,7 @@ get `pull_credentials` only when they may read secrets.
 A `deploy` section makes the Station a launch Station: it does the work of
 [launch, Return to base (rollback) and rollout steps](pipeline.md#kind-deploy) for the targets listed, through the
 Kubernetes API with its own identity, and runs no other steps. Its token must be a
-[Flight line's](server-config.md#runner-pools). `executor` and `kubernetes` do not apply.
+[Ramp's](server-config.md#runner-pools). `executor` and `kubernetes` do not apply.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
@@ -413,7 +413,7 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.targets.<name>.kubernetes.kubeconfig` | path | the usual kubeconfig files | With `context` |
 | `deploy.targets.<name>.kubernetes.context` | text | | The kubeconfig context. The current context is never used |
 | `deploy.targets.<name>.argocd_namespace` | text | `argocd` | Where the Argo CD Applications are |
-| `deploy.targets.<name>.applications[].projects` | list of patterns | required | Projects a rule allows |
+| `deploy.targets.<name>.applications[].projects` | list of patterns | required | Flights a rule allows |
 | `deploy.targets.<name>.applications[].names` | list of patterns | required | Applications they may launch. At least one rule is required |
 | `deploy.targets.<name>.rollout_namespaces` | list | none | Namespaces whose Argo Rollouts rollouts deploy steps may watch |
 | `deploy.targets.<name>.refresh` | boolean | `true` | Ask Argo CD to look at the repository at once after a commit (the refresh annotation). Needs patch on the Application; without it, skipped with a note in the log |
@@ -428,7 +428,7 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.repos.<name>.credentials.field` | text | | |
 | `deploy.repos.<name>.username` | text | `launchway` | The user name sent with the credentials |
 | `deploy.repos.<name>.hosted` | boolean | `false` | The repository is hosted by Launchway and `url` is its address. Deploy steps then write with their own credential, which the server gives each deployment (the Airfield's `write_back`), and never with a stored one; `credentials`, if any, only read. A hosted repository needs the Airfield's `write_back`, and `write_back` needs `hosted: true` |
-| `deploy.repos.<name>.paths[].projects` | list of patterns | required | Projects a rule allows |
+| `deploy.repos.<name>.paths[].projects` | list of patterns | required | Flights a rule allows |
 | `deploy.repos.<name>.paths[].files` | list of patterns | required | Files they may change; `**` matches any number of directories. At least one rule is required |
 | `deploy.repos.<name>.author.name` | text | `Launchway` | The commits' author |
 | `deploy.repos.<name>.author.email` | text | `launchway@localhost` | |
@@ -459,7 +459,7 @@ secrets:
 
 On a launch Station, `health_sources` says where the monitoring systems are, for
 [verification steps](../guide/verification.md). The server's `verification.sources` lists the same
-names, types and projects; the launch Stations that serve an Airfield's target hold the rest, because they are next
+names, types and Flights; the launch Stations that serve an Airfield's target hold the rest, because they are next
 to the monitoring systems and never run anyone's script. A health source needs a `deploy` section.
 Credentials are only secret references, read from the Station's own stores for each query.
 
@@ -468,7 +468,7 @@ Credentials are only secret references, read from the Station's own stores for e
 |---|---|---|---|
 | `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres`, `http`, or `check` (the launch Station's own health calls) |
 | `health_sources.<name>.url` | URL | required (not for `check`) | The base URL. For `postgres`, a `postgres://` URL without a password |
-| `health_sources.<name>.projects` | list of patterns | none: allows no project | The projects that may use the source |
+| `health_sources.<name>.projects` | list of patterns | none: allows no Flight | The Flights that may use the source |
 | `health_sources.<name>.auth.type` | text | | `bearer`, `basic` or `header`. For `clickhouse` and `postgres` it may be left out: the user and the secret are the database account |
 | `health_sources.<name>.auth.user` | text | | The user name, for `basic` and the databases |
 | `health_sources.<name>.auth.header` | text | | The header that carries the secret, for `header` |
@@ -495,7 +495,7 @@ Credentials are only secret references, read from the Station's own stores for e
 | `health_sources.<name>.statements.<name>.body` | text | | `http` `POST`: a JSON document; `{{name}}` placeholders in its string values are replaced |
 | `health_sources.<name>.statements.<name>.value` | text | | `http`: a dotted path into the JSON answer (numbers index arrays): a number, an array of numbers, or an array of `[time, value]` pairs for metrics; an array of strings for logs |
 | `health_sources.<name>.statements.<name>.params` | mapping | none | The parameters a pipeline must pass, by name and type: a ClickHouse type such as `String` or `DateTime64(3)`; for PostgreSQL `text`, `int`, `float` or `timestamptz`; for `http` `string` |
-| `health_sources.<name>.statements.<name>.projects` | list of patterns | the source's | Narrows which of the source's projects may run the statement |
+| `health_sources.<name>.statements.<name>.projects` | list of patterns | the source's | Narrows which of the source's Flights may run the statement |
 
 Types `clickhouse`, `postgres` and `http` run only the named `statements`; pipelines never write
 SQL of their own. Every query is read-only where the source can enforce it (ClickHouse with
@@ -546,7 +546,7 @@ health_sources:
 
 ## What next
 
-- [Server configuration](server-config.md): Airfields and Flight lines (Station (runner) pools) that launch Stations
+- [Server configuration](server-config.md): Airfields and Ramps (Station (runner) pools) that launch Stations
   serve.
 - [Helm values](helm-values.md): the chart renders this file for its Stations from `runner.*` and
   `delivery.deployRunner.*`.

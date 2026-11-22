@@ -196,7 +196,7 @@ func encryptionInit(args []string) error {
 func afterInit(setting, what string) string {
 	return "What to do now:\n" +
 		"  1. Keep a copy of " + what + " somewhere other than the database's backups (a password manager, a sealed printout in a safe).\n" +
-		"     Without it a restore cannot read any secret, and nobody, including the Launchway project, can recover it for you.\n" +
+		"     Without it a restore cannot read any secret, and nobody, including the Launchway Flight, can recover it for you.\n" +
 		"  2. Tell every server where it is, then restart them:\n  " + setting + "\n" +
 		"     On the first start with the key, the secrets already stored are sealed in place; the server says when it is done.\n" +
 		"  3. Check with: launchway doctor encryption\n"

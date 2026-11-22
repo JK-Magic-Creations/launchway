@@ -11,9 +11,9 @@ flowchart LR
   R --- S[("Artifact store<br/>+ database")]
 ```
 
-## One name, one project
+## One name, one Flight (codebase) {#one-name-one-project}
 
-Every repository starts with the project that owns it: `shop/api` belongs to the project `shop`. That one rule is how
+Every repository starts with the Flight that owns it: `shop/api` belongs to the Flight `shop`. That one rule is how
 the Depot shares Launchway's permissions instead of adding new ones: a **viewer** of `shop` pulls, an **operator**
 pushes, an **admin** deletes and sets the rules. Someone with no role on `shop` is told nothing about it, not even
 that it exists. There is no anonymous pull anywhere.
@@ -21,7 +21,7 @@ that it exists. There is no anonymous pull anywhere.
 ## A Sortie's own credential {#a-runs-own-credential}
 
 A step does not carry a stored password. When an image step starts, the server gives it an address and a
-credential **made for that run**: it can pull the project's images and push to the project's repositories, it never
+credential **made for that run**: it can pull the Flight's images and push to the Flight's repositories, it never
 pushes for a pull request, and it stops working when the Sortie (run) ends.
 
 ```mermaid
@@ -38,7 +38,7 @@ sequenceDiagram
 
 ## What stays and what goes
 
-Layers are stored once per Wing and counted once against a project's quota. **Tags matching a pattern can
+Layers are stored once per Wing and counted once against a Flight's quota. **Tags matching a pattern can
 be made immutable** (`v*`), so a release cannot be quietly replaced. **Retention** rules say which images may be
 deleted (keep the newest N, keep tags matching a pattern, delete untagged ones after D days) and you can **preview
 exactly what would go** before anything does. An image an Airfield (environment) runs is never deleted. **Garbage collection**

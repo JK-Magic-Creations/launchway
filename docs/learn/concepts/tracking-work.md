@@ -21,7 +21,7 @@ fix is running now. People and agents work from the same list, under the same ru
 
 ## Giving work to an agent
 
-An agent is software with its own name and token. You register it for certain Projects and kinds of work,
+An agent is software with its own name and token. You register it for certain Flights (codebase) and kinds of work,
 and then either assign it an item or give it a label to work from (a "pool"). The agent:
 
 1. reads its Holding pattern (queue),
@@ -36,7 +36,7 @@ at any moment, and take its work over with the branch where it was left.
 
 ## How much an agent may do alone
 
-A policy of the Project says how far an agent goes without a person:
+A policy of the Flight says how far an agent goes without a person:
 
 | Level | What happens |
 |---|---|

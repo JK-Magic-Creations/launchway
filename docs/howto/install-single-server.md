@@ -295,7 +295,7 @@ LAUNCHWAY_RUNNER_TOKEN="$(cat runner-token)" launchway runner \
 
 Things to know about the image:
 
-- Projects must be Git URLs (`https://` or SSH). A local path fails, because Git needs a shell to
+- Flights (codebase) must be Git URLs (`https://` or SSH). A local path fails, because Git needs a shell to
   read a repository on disk, and the image has none.
 - The data directory must belong to user `65532`. A named volume does this for you. For a
   directory on the host with rootless Podman, run `podman unshare chown 65532:65532 DIR` first;
@@ -406,7 +406,7 @@ Inbound, to the server:
 
 Launchway itself listens on one port (`listen`). Keep it closed to everything but the proxy.
 
-Outbound, from the server: your Git hosts (to poll projects and libraries), the OpenID Connect
+Outbound, from the server: your Git hosts (to poll Flights and libraries), the OpenID Connect
 provider (discovery, keys, token exchange), PostgreSQL if you use it, and S3-compatible storage
 if Cargo are kept there.
 

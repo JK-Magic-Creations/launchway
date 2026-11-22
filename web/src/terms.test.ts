@@ -7,7 +7,7 @@ describe("the terms module", () => {
   it("defaults to the aviation words", () => {
     const t = makeTerms();
     expect(DEFAULT_SET).toBe("aviation");
-    expect([t.label("installation"), t.label("organization"), t.label("unit"), t.label("project")]).toEqual(["Base", "Wing", "Squadron", "Project"]);
+    expect([t.label("installation"), t.label("organization"), t.label("unit"), t.label("project")]).toEqual(["Base", "Wing", "Squadron", "Flight"]);
     expect(t.label("guide")).toBe("Wingman");
     expect([t.label("clearance"), t.label("go"), t.label("no_go"), t.label("hold")]).toEqual(["Clearance", "Go", "No-go", "Hold"]);
     expect([t.label("flight_plan"), t.label("logbook"), t.label("preflight"), t.label("payload")]).toEqual(["Flight plan", "Logbook", "Preflight", "Payload"]);
@@ -15,7 +15,7 @@ describe("the terms module", () => {
 
   it("switches to the plain business set", () => {
     const t = makeTerms({ set: "business" });
-    expect([t.label("installation"), t.label("organization"), t.label("unit"), t.label("project")]).toEqual(["Installation", "Organization", "Team", "Project"]);
+    expect([t.label("installation"), t.label("organization"), t.label("unit"), t.label("project")]).toEqual(["Installation", "Organization", "Team", "Codebase"]);
     expect([t.label("guide"), t.label("preflight"), t.label("clearance"), t.label("go"), t.label("no_go")]).toEqual(["Guide", "Checks", "Approval", "Approve", "Reject"]);
     expect([t.label("hold"), t.label("flight_plan"), t.label("logbook")]).toEqual(["Freeze", "Pipeline template", "Audit trail"]);
   });
@@ -64,7 +64,7 @@ describe("the terms module", () => {
 
   it("is capitalized as a name in the middle of a sentence in the aviation set, and plain English in the business set", () => {
     expect(makeTerms().lower("run")).toBe("Sortie");
-    expect(makeTerms().lower("project")).toBe("Project");
+    expect(makeTerms().lower("project")).toBe("Flight");
     expect(makeTerms({ set: "business" }).lower("run")).toBe("run");
     expect(makeTerms({ set: "business" }).lower("unit")).toBe("Team");
     expect(makeTerms().say("each {run} on a {runner}; {Runs}; {deploy:doing}; {run:plain}")).toBe("each Sortie on a Station; Sorties; launching; run");

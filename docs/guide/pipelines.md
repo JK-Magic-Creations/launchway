@@ -132,7 +132,7 @@ so "exit code 1" comes with its reason.
 ## Superseding older Sorties {#superseding-older-runs}
 
 With `supersede: true` at the top of the pipeline, a new Sortie started by a push or a pull request
-cancels the older Sorties of the same project and ref (the same branch, tag or pull request) that
+cancels the older Sorties of the same Flight (codebase) and ref (the same branch, tag or pull request) that
 are still queued, running or waiting for approval, if they too were started by a push or a pull
 request. They are cancelled as if by hand (running steps are stopped by their Stations), and say
 why: *superseded by run #N*, in the Sortie list, on the Sortie page, and in the API (`cancel_reason`,
@@ -144,7 +144,7 @@ A superseded run can be resumed like any cancelled run.
 
 ## Lanes: one run at a time
 
-`supersede` only ever cancels. A **lane** makes the Sorties of a project take turns, and says what a
+`supersede` only ever cancels. A **lane** makes the Sorties of a Flight take turns, and says what a
 run that arrives while another goes does:
 
 ```yaml
@@ -169,8 +169,8 @@ records *skipped* or *waiting*), webhooks and runs started by hand. Draft runs a
 one. A lane is released when its holder ends, however it ends, and the next Sortie starts in the same
 database transaction, so it is exact however many servers there are; a server that finds a lane
 with runs waiting and no live holder starts the first of them. Resuming a finished run is
-refused while another Sortie holds its lane. A Sortie that waits for an approval keeps its lane until the approval is decided or expires, so give approvals in a laned pipeline a short `timeout`. See the runs a project has in line with `launchway runs
-lanes PROJECT`, on the run page, or with the MCP tool `list_lanes`. `lane` and `supersede` cannot be written together:
+refused while another Sortie holds its lane. A Sortie that waits for an approval keeps its lane until the approval is decided or expires, so give approvals in a laned pipeline a short `timeout`. See the runs a Flight has in line with `launchway runs
+lanes Flight`, on the run page, or with the MCP tool `list_lanes`. `lane` and `supersede` cannot be written together:
 `supersede: true` is the short form of `lane: { per: [ref], when_busy: cancel }` for pushes and
 pull requests.
 

@@ -60,7 +60,7 @@ const has = (n: number | null) => (n ?? 0) > 0;
 /** The ten areas, in the order of a change's journey, then the places visited less often (docs 42, section 17). */
 export const SECTIONS: Section[] = [
   { id: "home", get label() { return say("{Home}"); }, href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
-  { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, promise: "Repositories and projects: files, commits, branches and reviews.", tabs: [] },
+  { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, get promise() { return say("Repositories and {projects}: files, commits, branches and reviews."); }, tabs: [] },
   {
     id: "work", label: "Work", href: "/work", icon: "list", group: 1,
     get promise() { return say("Issues, boards, backlogs and sprints, and the agents that work on them."); }, tabs: [],

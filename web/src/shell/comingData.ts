@@ -19,14 +19,14 @@ export interface Coming {
 export const COMING: Record<string, Coming> = {
   "/code/files": {
     title: "Files, commits and branches", area: "Code",
-    does: "Browse a project's code here: its files, the history of each, who changed which line, and the branches with the rules that protect them.",
-    appears: "Every project you add will show its files and commits here once Launchway reads the repository itself. Today it reads only the pipeline file.",
-    action: { label: "Add a project", href: "/config/wizard/connect-repository" },
+    does: "Browse a {project}'s code here: its files, the history of each, who changed which line, and the branches with the rules that protect them.",
+    appears: "Every {project} you add will show its files and commits here once Launchway reads the repository itself. Today it reads only the pipeline file.",
+    action: { label: "Add a {project}", href: "/config/wizard/connect-repository" },
   },
   "/code/reviews": {
     title: "Reviews", area: "Code",
     does: "Read a proposed change, comment, see which checks passed, and merge it when the rules are met. A blocked merge will say which rule and what unblocks it.",
-    appears: "A change under review appears here when a pull request starts a run of a project. Runs of pull requests exist today, and are listed under Activity.",
+    appears: "A change under review appears here when a pull request starts a run of a {project}. Runs of pull requests exist today, and are listed under Activity.",
     action: { label: "See runs", href: "/activity" },
   },
   "/depot/charts": {

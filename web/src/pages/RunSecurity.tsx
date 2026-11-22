@@ -258,7 +258,7 @@ function StepReports({ steps, active, onStep }: { steps: StepFindings[]; active:
                 </li>
               ))}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
-              {s.pruned && <li className="tfile-note">The individual findings were removed to keep the project's storage within its limit; the totals remain.</li>}
+              {s.pruned && <li className="tfile-note">{terms().say("The individual findings were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
             </ul>
           </li>
         ))}
@@ -334,7 +334,7 @@ function ComponentFinder() {
         <span className="visually-hidden">Component name</span>
         <input type="search" placeholder="Component name, such as requests" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-      <button type="submit" className="btn btn-sm" disabled={!name.trim()}>Find in every project</button>
+      <button type="submit" className="btn btn-sm" disabled={!name.trim()}>{terms().say("Find in every {project}")}</button>
     </form>
   );
 }
@@ -386,7 +386,7 @@ function SBOMSection({ run, sboms, version }: { run: RunDetail; sboms: StepSBOM[
               {s.artifact && arts && (!art || art.status !== "kept") && <li className="tfile-note">The SBOM file is no longer kept{art ? ` (${art.status})` : ""}; the component list remains.</li>}
               {s.notes?.map((n, i) => <li key={"n" + i} className="tfile-note">{n}</li>)}
               {s.truncated && <li className="tfile-note">Only the first {s.stored.toLocaleString()} components were kept for search.</li>}
-              {s.pruned && <li className="tfile-note">The components were removed to keep the project's storage within its limit; the totals remain.</li>}
+              {s.pruned && <li className="tfile-note">{terms().say("The components were removed to keep the {project}'s storage within its limit; the totals remain.")}</li>}
             </ul>
             {lic.length > 0 && (
               <div className="lics">

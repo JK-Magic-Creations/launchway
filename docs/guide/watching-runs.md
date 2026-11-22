@@ -42,7 +42,7 @@ The `get_step_log` MCP tool takes a cursor: call it with `mode: head` and `after
 
 ## Time estimates
 
-The page says how long things usually take, from earlier Sorties of the same pipeline in the same project. Nothing is stored for it: it is read from the step records that are already kept.
+The page says how long things usually take, from earlier Sorties of the same pipeline in the same Flight (codebase). Nothing is stored for it: it is read from the step records that are already kept.
 
 **Per step.** A step needs three earlier successful runs to have an estimate. The *typical* time is the median, with a range from the 20th to the 80th percentile. Recent Sorties count more than old ones, runs of the same kind (pull requests against everything else) are preferred when there are enough of them, and one freak run (a stuck Station) is ignored. A running step shows *1m 12s of about 2 min* with a small bar that is only a hint: it never gets more precise than the history.
 

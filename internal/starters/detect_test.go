@@ -32,8 +32,8 @@ func TestDetect(t *testing.T) {
 		{"maven", files("pom.xml"), "java-maven", map[string]string{"java_version": "17"}, "pom.xml was found"},
 		{"gradle with image", files("build.gradle.kts", "Dockerfile"), "java-gradle", map[string]string{"image": "true"}, "build.gradle.kts was found (and a Dockerfile)"},
 		{"chart", files("Chart.yaml", "values.yaml"), "helm-chart", nil, "Chart.yaml was found"},
-		{"image only", files("Dockerfile", "README.md"), "container-image", nil, "Dockerfile was found and nothing else that builds the project"},
-		{"site", files("index.html", "site.css"), "static-site", nil, "index.html was found and nothing else that builds the project"},
+		{"image only", files("Dockerfile", "README.md"), "container-image", nil, "Dockerfile was found and nothing else that builds the codebase"},
+		{"site", files("index.html", "site.css"), "static-site", nil, "index.html was found and nothing else that builds the codebase"},
 		{"a subdirectory's go.mod is not the root's", files("tools/go.mod", "README.md"), "", nil, ""},
 	} {
 		d := starters.Detect(tc.files, read)

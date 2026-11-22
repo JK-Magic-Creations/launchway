@@ -39,7 +39,7 @@ export function SettingsVariablesPage() {
           )}
         </div>
         {needsScope && choices.length === 0
-          ? <p className="sub">There is no {word(level).toLowerCase()} yet. {level === "unit" ? "Create one in Configuration." : "Add a project first."}</p>
+          ? <p className="sub">There is no {word(level).toLowerCase()} yet. {level === "unit" ? "Create one in Configuration." : terms().say("Add a {project} first.")}</p>
           : <VariablesPanel key={level + ":" + chosen} level={level} scope={needsScope ? chosen : undefined} />}
       </Sheet>
     </div>
@@ -53,7 +53,7 @@ export function ProjectVariablesPage({ name }: { name: string }) {
   return (
     <div className="page">
       <ProjectHead name={name} on="variables" title={`Variables of ${name}`}
-        sentence="Everything that reaches this project from above, and what it sets itself. Set a variable here to override the one from a wider level, unless a lock stops it." />
+        sentence={terms().say("Everything that reaches this {project} from above, and what it sets itself. Set a variable here to override the one from a wider level, unless a lock stops it.")} />
       <Sheet pad>
         <form className="vr-tabs" onSubmit={(e) => { e.preventDefault(); setApplied(env.trim()); }}>
           <label>{terms().say("For an {environment}")} <input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="all (general)" aria-label={terms().say("{Environment}")} /></label>

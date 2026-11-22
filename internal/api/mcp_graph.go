@@ -172,7 +172,7 @@ func addGraphChangeTools(srv *mcp.Server, c *mcpCall) {
 			return out, err
 		})
 	for _, t := range []struct{ name, path, title, desc string }{
-		{"rescan_graph", "/api/v1/graph/rescan", "Read everything into the graph again", "Administrators only. Read every repository, project and the installation again into the software graph. Nothing is removed first. Audited."},
+		{"rescan_graph", "/api/v1/graph/rescan", "Read everything into the graph again", "Administrators only. Read every repository, Flight and the installation again into the software graph. Nothing is removed first. Audited."},
 		{"rebuild_graph", "/api/v1/graph/rebuild", "Rebuild the graph from scratch", "Administrators only. Clear the software graph and read everything again; the result equals what incremental updates built. The build-order overrides are kept. Audited."},
 	} {
 		addTool(srv, c, &mcp.Tool{Name: t.name, Annotations: changes(t.title, t.name == "rebuild_graph", true), Description: t.desc}, 10*time.Minute,

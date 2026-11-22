@@ -11,7 +11,7 @@ A pipeline or repository can sit in one folder. There are two ways to make folde
 - **By name.** A name with slashes, such as `payments/api/build`, shows as the folders `payments` and `api` with no one filing anything. This is the starting point and needs no setup.
 - **By hand.** Someone who may arrange for everyone at that level makes a folder, names it, and files items in it. Choose **Arrange for everyone**, then drag an item onto a folder, or use **Move to…** on the item, which works with the keyboard and a screen reader. The last move can be undone from the line that appears, and every move is written to the Logbook.
 
-**Labels** are free tags for groups that cut across folders, such as a team, a tier or a language. Anyone who may operate a project can label it; the label filter and the group-by choice use them.
+**Labels** are free tags for groups that cut across folders, such as a team, a tier or a language. Anyone who may operate a Flight (codebase) can label it; the label filter and the group-by choice use them.
 
 ## My collections
 
@@ -27,11 +27,11 @@ Star an item to make it a favorite. Favorites are yours: they show first on Home
 
 ## Finding anything
 
-Press **/** (or choose the search field in the top bar) to open the finder. Before you type it offers your favorites and what you opened lately. As you type it searches the pages and actions, the documentation (from the copy in the program, so it works offline) and, on the server, the projects, repositories, folders, open pull requests and Sorties you may see, and, if you may manage access, the people: a Sortie is found by its number (`#412`), the start of its commit, or its branch, a pull request by its number or title. Results are ranked (exact name, then start of a name, then a word in it, then anywhere in it, then a near miss) and grouped by kind. The server only searches what you are allowed to read.
+Press **/** (or choose the search field in the top bar) to open the finder. Before you type it offers your favorites and what you opened lately. As you type it searches the pages and actions, the documentation (from the copy in the program, so it works offline) and, on the server, the Flights, repositories, folders, open pull requests and Sorties you may see, and, if you may manage access, the people: a Sortie is found by its number (`#412`), the start of its commit, or its branch, a pull request by its number or title. Results are ranked (exact name, then start of a name, then a word in it, then anywhere in it, then a near miss) and grouped by kind. The server only searches what you are allowed to read.
 
 ## Layouts: a default for everyone, and your own
 
-Each page has a **shared default** set by someone who may arrange at a level: Base, Wing, Squadron or Project. A lower level inherits the one above it and may change it, unless a level above **locks** the layout. On top of that, **Arrange for me** changes only your own view: the order and visibility of the sections on Home, which Squadrons are open, cards or table. Your arrangement is kept on the server, so it follows you across devices, and a note on the page says when you are looking at your own. **Reset to the default** puts the shared one back. An item added to the shared layout appears for you in its default place; one removed disappears.
+Each page has a **shared default** set by someone who may arrange at a level: Base, Wing, Squadron or Flight. A lower level inherits the one above it and may change it, unless a level above **locks** the layout. On top of that, **Arrange for me** changes only your own view: the order and visibility of the sections on Home, which Squadrons are open, cards or table. Your arrangement is kept on the server, so it follows you across devices, and a note on the page says when you are looking at your own. **Reset to the default** puts the shared one back. An item added to the shared layout appears for you in its default place; one removed disappears.
 
 A level's layouts and folders can be exported as one document and applied again, so the defaults can live in Git:
 

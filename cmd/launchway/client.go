@@ -42,7 +42,7 @@ const (
 var clientUsage = themed(`Usage:
   launchway login --server URL              store an API token for the server (read from
                   [--allow-http]            LAUNCHWAY_TOKEN, or typed or piped in)
-  launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
+  launchway runs start <Flight> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
   launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [step] [--step S] [--service NAME] [--follow]   --service: a service container's output
@@ -51,9 +51,9 @@ var clientUsage = themed(`Usage:
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same {run} goes on, running its failed steps again
   launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
                                                           a new {run} from those steps (or the failed ones), reusing the rest
-  launchway runs queue [project] [--json]          runs held back by limits, in order, with why; next|hold|release <run-id> moves one
+  launchway runs queue [Flight] [--json]          runs held back by limits, in order, with why; next|hold|release <run-id> moves one
   launchway runs trust <run-id> [--comment text]   approve a restricted run (a pull request from an automation account): Run with secrets
-  launchway runs lanes <project> [--json]          each lane: the {run} that holds it, and the {runs} waiting
+  launchway runs lanes <Flight> [--json]          each lane: the {run} that holds it, and the {runs} waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
   launchway runs reports <run-id> [--json]                links to its HTML reports
@@ -439,7 +439,7 @@ func parseArgs(fs *flag.FlagSet, args []string) ([]string, error) {
 
 func (cl *client) start(args []string) error {
 	fs := flag.NewFlagSet("runs start", flag.ContinueOnError)
-	ref := fs.String("ref", "", "the branch or tag to run; default the project's default branch")
+	ref := fs.String("ref", "", "the branch or tag to run; default the Flight's default branch")
 	var inputs multi
 	fs.Var(&inputs, "i", "an input value, name=value; give it once for each input (a list: name=a,b,c)")
 	wait := fs.Bool("wait", false, "wait for the run to finish, and exit with its outcome")
@@ -450,7 +450,7 @@ func (cl *client) start(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which project: launchway runs start <project> [--ref R] [-i name=value ...] [--wait]")
+		return usageErr("say which Flight: launchway runs start <Flight> [--ref R] [-i name=value ...] [--wait]")
 	}
 	vals := map[string]string{}
 	for _, kv := range inputs {
@@ -550,7 +550,7 @@ func (cl *client) print(v any, asJSON bool, text func()) error {
 
 func (cl *client) list(args []string) error {
 	fs := flag.NewFlagSet("runs list", flag.ContinueOnError)
-	project := fs.String("project", "", "only this project's runs")
+	project := fs.String("project", "", "only this Flight's runs")
 	status := fs.String("status", "", "only runs with this status")
 	lane := fs.String("lane", "", "only runs in the lane of this name")
 	limit := fs.Int("limit", 20, "at most this many")
@@ -843,7 +843,7 @@ func (cl *client) lanes(args []string) error {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("say which project: launchway runs lanes <project> [--json]")
+		return usageErr("say which Flight: launchway runs lanes <Flight> [--json]")
 	}
 	type ref struct {
 		ID     string `json:"id"`

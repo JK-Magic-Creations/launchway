@@ -18,7 +18,7 @@ import (
 func addRollbackReadTools(srv *mcp.Server, c *mcpCall) {
 	addReleaseReadTools(srv, c) // releases ride with the delivery tools
 	addTool(srv, c, &mcp.Tool{Name: "get_rollback_options", Annotations: readOnly("Get rollback options"),
-		Description: "Whether a service of a project can be rolled back in an Airfield after its deployment succeeded, and to what: the earlier successful deployments (version, when, which run) with, for each, what would be reverted and the consequence and suggestions. When it cannot, the reason and what would help; when another deployment holds the lock, queueable says rollback_deployment with queue true waits behind it."},
+		Description: "Whether a service of a Flight can be rolled back in an Airfield after its deployment succeeded, and to what: the earlier successful deployments (version, when, which run) with, for each, what would be reverted and the consequence and suggestions. When it cannot, the reason and what would help; when another deployment holds the lock, queueable says rollback_deployment with queue true waits behind it."},
 		mcpCallTimeout, getRollbackOptions)
 	addTool(srv, c, &mcp.Tool{Name: "list_rollback_reviews", Annotations: readOnly("List rollbacks to review"),
 		Description: "Emergency rollbacks of protected Airfields that no approver has acknowledged yet, with whether this token may acknowledge each."},
@@ -36,15 +36,15 @@ func addRollbackChangeTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type rollbackOptionsIn struct {
-	Project     string `json:"project" jsonschema:"the project's name"`
+	Project     string `json:"project" jsonschema:"the Flight's name"`
 	Environment string `json:"environment" jsonschema:"the environment's name, such as prod"`
-	Service     string `json:"service,omitempty" jsonschema:"default the project's name"`
+	Service     string `json:"service,omitempty" jsonschema:"default the Flight's name"`
 }
 
 func getRollbackOptions(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in rollbackOptionsIn) (engine.RollbackPlan, error) {
 	var plan engine.RollbackPlan
 	if in.Project == "" || in.Environment == "" {
-		return plan, errors.New("say which project and Airfield")
+		return plan, errors.New("say which Flight and Airfield")
 	}
 	q := url.Values{"environment": {in.Environment}}
 	if in.Service != "" {
@@ -55,9 +55,9 @@ func getRollbackOptions(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest,
 }
 
 type rollbackIn struct {
-	Project     string `json:"project" jsonschema:"the project's name"`
+	Project     string `json:"project" jsonschema:"the Flight's name"`
 	Environment string `json:"environment" jsonschema:"the environment's name, such as prod"`
-	Service     string `json:"service,omitempty" jsonschema:"default the project's name"`
+	Service     string `json:"service,omitempty" jsonschema:"default the Flight's name"`
 	To          string `json:"to,omitempty" jsonschema:"the deployment (dep_…) or version to restore; default the previous successful deployment"`
 	Reason      string `json:"reason" jsonschema:"why, in words; required and recorded"`
 	Queue       bool   `json:"queue,omitempty" jsonschema:"wait behind a deployment that holds the environment's lock"`
@@ -72,7 +72,7 @@ type rollbackOut struct {
 
 func rollbackDeployment(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in rollbackIn) (rollbackOut, error) {
 	if in.Project == "" || in.Environment == "" {
-		return rollbackOut{}, errors.New("say which project and Airfield")
+		return rollbackOut{}, errors.New("say which Flight and Airfield")
 	}
 	var run engine.RunSummary
 	body := map[string]any{"environment": in.Environment, "service": in.Service, "to": in.To, "reason": in.Reason, "queue": in.Queue}

@@ -52,7 +52,7 @@ func (s *Server) createRunTrigger(w http.ResponseWriter, r *http.Request) {
 	// The caller must be able to read the upstream project too: a trigger is
 	// not a way to learn that a project exists.
 	if in.UpstreamProject != "" && !s.authorize(identityFrom(r), auth.Read, in.UpstreamProject) {
-		s.fail(w, fmt.Errorf("%w: project %s", engine.ErrNotFound, in.UpstreamProject))
+		s.fail(w, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, in.UpstreamProject))
 		return
 	}
 	t, err := s.Engine.CreateRunTrigger(in)
@@ -101,7 +101,7 @@ func (s *Server) allowRunTriggers(w http.ResponseWriter, r *http.Request) {
 		found = found || p == in.Downstream
 	}
 	if !found {
-		s.fail(w, fmt.Errorf("%w: project %s", engine.ErrNotFound, in.Downstream))
+		s.fail(w, fmt.Errorf("%w: Flight %s", engine.ErrNotFound, in.Downstream))
 		return
 	}
 	a := engine.RunTriggerAllow{Upstream: r.PathValue("name"), Downstream: in.Downstream, ShareOutputs: in.ShareOutputs, CreatedBy: identityFrom(r).User}
@@ -129,7 +129,7 @@ func (s *Server) revokeRunTriggers(w http.ResponseWriter, r *http.Request) {
 // ---- MCP ----
 
 type runTriggersIn struct {
-	Project string `json:"project" jsonschema:"the project's name (for triggers, the downstream project that starts a run; for allows, the upstream project)"`
+	Project string `json:"project" jsonschema:"the Flight's name (for triggers, the downstream Flight that starts a run; for allows, the upstream Flight)"`
 }
 
 type runTriggerBrief struct {
@@ -147,10 +147,10 @@ type runTriggersOut struct {
 }
 
 type createRunTriggerIn struct {
-	Project  string            `json:"project" jsonschema:"the downstream project's name"`
+	Project  string            `json:"project" jsonschema:"the downstream Flight's name"`
 	Name     string            `json:"name" jsonschema:"a name for the trigger: lower-case letters, digits and hyphens"`
 	Kind     string            `json:"kind,omitempty" jsonschema:"run (default) or launch: a deployment that ended"`
-	Upstream string            `json:"upstream_project" jsonschema:"the project whose results to wait for; it must have allowed this project"`
+	Upstream string            `json:"upstream_project" jsonschema:"the Flight whose results to wait for; it must have allowed this Flight"`
 	When     string            `json:"when,omitempty" jsonschema:"run: succeeded (default), failed, canceled or any; launch: deployed (default), failed, rolled_back or any"`
 	Pipeline string            `json:"upstream_pipeline,omitempty" jsonschema:"only results of the upstream pipeline with this name"`
 	Filter   string            `json:"filter,omitempty" jsonschema:"an expression over run, launch and outputs that must be true"`
@@ -159,36 +159,36 @@ type createRunTriggerIn struct {
 }
 
 type runTriggerRef struct {
-	Project string `json:"project" jsonschema:"the downstream project's name"`
+	Project string `json:"project" jsonschema:"the downstream Flight's name"`
 	Name    string `json:"name" jsonschema:"the trigger's name"`
 }
 
 type allowIn struct {
-	Project      string `json:"project" jsonschema:"the upstream project's name (whose results are triggered on)"`
-	Downstream   string `json:"downstream_project" jsonschema:"the project that may trigger on it"`
+	Project      string `json:"project" jsonschema:"the upstream Flight's name (whose results are triggered on)"`
+	Downstream   string `json:"downstream_project" jsonschema:"the Flight that may trigger on it"`
 	ShareOutputs bool   `json:"share_outputs,omitempty" jsonschema:"also let it read the step outputs of the upstream's runs (never secrets, logs or files)"`
 }
 
 func addRunTriggerTools(srv *mcp.Server, c *mcpCall) {
-	addTool(srv, c, &mcp.Tool{Name: "list_run_trigger_allows", Annotations: readOnly("List who may trigger on a project"),
-		Description: "The projects an upstream project has allowed to start runs when its Sorties or launches end, and whether each may read the step outputs."},
+	addTool(srv, c, &mcp.Tool{Name: "list_run_trigger_allows", Annotations: readOnly("List who may trigger on a Flight"),
+		Description: "The Flights an upstream Flight has allowed to start runs when its Sorties or launches end, and whether each may read the step outputs."},
 		mcpCallTimeout, listRunTriggerAllowsTool)
 	addTool(srv, c, &mcp.Tool{Name: "list_run_triggers", Annotations: readOnly("List result triggers"),
-		Description: "A project's triggers on other projects' results: when the upstream project's run or launch ends the way each says, a run of this project starts with inputs mapped from the result."},
+		Description: "A Flight's triggers on other Flights' results: when the upstream Flight's run or launch ends the way each says, a run of this Flight starts with inputs mapped from the result."},
 		mcpCallTimeout, listRunTriggers)
 	if !c.mayOperate {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "create_run_trigger", Annotations: changes("Make a result trigger", false, false),
-		Description: "Make a project start a run when another project's run or launch ends. The upstream project must have allowed this project first (allow_run_triggers), and a cycle is refused."},
+		Description: "Make a Flight start a run when another Flight's run or launch ends. The upstream Flight must have allowed this Flight first (allow_run_triggers), and a cycle is refused."},
 		mcpCallTimeout, createRunTrigger)
 	addTool(srv, c, &mcp.Tool{Name: "delete_run_trigger", Annotations: changes("Delete a result trigger", true, true),
-		Description: "Remove a result trigger of a project."}, mcpCallTimeout, deleteRunTrigger)
-	addTool(srv, c, &mcp.Tool{Name: "allow_run_triggers", Annotations: changes("Allow a project to trigger on this one", false, true),
-		Description: "As an operator of the upstream project, let another project start runs when this project's runs or launches end. Optionally let it read their step outputs. Nothing else crosses: no secret, log or file."},
+		Description: "Remove a result trigger of a Flight."}, mcpCallTimeout, deleteRunTrigger)
+	addTool(srv, c, &mcp.Tool{Name: "allow_run_triggers", Annotations: changes("Allow a Flight to trigger on this one", false, true),
+		Description: "As an operator of the upstream Flight, let another Flight start runs when this Flight's runs or launches end. Optionally let it read their step outputs. Nothing else crosses: no secret, log or file."},
 		mcpCallTimeout, allowRunTriggers)
-	addTool(srv, c, &mcp.Tool{Name: "revoke_run_triggers", Annotations: changes("Stop allowing a project to trigger on this one", true, true),
-		Description: "As an operator of the upstream project, withdraw the permission. The downstream project's triggers stay and are refused, with the reason, until it is given again."},
+	addTool(srv, c, &mcp.Tool{Name: "revoke_run_triggers", Annotations: changes("Stop allowing a Flight to trigger on this one", true, true),
+		Description: "As an operator of the upstream Flight, withdraw the permission. The downstream Flight's triggers stay and are refused, with the reason, until it is given again."},
 		mcpCallTimeout, revokeRunTriggers)
 }
 
@@ -205,8 +205,8 @@ func listRunTriggerAllowsTool(ctx context.Context, c *mcpCall, _ *mcp.CallToolRe
 }
 
 type revokeIn struct {
-	Project    string `json:"project" jsonschema:"the upstream project's name"`
-	Downstream string `json:"downstream_project" jsonschema:"the project that may no longer trigger on it"`
+	Project    string `json:"project" jsonschema:"the upstream Flight's name"`
+	Downstream string `json:"downstream_project" jsonschema:"the Flight that may no longer trigger on it"`
 }
 
 func revokeRunTriggers(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in revokeIn) (okOut, error) {

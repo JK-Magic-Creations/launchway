@@ -49,7 +49,7 @@ func TestVariablesOverHTTP(t *testing.T) {
 		t.Fatalf("%d %s", code, body)
 	}
 	code, body := put(otto, "/api/v1/variables/replicas", `{"level":"project","scope":"pay-api","environment":"production","type":"number","value":5}`)
-	if code != 409 || !strings.Contains(body, "locked by the base (fleet rule). Only an administrator of every project can change it.") {
+	if code != 409 || !strings.Contains(body, "locked by the base (fleet rule). Only an administrator of every Flight can change it.") {
 		t.Fatalf("the override below the lock: %d %s", code, body)
 	}
 	ada.get(u+"/api/v1/projects/pay-api/variables").json(t, &v)

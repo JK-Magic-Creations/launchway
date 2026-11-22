@@ -8,21 +8,21 @@ The call matrix below is generated from the route rows of http-api.md; keep them
 
 This page says who may do what in Launchway: the three roles, how the server works out a person's role for each request, and the settings that narrow it further. It is for operators who write the `auth.access` section of the server configuration, and for security reviewers.
 
-> **Verified** on 2026-11-19 against commit f717337: a local server with OpenID Connect sign-in (a test provider) and bindings for an admin group, an operator group limited to one project and a viewer group; each refusal below (`404` for another team's project, `403` for a viewer starting a Sortie (run), an operator waiving or reading the Logbook, a viewer-limited token starting a Sortie, a cookie request without the CSRF header, a token making a token) was produced with `curl` and the command line. **Not verified:** environment-limited bindings and protected Airfields (they need deployments, which need Argo CD), and self-approval with sign-in on (described from the code and its tests).
+> **Verified** on 2026-11-19 against commit f717337: a local server with OpenID Connect sign-in (a test provider) and bindings for an admin group, an operator group limited to one Flight (codebase) and a viewer group; each refusal below (`404` for another team's Flight, `403` for a viewer starting a Sortie (run), an operator waiving or reading the Logbook, a viewer-limited token starting a Sortie, a cookie request without the CSRF header, a token making a token) was produced with `curl` and the command line. **Not verified:** environment-limited bindings and protected Airfields (they need deployments, which need Argo CD), and self-approval with sign-in on (described from the code and its tests).
 
 ## Roles
 
 | Role | May |
 |---|---|
-| `viewer` | See a project and everything about its Sorties: logs, events, pipeline files, test results, findings, Cargo (artifacts), images, policy decisions, approvals waiting. See the Stations (runners) and their pools, the policies in force, verifications, and the health sources and AI models their projects may use. Check pipeline text. |
+| `viewer` | See a Flight and everything about its Sorties: logs, events, pipeline files, test results, findings, Cargo (artifacts), images, policy decisions, approvals waiting. See the Stations (runners) and their pools, the policies in force, verifications, and the health sources and AI models their Flights may use. Check pipeline text. |
 | `operator` | Everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, give deployment commands, mark a running verification passed or failed, ask a model to explain a failed step, delete Cargo, save pipelines from the editor, and start draft runs (if `drafts.allow` is `operator`, the default). |
-| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every project also reads the Logbook, sees and revokes everyone's API tokens, and (by default, see `runner_admin`) makes join tokens and revokes and rotates Stations. |
+| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every Flight also reads the Logbook, sees and revokes everyone's API tokens, and (by default, see `runner_admin`) makes join tokens and revokes and rotates Stations. |
 
-Each role includes the ones above it. Someone who signs in but has no role anywhere can sign in, sees no projects, and may still manage their own API tokens.
+Each role includes the ones above it. Someone who signs in but has no role anywhere can sign in, sees no Flights, and may still manage their own API tokens.
 
 ### Sign-in off
 
-With `auth.mode: none`, every request acts as the configured `user`, with the `admin` role on every project. Two settings still apply: `drafts.allow: none` turns draft runs off, and `policy.waivers.allow: none` turns waivers off. The [CSRF header](http-api.md#csrf-header) is required all the same. A server without sign-in refuses to start unless it listens only on a loopback address, or `auth.allow_anonymous: true` says something in front of it decides who may reach it.
+With `auth.mode: none`, every request acts as the configured `user`, with the `admin` role on every Flight. Two settings still apply: `drafts.allow: none` turns draft runs off, and `policy.waivers.allow: none` turns waivers off. The [CSRF header](http-api.md#csrf-header) is required all the same. A server without sign-in refuses to start unless it listens only on a loopback address, or `auth.allow_anonymous: true` says something in front of it decides who may reach it.
 
 ## Bindings
 
@@ -33,7 +33,7 @@ The `auth.access` list in the server configuration grants roles. Each entry has:
 | `group` | A group from the provider's `groups_claim`. Give exactly one of `group` and `user`. |
 | `user` | A user name from the provider's `username_claim`. |
 | `role` | `viewer`, `operator` or `admin`. Required. |
-| `projects` | Patterns of the projects the role is granted on. None means every project. |
+| `projects` | Patterns of the Flights the role is granted on. None means every Flight. |
 | `environments` | Patterns of the Airfields the role covers for deployments. None means every Airfield. See [Environment-limited bindings](#environment-limited-bindings). |
 
 ```yaml
@@ -45,13 +45,13 @@ auth:
     - { user: dana,             role: operator, projects: [web] }
 ```
 
-Patterns use `*` (any characters except `/`), `?` (one character) and `[...]`. Where several entries match a person and a project, the highest role wins. A mistake in a binding (both or neither of `group` and `user`, a missing role, a pattern that does not parse) stops the server from starting.
+Patterns use `*` (any characters except `/`), `?` (one character) and `[...]`. Where several entries match a person and a Flight, the highest role wins. A mistake in a binding (both or neither of `group` and `user`, a missing role, a pattern that does not parse) stops the server from starting.
 
 Rights are worked out on every request, from the configuration and the groups the provider gave at the person's latest sign-in. The server checks them whatever the UI shows.
 
-Some calls need a role "on every project": reading the Logbook and administering everyone's API tokens. Only an entry **without** `projects` counts for those, so `{ group: payments, role: admin, projects: ["payments-*"] }` makes someone admin of those projects but never lets them read the Logbook.
+Some calls need a role "on every Flight": reading the Logbook and administering everyone's API tokens. Only an entry **without** `projects` counts for those, so `{ group: payments, role: admin, projects: ["payments-*"] }` makes someone admin of those Flights but never lets them read the Logbook.
 
-**Managing Stations.** Making join tokens, listing them, and revoking or rotating Stations need the role `runner_admin` names (`admin` by default; `operator` or `none`) on every project, as for the Logbook: only an entry without `projects` counts. With `none`, managing Stations over the API is off. A token limited to projects, or to a lower role, cannot do it.
+**Managing Stations.** Making join tokens, listing them, and revoking or rotating Stations need the role `runner_admin` names (`admin` by default; `operator` or `none`) on every Flight, as for the Logbook: only an entry without `projects` counts. With `none`, managing Stations over the API is off. A token limited to Flights, or to a lower role, cannot do it.
 
 **The MCP endpoint.** `POST /mcp` gives an agent exactly what its API token allows: each tool calls the API above with the token, through the same checks. Browser session cookies are not accepted there. See [Agents (MCP)](../guide/agents.md).
 
@@ -81,7 +81,7 @@ In words:
 1. **Public** routes (health, sign-in, webhooks) and **Station** routes have their own checks. See [the HTTP API](http-api.md#authentication).
 2. With sign-in on, the request must carry a valid API token or session (`401` otherwise). An address that fails 20 times in a minute is refused with `429`.
 3. A request that changes something and is not authenticated by an API token must carry the CSRF header (`403` otherwise).
-4. The route's access class is checked against the person's role on the project in the path (or the Sortie's project). A project or run the person cannot see answers `404`, as if it did not exist; one they can see but not change answers `403`.
+4. The route's access class is checked against the person's role on the Flight in the path (or the Sortie's Flight). A Flight or run the person cannot see answers `404`, as if it did not exist; one they can see but not change answers `403`.
 5. The handler checks what depends on the request: the Airfield of a deployment, `drafts.allow`, `policy.waivers.allow`, force-saving, and whether the person started the Sortie.
 6. Calls that change something are recorded in the Logbook, allowed or refused. See [Events and audit trail](events.md#audit-trail).
 
@@ -92,52 +92,52 @@ Every route belongs to one class. [The HTTP API reference](http-api.md) gives ea
 | Class | Who passes |
 |---|---|
 | `public` | Anyone; the handler decides. |
-| `runner` | A Station with the shared Station token, a Flight line's token or an enrolled Station's access token. |
+| `runner` | A Station with the shared Station token, a Ramp's token or an enrolled Station's access token. |
 | `signed-in` | Anyone signed in, with any role or none. Lists and the live stream contain only what the person may see. |
-| `any-viewer` | Someone with at least `viewer` on at least one project. |
-| `project-viewer` | `viewer` or more on the project in the path. |
-| `project-operator` | `operator` or more on the project in the path. |
-| `project-draft` | The role `drafts.allow` names on the project in the path. |
-| `run-viewer` | `viewer` or more on the Sortie's project. |
-| `run-operator` | `operator` or more on the Sortie's project. |
+| `any-viewer` | Someone with at least `viewer` on at least one Flight. |
+| `project-viewer` | `viewer` or more on the Flight in the path. |
+| `project-operator` | `operator` or more on the Flight in the path. |
+| `project-draft` | The role `drafts.allow` names on the Flight in the path. |
+| `run-viewer` | `viewer` or more on the Sortie's Flight. |
+| `run-operator` | `operator` or more on the Sortie's Flight. |
 | `repo-viewer` | `viewer` or more on the repository, named `<owner>/<name>` to the bindings. Git hosting must be on (`404 feature_off` otherwise). A repository the caller may not read is reported as not existing. |
 | `repo-operator` | `operator` or more on the repository: may push. |
 | `repo-admin` | `admin` on the repository: may rename, archive, change who reads it and delete it. |
-| `admin` | `admin` on every project. |
+| `admin` | `admin` on every Flight. |
 
 ## Work tracking
 
 The work routes (`/api/v1/work/…`) are open to anyone signed in; the server then decides, from the role on the
-Project the work belongs to, what the person may see and do. The call matrix below shows them all as `signed-in`.
+Flight the work belongs to, what the person may see and do. The call matrix below shows them all as `signed-in`.
 
-| Level of right | Role on the Project | What it allows |
+| Level of right | Role on the Flight | What it allows |
 |---|---|---|
 | **Read** | `viewer` | See items, boards, sprints, milestones, charts, the roadmap, agents and the spend view; search; read release notes |
 | **Write** | `operator` | Create and change items; comment, link, attach files; reorder the backlog; make and start sprints and milestones; take work over from an agent; save views |
-| **Maintain** | `admin` of the Project | Change how work is set up (workflow, types, fields, the close rule, agent rules and the autonomy policy); register, change, switch off and rotate the token of agents; clear a pause; look at flagged merges; import stories and promote an archive; change whether an item is confidential; report on someone's behalf; see confidential items |
+| **Maintain** | `admin` of the Flight | Change how work is set up (workflow, types, fields, the close rule, agent rules and the autonomy policy); register, change, switch off and rotate the token of agents; clear a pause; look at flagged merges; import stories and promote an archive; change whether an item is confidential; report on someone's behalf; see confidential items |
 
 A few more rules sit on top:
 
 - **Confidential items** are seen by the people who maintain the scope, the reporter and the assignees, and nobody else.
 - **Only a person** registers or switches off an agent, changes settings, clears a pause, or takes work over. An
   agent token never does any of these.
-- An agent token sees and changes only the Projects it was registered for, and only the work it holds.
-- **Closing work in another Project** from a pull request needs the operator role there, held through a
+- An agent token sees and changes only the Flights it was registered for, and only the work it holds.
+- **Closing work in another Flight** from a pull request needs the operator role there, held through a
   binding that names the person; a binding granted to a group does not yet allow it.
 
-For work above a Project the right is worked out from the Projects below it:
+For work above a Flight the right is worked out from the Flights below it:
 
 | Scope of the work | Read or write | Maintain |
 |---|---|---|
-| A Project | The role on that Project | `admin` on that Project |
-| A Squadron | The role on any Project of the Squadron | `admin` on every Project of the Squadron (and it must have some) |
-| A Wing or the Base | The role on any Project | `admin` of every Project |
+| A Flight | The role on that Flight | `admin` on that Flight |
+| A Squadron | The role on any Flight of the Squadron | `admin` on every Flight of the Squadron (and it must have some) |
+| A Wing or the Base | The role on any Flight | `admin` of every Flight |
 
 The guides are [tracking work](../guide/tracking-work.md) and [working with agents](../guide/working-with-agents.md).
 
 ## Who may make which call
 
-Generated from the route table. "yes" means a person with that role on the project (or, for `admin`-class calls, on every project) passes the class check; the last column is what the handler checks on top.
+Generated from the route table. "yes" means a person with that role on the Flight (or, for `admin`-class calls, on every Flight) passes the class check; the last column is what the handler checks on top.
 
 | Call | Class | `viewer` | `operator` | `admin` | Also needs |
 |---|---|---|---|---|---|
@@ -161,9 +161,9 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `POST /api/v1/runs/{id}/steps/{step}/approve` | run-operator | no | yes | yes | the operator role on the Airfield, if the approval names a deployment; not the Sortie's starter unless `approvals.allow_self` |
 | `POST /api/v1/runs/{id}/steps/{step}/reject` | run-operator | no | yes | yes | the operator role on the Airfield, if the approval names a deployment |
 | `GET /api/v1/projects/{name}/pipeline` | project-viewer | yes | yes | yes |  |
-| `POST /api/v1/projects/{name}/pipeline` | project-operator | no | yes | yes | `force: true` needs admin on the project; the project needs `push:` |
+| `POST /api/v1/projects/{name}/pipeline` | project-operator | no | yes | yes | `force: true` needs admin on the Flight; the Flight needs `push:` |
 | `POST /api/v1/projects/{name}/draft-runs` | project-draft | no | yes | yes | the role `drafts.allow` names (operator by default) |
-| `POST /api/v1/validate` | any-viewer | yes | yes | yes | the role on any project; `?project=` must be visible |
+| `POST /api/v1/validate` | any-viewer | yes | yes | yes | the role on any Flight; `?project=` must be visible |
 | `GET /api/v1/runs/{id}/tests` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/tests/cases` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | run-viewer | yes | yes | yes |  |
@@ -176,7 +176,7 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/projects/{name}/coverage` | project-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/reports` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/artifacts` | run-viewer | yes | yes | yes |  |
-| `GET /api/v1/artifact-store` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/artifact-store` | any-viewer | yes | yes | yes | the role on any Flight |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/file` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` | run-viewer | yes | yes | yes |  |
 | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` | run-operator | no | yes | yes |  |
@@ -200,17 +200,17 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs` | run-operator | no | yes | yes | the operator role on the Airfield (environment); logs can hold anything a container prints |
 | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream` | run-operator | no | yes | yes | as the logs |
 | `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` | run-operator | no | yes | yes | the operator role on the Airfield; a reason is required |
-| `GET /api/v1/libraries` | any-viewer | yes | yes | yes | the role on any project |
-| `GET /api/v1/libraries/{library}/templates` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/libraries` | any-viewer | yes | yes | yes | the role on any Flight |
+| `GET /api/v1/libraries/{library}/templates` | any-viewer | yes | yes | yes | the role on any Flight |
 | `GET /api/v1/runs/{id}/verifications` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/verifications` | signed-in | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/steps/{step}/verify/controls` | run-viewer | yes | yes | yes |  |
 | `POST /api/v1/runs/{id}/steps/{step}/verify/override` | run-operator | no | yes | yes | on a protected Airfield, not the Sortie's starter marking it passed |
-| `GET /api/v1/health-sources` | signed-in | yes | yes | yes | only the sources of projects the person may see |
-| `GET /api/v1/ai/models` | signed-in | yes | yes | yes | only the models of projects the person may see |
+| `GET /api/v1/health-sources` | signed-in | yes | yes | yes | only the sources of Flights the person may see |
+| `GET /api/v1/ai/models` | signed-in | yes | yes | yes | only the models of Flights the person may see |
 | `GET /api/v1/runs/{id}/steps/{step}/explanations` | run-viewer | yes | yes | yes |  |
 | `POST /api/v1/runs/{id}/steps/{step}/explain` | run-operator | no | yes | yes |  |
-| `GET /api/v1/policies` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/policies` | any-viewer | yes | yes | yes | the role on any Flight |
 | `GET /api/v1/runs/{id}/policy` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/waivers` | signed-in | yes | yes | yes |  |
 | `POST /api/v1/projects/{name}/waivers` | project-viewer | yes | yes | yes | the role `policy.waivers.allow` names (admin by default); for a deploy rule, that role on the Airfield |
@@ -221,9 +221,9 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/tokens/limits` | signed-in | yes | yes | yes |  |
 | `GET /api/v1/admin/tokens` | admin | no | no | yes | admin from an entry without `projects` |
 | `DELETE /api/v1/admin/tokens/{id}` | admin | no | no | yes | admin from an entry without `projects` |
-| `GET /api/v1/runners` | any-viewer | yes | yes | yes | the role on any project |
-| `GET /api/v1/runner-pools` | any-viewer | yes | yes | yes | the role on any project |
-| `GET /api/v1/runner-join-tokens` | signed-in | yes | yes | yes | the role `runner_admin` names (admin by default), on every project |
+| `GET /api/v1/runners` | any-viewer | yes | yes | yes | the role on any Flight |
+| `GET /api/v1/runner-pools` | any-viewer | yes | yes | yes | the role on any Flight |
+| `GET /api/v1/runner-join-tokens` | signed-in | yes | yes | yes | the role `runner_admin` names (admin by default), on every Flight |
 | `POST /api/v1/runner-join-tokens` | signed-in | yes | yes | yes | as listing |
 | `POST /api/v1/runner-join-tokens/{id}/revoke` | signed-in | yes | yes | yes | as listing |
 | `POST /api/v1/runners/{id}/revoke` | signed-in | yes | yes | yes | as listing |
@@ -233,7 +233,7 @@ Generated from the route table. "yes" means a person with that role on the proje
 
 ## Environment-limited bindings
 
-An entry with `environments` grants its role on deployments to those Airfields only: the deployment commands (promote, promote fully, abort, retry, withdraw) and approvals that name a deployment. On its projects otherwise it grants as usual.
+An entry with `environments` grants its role on deployments to those Airfields only: the deployment commands (promote, promote fully, abort, retry, withdraw) and approvals that name a deployment. On its Flights otherwise it grants as usual.
 
 ```yaml
 auth:
@@ -250,10 +250,10 @@ Waiving a deploy rule (a rule judged before deploying) also needs the waiver rol
 
 An API token acts as the person who made it, with their rights as of their latest sign-in, at the moment of each call. It may be limited further when it is made:
 
-- **role**: `viewer`, `operator` or `admin`, no higher than the highest role its maker has anywhere. On each project the token acts with the lower of its role and its maker's.
-- **projects**: up to 20 names or patterns such as `pay-*`. Elsewhere the token sees nothing, as if those projects did not exist.
+- **role**: `viewer`, `operator` or `admin`, no higher than the highest role its maker has anywhere. On each Flight the token acts with the lower of its role and its maker's.
+- **Flights**: up to 20 names or patterns such as `pay-*`. Elsewhere the token sees nothing, as if those Flights did not exist.
 
-A token limited to projects is never an admin of every project, so it cannot read the Logbook or other people's tokens. A token can only be made from a signed-in browser session, never with another token. A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in the Logbook as `token.use`. Every token expires: by default after 90 days, at most after `auth.tokens.max_days` (default 365, up to 3650).
+A token limited to Flights is never an admin of every Flight, so it cannot read the Logbook or other people's tokens. A token can only be made from a signed-in browser session, never with another token. A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in the Logbook as `token.use`. Every token expires: by default after 90 days, at most after `auth.tokens.max_days` (default 365, up to 3650).
 
 A limited token works only on servers that know limits. An older server, during a Return to base (rollback), refuses it rather than grant its owner's full rights.
 
@@ -271,7 +271,7 @@ projects:
     drafts: { allow: admin }   # this project only; unset keys take the server's setting
 ```
 
-`drafts.allow` is the role needed on the project. `none` turns draft runs off for everyone, with or without sign-in. Resuming or re-running a draft run needs the same role, and whether its steps may read secrets is decided again by the current setting. With `secrets: false`, a draft run's step that asks for a secret fails before any Station sees it.
+`drafts.allow` is the role needed on the Flight. `none` turns draft runs off for everyone, with or without sign-in. Resuming or re-running a draft run needs the same role, and whether its steps may read secrets is decided again by the current setting. With `secrets: false`, a draft run's step that asks for a secret fails before any Station sees it.
 
 ## Policy waivers
 
@@ -282,7 +282,7 @@ policy:
     max_days: 30
 ```
 
-`policy.waivers.allow` is the role needed on the project to grant or revoke a waiver; `none` turns waivers off. A deploy rule also needs the role on the Airfield, as above. On a protected Airfield, the person who started a Sortie may not waive its deploy gate. See [Policy rules](policy-rules.md).
+`policy.waivers.allow` is the role needed on the Flight to grant or revoke a waiver; `none` turns waivers off. A deploy rule also needs the role on the Airfield, as above. On a protected Airfield, the person who started a Sortie may not waive its deploy gate. See [Policy rules](policy-rules.md).
 
 ## Self-approval
 

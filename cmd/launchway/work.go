@@ -193,7 +193,7 @@ type wcmd struct {
 
 func (w *wcmd) useScope() {
 	w.scope = w.fs.String("scope", "", "where: project:OWNER/NAME, unit:NAME, organization or installation (default $LAUNCHWAY_WORK_SCOPE)")
-	w.repo = w.fs.String("repo", "", "OWNER/NAME of the project (same as --scope project:OWNER/NAME)")
+	w.repo = w.fs.String("repo", "", "OWNER/NAME of the Flight (same as --scope project:OWNER/NAME)")
 }
 
 // given says which flags were set on the command line.

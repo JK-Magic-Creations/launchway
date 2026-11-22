@@ -49,8 +49,8 @@ export function loadVocabulary(): Promise<void> {
 }
 
 export const SETS: Record<SetId, { name: string; blurb: string }> = {
-  aviation: { name: "Aviation", blurb: "Base, Wing, Squadron, Project. Tower, Sortie, Station, Launch. The default." },
-  business: { name: "Plain business", blurb: "Installation, Organization, Team, Project. Home, Run, Runner, Deploy. Ordinary words only." },
+  aviation: { name: "Aviation", blurb: "Base, Wing, Squadron, Flight. Tower, Sortie, Station, Launch. The default." },
+  business: { name: "Plain business", blurb: "Installation, Organization, Team, Codebase. Home, Run, Runner, Deploy. Ordinary words only." },
 };
 
 export const DEFAULT_SET: SetId = "aviation";

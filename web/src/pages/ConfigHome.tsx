@@ -89,7 +89,7 @@ export function ConfigHomePage() {
             <li key={w.id}>
               <Link href={`/config/wizard/${w.id}`} className="cf-wizcard">
                 <span className="cf-wizcard-title">{w.id === "connect-repository" ? `Connect a repository (a ${lv.project.singular.toLowerCase()})` : w.title}</span>
-                <span className="cf-wizcard-text">{w.text}</span>
+                <span className="cf-wizcard-text">{terms().say(w.text)}</span>
               </Link>
             </li>
           ))}

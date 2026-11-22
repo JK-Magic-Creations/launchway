@@ -53,7 +53,7 @@ export function ProjectSecurityPage({ name }: { name: string }) {
           </div>
         )} />
 
-      <ErrorBox error={error instanceof ApiError && error.status === 404 ? `There is no project called ${name}, or you may not see it.` : error} />
+      <ErrorBox error={error instanceof ApiError && error.status === 404 ? terms().say(`There is no {project} called ${name}, or you may not see it.`) : error} />
       {!data && !error && <div className="loading">Loading…</div>}
       {data && withFindings.length === 0 && (
         <Empty title={data.ref ? `No findings on ${refName(data.ref)} yet` : "No findings yet"}>

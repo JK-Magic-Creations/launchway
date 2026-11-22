@@ -332,7 +332,7 @@ helm template launchway deploy/helm/launchway -n launchway -f deploy/helm/launch
 
 ## What next
 
-- [Connect a Station](connect-runner.md) in another project or network.
+- [Connect a Station](connect-runner.md) in another Flight (codebase) or network.
 - [Back up, restore and upgrade](backup-restore-upgrade.md).
 - [Install on Kubernetes](install-kubernetes.md) for scaling, the deploy Station and upgrades.
 - [Helm values](../reference/helm-values.md) for every setting.

@@ -70,7 +70,7 @@ func cmdModels(args []string) error {
 func (cl *client) verifications(args []string) error {
 	fs := flag.NewFlagSet("verifications list", flag.ContinueOnError)
 	env := fs.String("environment", "", "only this Airfield's")
-	project := fs.String("project", "", "only this project's")
+	project := fs.String("project", "", "only this Flight's")
 	service := fs.String("service", "", "only this service's")
 	limit := fs.Int("limit", 20, "at most this many")
 	asJSON := fs.Bool("json", false, "print JSON")
@@ -227,9 +227,9 @@ func (cl *client) models(args []string) error {
 			}
 			budget := "no daily budget"
 			if m.TokensPerDay > 0 {
-				budget = fmt.Sprintf("%d tokens a day per project", m.TokensPerDay)
+				budget = fmt.Sprintf("%d tokens a day per Flight", m.TokensPerDay)
 			}
-			fmt.Fprintf(cl.out, "%-16s %-10s %-28s %-6s max %d tokens a call, %d calls a Sortie, %s; projects %s\n", m.Name, m.Provider, m.Model,
+			fmt.Fprintf(cl.out, "%-16s %-10s %-28s %-6s max %d tokens a call, %d calls a Sortie, %s; Flights %s\n", m.Name, m.Provider, m.Model,
 				where, m.MaxTokens, m.CallsPerRun, budget, strings.Join(m.Projects, ","))
 			for _, u := range m.UsedToday {
 				fmt.Fprintf(cl.out, "    %s today: %d calls, %d in, %d out, $%.4f\n", u.Project, u.Calls, u.InputTokens, u.OutputTokens, u.CostUSD)
