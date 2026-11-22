@@ -263,12 +263,23 @@ func (b *logBuffer) take(max int) []engine.LogLine {
 	return out
 }
 
+// resultWithin bounds delivering a finished step's last log lines and its
+// result. It does not bound the step.
+const resultWithin = 5 * time.Minute
+
 func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	log := r.Log.With("run", job.RunID, "step", job.StepID, "attempt", job.Attempt)
-	// The server talks to the step's lease on a context of its own, so that
-	// reporting the result still works while the runner is shutting down.
-	report, stopReport := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer stopReport()
+	// The server is talked to on contexts of the step's own, not the runner's,
+	// so that reporting still works while the runner is shutting down. While
+	// the step runs that context has NO deadline: heartbeats and log uploads
+	// must go on for as long as the step does, however long that is (one
+	// five-minute deadline here once made every heartbeat fail from the sixth
+	// minute of a step, and the server then took a long step back). Each call
+	// bounds itself. Only what comes after the step, delivering the last lines
+	// and the result, gets a deadline (resultWithin).
+	live, stopLive := context.WithCancel(context.Background())
+	defer stopLive()
+	report := live
 
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
@@ -379,6 +390,11 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	close(bgStop)
 	<-bgDone
 	<-beatDone
+	// The step is over and nothing runs beside it any more: from here on the
+	// last lines and the result are delivered within resultWithin.
+	final, stopFinal := context.WithTimeout(context.Background(), resultWithin)
+	defer stopFinal()
+	report = final
 	mu.Lock()
 	wasRequested, wasLost = requested, lost
 	mu.Unlock()
