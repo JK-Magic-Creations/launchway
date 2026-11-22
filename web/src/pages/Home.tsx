@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import type { Approval, Me, Project, RunSummary, Runner } from "../api";
 import type { LaunchLineView } from "../api/launch";
 import { useMe } from "../auth";
@@ -18,6 +18,9 @@ import { useNow } from "../live";
 import { onLink } from "../router";
 import { Explore } from "./HomeExplore";
 import { terms } from "../terms";
+
+// Loaded after the first paint: Home draws without it.
+const HomeWork = lazy(() => import("../work/HomeWork"));
 
 /** Home answers one question: what should I do next? A new installation sees what to set up, in order;
  * a busy one sees what needs it today, then the changes on their way. Everything on it comes from the server's own state. */
@@ -69,6 +72,7 @@ export function Home({ me, projects, runs, runners, environments, applications, 
       {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> {terms().say("Projects, a {runner}, a first {run} and an {environment} are in place.")}</div>}
 
       <NeedsSheet list={needs} />
+      <Suspense fallback={null}><HomeWork /></Suspense>
 
       <ChangesOnTheirWay lines={lines} runs={runs} now={now} />
 

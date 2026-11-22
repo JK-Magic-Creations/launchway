@@ -196,8 +196,8 @@ func TestGiteaStyleRepositoryCalls(t *testing.T) {
 		t.Errorf("a branch of an empty repository: %d", r.status)
 	}
 	tok := e.tokenFor(t, "ada", "git")
-	mustGit(t, work(t), "version")
-	src := work(t)
+	mustGit(t, workingCopy(t), "version")
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/ada/lw-x.git", tok), "HEAD:refs/heads/main")
 	if r := ada.get(api + "/repos/ada/lw-x/branches/main"); r.status != 200 {
 		t.Errorf("the pushed branch: %d %s", r.status, r.body)

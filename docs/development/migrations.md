@@ -520,6 +520,13 @@ range in `schemaStandInFirst` and `schemaStandInLast` shrinks. A server of an ol
 tables; the blobs they name stay in the blob store until a newer server collects them. The startup
 check covers the tables (`schemaMarkersRegistry`).
 
+Schema 50 brings work tracking (`internal/work`, `internal/engine/schema50.go`), additive: only new tables, all
+beginning `work_`: scopes and their settings and counters, items, labels, assignees, watchers, criteria, links, code links,
+comments and their edits, attachments, events (the history), milestones, sprints and what each committed to, saved
+views, the inbox, agents, claims, the agent log and usage, agent changes and reviews, review samples and the autonomy
+pause state. Money and time are whole numbers (estimates in thousandths, times in milliseconds). An older
+server ignores the tables. The startup check covers them (`schema_markers_work.go`).
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

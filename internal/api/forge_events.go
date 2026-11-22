@@ -37,6 +37,7 @@ func (s *Server) afterPush(ctx context.Context, c gitCaller, repo forge.Reposito
 		}
 	}
 	s.pullsPushed(ctx, c, repo, updates)
+	s.workOnPush(ctx, c, repo, updates)
 	s.pollWatchers(repo)
 	s.graphPushed(ctx, repo, updates)
 }

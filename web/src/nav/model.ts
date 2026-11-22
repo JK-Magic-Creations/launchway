@@ -11,7 +11,7 @@ import { terms } from "../terms";
 /** The words in effect, filled into a sentence: {Hold} is what this installation calls a freeze. */
 const say = (t: string) => terms().say(t);
 
-export type SectionId = "home" | "projects" | "pipelines" | "images" | "deployments" | "traffic" | "changes" | "activity" | "library" | "settings";
+export type SectionId = "home" | "projects" | "work" | "pipelines" | "images" | "deployments" | "traffic" | "changes" | "activity" | "library" | "settings";
 
 /** What the navigation needs to know about the installation to decide what to
  * show. A number is null until it is known; unknown counts as nothing to show. */
@@ -61,6 +61,10 @@ const has = (n: number | null) => (n ?? 0) > 0;
 export const SECTIONS: Section[] = [
   { id: "home", get label() { return say("{Home}"); }, href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
   { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, promise: "Repositories and projects: files, commits, branches and reviews.", tabs: [] },
+  {
+    id: "work", label: "Work", href: "/work", icon: "list", group: 1,
+    get promise() { return say("Issues, boards, backlogs and sprints, and the agents that work on them."); }, tabs: [],
+  },
   { id: "pipelines", label: "Pipelines", href: "/pipelines", icon: "graph", group: 1, get promise() { return say("The steps that build, test and release your software, and how their {runs} went."); }, tabs: [] },
   { id: "images", label: "Images", href: "/images", icon: "package", group: 1, promise: "Container images, Helm charts and files your pipelines build, with what is in them.", tabs: [] },
   {
@@ -174,6 +178,9 @@ function kindWord(kind: string): string {
   }
 }
 
+const repoCrumb = (p: Record<string, string>): Crumb => ({ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` });
+const pipeCrumb = (p: Record<string, string>): Crumb => ({ label: p.name, href: `/projects/${enc(p.name)}/pipeline` });
+
 function page(pattern: string, section: SectionId, tab: string | undefined, title: (p: Record<string, string>) => string,
   trail: (p: Record<string, string>) => Crumb[]): PageInfo {
   return { pattern, section, tab, title, trail };
@@ -204,6 +211,7 @@ export const PAGES: PageInfo[] = [
 
   page("/projects", "projects", undefined, () => "Code", () => []),
   page("/code/:page", "projects", undefined, (p) => comingTitle("/code/" + p.page), (p) => [{ label: comingTitle("/code/" + p.page) }]),
+
   page("/pipelines", "pipelines", undefined, () => "Pipelines", () => []),
   page("/projects/:name", "projects", undefined, (p) => p.name, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline", "pipelines", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name }]),
@@ -305,12 +313,16 @@ export const PAGES: PageInfo[] = [
   page("/config/:kind", "settings", "config", (p) => kindWord(p.kind), (p) => [{ label: "Configuration", href: "/config" }, { label: kindWord(p.kind) }]),
 ];
 
+const WORK = page("/work", "work", undefined, (p) => (p.w ? `Work: ${p.w}` : "Work"), (p) => (p.w ? [{ label: p.w }] : []));
+
 export interface Located { info: PageInfo; params: Record<string, string> }
 
 /** Finds the page for an address. Order matters where a pattern could also
  * match: /config/wizard/x before /config/:kind/:name, /projects/:name/pipeline/edit first. */
 export function locate(path: string): Located | null {
   const clean = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  // Every work address (its pages are chunks of their own) is one page here: the rest of the address is its name.
+  if (clean === "/work" || clean.startsWith("/work/")) return { info: WORK, params: { w: clean.slice(6).split("/").map(decodeURIComponent).join(" / ").replace("project:", "") } };
   for (const info of PAGES) {
     const params = match(info.pattern, clean);
     if (params) return { info, params };

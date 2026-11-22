@@ -234,6 +234,10 @@ func (s *Server) pullReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := identityFrom(r)
+	if id.agent != nil && in.Verdict == "approve" {
+		writeErr(w, http.StatusForbidden, "an agent does not approve through the ordinary review; it sends a structured verdict to /api/v1/work/agent/pull-review, and the policy decides whether that counts")
+		return
+	}
 	ri := pulls.ReviewInput{Verdict: in.Verdict, Body: in.Body, Role: s.pullRole(id, repo.Path), Groups: auth.StripReservedGroups(id.Groups)}
 	for _, c := range in.Comments {
 		ri.Comments = append(ri.Comments, c.comment())

@@ -21,6 +21,7 @@
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
     "Valkey", "Containerfile", "Containerfiles", "Dockerfiles", "millicores",
     "skopeo",
+    "burndown", "Burndown",
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
     "applicationsets", "blocklist",
     "Authentik",

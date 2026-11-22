@@ -5,14 +5,14 @@ import { breadcrumbs, locate, NO_FACTS, pageTitle, redirectFor, sectionOf, SECTI
 const facts = (over: Partial<Facts> = {}): Facts => ({ ...NO_FACTS, ...over });
 
 describe("sections", () => {
-  it("has the ten areas, in the order of a change's journey", () => {
-    expect(SECTIONS.map((s) => s.label)).toEqual(["Tower", "Code", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
+  it("has the eleven areas, in the order of a change's journey", () => {
+    expect(SECTIONS.map((s) => s.label)).toEqual(["Tower", "Code", "Work", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
   });
   it("groups them: Home, then build, then run and watch, then elsewhere", () => {
-    expect(SECTIONS.map((s) => s.group)).toEqual([0, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
+    expect(SECTIONS.map((s) => s.group)).toEqual([0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
   });
-  it("keeps all ten visible, also for a new installation", () => {
-    expect(visibleSections({ me: me(), facts: facts() })).toHaveLength(10);
+  it("keeps all eleven visible, also for a new installation", () => {
+    expect(visibleSections({ me: me(), facts: facts() })).toHaveLength(11);
   });
   it("gives every area a sentence for hover, the launcher and the Guide", () => {
     for (const s of SECTIONS) expect(s.promise.length, s.id).toBeGreaterThan(20);

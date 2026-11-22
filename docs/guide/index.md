@@ -37,6 +37,11 @@ key and setting see the [reference](../reference/index.md).
 | [Searching code](searching-code.md) | Literal and regular-expression search inside a repository, with its bounds |
 | [Editing in the browser](editing-in-the-browser.md) | Change one file as a commit, or as a branch with a pull request |
 | [Pull requests and code review](pull-requests.md) | Opening, reviewing and merging changes on hosted repositories; merge rules; checks |
+| [Tracking work](tracking-work.md) | Items, types, workflow, labels, links, acceptance criteria, confidential items, comments, attachments, search, the inbox |
+| [Proposals from analysis](proposals-from-analysis.md) | How findings from scans and checks are grouped, capped and reviewed before they become work |
+| [Boards and sprints](boards-and-sprints.md) | Boards, lanes, limits, the backlog, sprints and capacity advice, milestones, the roadmap, charts |
+| [Work and code](work-and-code.md) | Naming work in commits and pull requests, closing rules, where the fix is running, release notes |
+| [Working with agents](working-with-agents.md) | Assigning work to agents, registering them, the loop, what the server enforces, autonomy, independent review, budgets |
 | [Webhooks and events](webhooks.md) | Repository and owner webhooks, signed deliveries, the delivery log, redelivery, turning off, pipelines on push |
 | [Secrets](secrets.md) | Secret references, stores, masking |
 | [Upgrading](upgrading.md) | From the release before: the root key, sealing, sign-in, values to check, returning to base |

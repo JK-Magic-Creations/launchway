@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { ago } from "../format";
 import { navigate } from "../router";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -13,6 +13,9 @@ import { pullHref, stateChip } from "./PullRequests";
 import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
 import { terms } from "../terms";
+
+// What agents said about the change: its own chunk, fetched only when this tab is open.
+const AgentReviews = lazy(() => import("../work/AgentReviews"));
 
 /** The pull request as a change on the launch line: opened, checked, reviewed, merged. */
 function stations(p: Pull): LineStation[] {
@@ -313,6 +316,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
             {tab === "conversation" && (
               <>
                 <Sheet title="Description" pad>{pull.body.trim() ? <Markdown text={pull.body} /> : <p className="faint">No description.</p>}</Sheet>
+                <Suspense fallback={null}><AgentReviews repo={path} pull={number} /></Suspense>
                 {conv && conv.reviews.map((r) => (
                   <div key={r.id} className="pr-comment">
                     <header><strong>{r.author}</strong> {r.verdict === "approve" ? <Chip tone="ok">Approved</Chip> : r.verdict === "request_changes" ? <Chip tone="bad">Asked for changes</Chip> : <Chip>Reviewed</Chip>}

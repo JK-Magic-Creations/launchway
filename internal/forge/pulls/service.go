@@ -46,7 +46,11 @@ type Service struct {
 	// ProtectedBranch says whether a branch's rules keep the queue from
 	// pushing to it (nil: none do).
 	ProtectedBranch func(ctx context.Context, repoID, branch string) bool
-	Log             *slog.Logger
+	// MergeCheck, when set, may refuse any merge (a request's or auto-merge's)
+	// before the rules are read; work tracking uses it for the rules about
+	// agents. actor is who merges.
+	MergeCheck func(ctx context.Context, repoID string, p PullRequest, actor string) error
+	Log        *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time
 

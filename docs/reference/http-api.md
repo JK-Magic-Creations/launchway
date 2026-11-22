@@ -832,7 +832,7 @@ The browser's walk-through after the first administrator. It asks the server wha
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/repositories/{owner}/{name}/hooks` | `repo-admin` | — | `{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}`. |
-| `POST /api/v1/repositories/{owner}/{name}/hooks` | `repo-admin` | `webhook.add` | Adds one: `{"name", "url", "events", "active", "secret"}`; `events` are `push`, `create`, `delete`, `repository` (`pull_request` and `pull_request_review` are reserved). `201` with `{"hook", "secret", "secret_note"}`; `400` for an address that is not `http(s)://`, carries a password, or an unknown event. |
+| `POST /api/v1/repositories/{owner}/{name}/hooks` | `repo-admin` | `webhook.add` | Adds one: `{"name", "url", "events", "active", "secret"}`; `events` are `push`, `create`, `delete`, `repository` and `work_item` (`pull_request` and `pull_request_review` are reserved). `201` with `{"hook", "secret", "secret_note"}`; `400` for an address that is not `http(s)://`, carries a password, or an unknown event. |
 | `PATCH /api/v1/repositories/{owner}/{name}/hooks/{id}` | `repo-admin` | `webhook.update` | Changes any of `name`, `url`, `events`, `active`, `secret`; turning a hook on clears its failure count and notice. |
 | `DELETE /api/v1/repositories/{owner}/{name}/hooks/{id}` | `repo-admin` | `webhook.delete` | Deletes the hook and its log. |
 | `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `repo-admin` | `webhook.test` | Sends a `ping` now, once, and answers with the delivery (state, status, error in words). |
@@ -955,6 +955,95 @@ Making and revoking join tokens, and revoking and rotating Stations, need the ro
 | `GET /api/v1/ai/models` | `signed-in` | — | The configured models the caller may use: name, limits and today's use, never endpoints or keys; and `server_can_explain`. |
 | `GET /api/v1/runs/{id}/steps/{step}/explanations` | `run-viewer` | — | The explanations models gave of a failed step. |
 | `POST /api/v1/runs/{id}/steps/{step}/explain` | `run-operator` | `step.explain` | Asks a configured model (`{"model"}`) to explain a failed step from its log tail, failed tests and findings, redacted. `409` when the server has no model or no key store for it. |
+
+## Work tracking
+
+Items, boards, sprints, charts, settings, the inbox and agents. Who may do what is decided by the store, not
+by the route class: seeing work needs the viewer role on the Project, changing it the operator role, and
+settings, agent registration and imports the admin role (see [Roles and permissions](roles.md#work-tracking)).
+A Squadron's work is open to people who may act on any of its Projects; a Wing's and the Base's to people who
+may act on any Project. Scopes are written `project:owner/name`, `unit:name`, `organization` or `installation`.
+Routes under `/api/v1/work/agent/` are the calls an agent makes with its `lwa_` token; the rest are for people (an agent
+token is offered the item routes only for the work it holds). The guides are [tracking work](../guide/tracking-work.md),
+[boards and sprints](../guide/boards-and-sprints.md), [work and code](../guide/work-and-code.md) and
+[working with agents](../guide/working-with-agents.md).
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/work/items` | `signed-in` | — | Lists items you may see. `?scope=`, `?q=` (the [query language](work-queries.md)), `?sort=`, `?desc=true`, `?limit=`, `?offset=`, `?parent=`. Answers `{items, total, limit, offset}`. |
+| `POST /api/v1/work/items` | `signed-in` | `work.create` | Creates an item: `{scope, type, title, body, state, priority, estimate, labels, assignees, parent, milestone, sprint, criteria, custom, confidential, …}`..  `201`. |
+| `GET /api/v1/work/items/{ref}` | `signed-in` | — | One item with its comments count, links, code, criteria, claim and, once merged, [where the fix is running](../guide/work-and-code.md#where-the-fix-is-running). `{ref}` is `PAY-12`. `404` for one you may not see. |
+| `PATCH /api/v1/work/items/{ref}` | `signed-in` | `work.update` | Changes fields, labels, assignees, criteria, state, parent, milestone, sprint, or watching. `expected_version` makes it fail with `409` if the item changed. The workflow and the agent rules apply. |
+| `POST /api/v1/work/items/{ref}/rank` | `signed-in` | `work.rank` | Puts the item `top`, `bottom`, `before` or `after` another item of the same Project (`{where, other}`). Not for agents. |
+| `POST /api/v1/work/items/{ref}/move` | `signed-in` | `work.move` | Moves a card: `{state, before}`. The same call the drag, the menu and the keyboard make. |
+| `POST /api/v1/work/items/{ref}/take-over` | `signed-in` | `work.take_over` | A person takes the item from an agent: the lease ends, the person is the assignee, the agent's branch stays. |
+| `GET /api/v1/work/items/{ref}/history` | `signed-in` | — | The item's history, oldest first: who (person, agent or system), how, what changed. |
+| `GET /api/v1/work/items/{ref}/comments` | `signed-in` | — | Comments, oldest first. |
+| `POST /api/v1/work/items/{ref}/comments` | `signed-in` | `work.comment` | Adds a comment (`{body}`, up to 64 KiB); `@name` tells that person. |
+| `PATCH /api/v1/work/comments/{id}` | `signed-in` | `work.comment_edit` | The author edits a comment; the earlier text is kept. |
+| `GET /api/v1/work/comments/{id}/edits` | `signed-in` | — | The earlier texts of a comment, oldest first. |
+| `GET /api/v1/work/items/{ref}/links` | `signed-in` | — | Links to other items (blocks, relates, duplicates), both directions, hiding items you may not see. |
+| `POST /api/v1/work/items/{ref}/links` | `signed-in` | `work.link` | Adds a link `{kind, to}`. `400` for a cycle of `blocks`, which names the chain; `409` for a link that exists. |
+| `DELETE /api/v1/work/links/{id}` | `signed-in` | `work.unlink` | Removes a link. |
+| `GET /api/v1/work/items/{ref}/code` | `signed-in` | — | The commits, branches, pull requests and runs tied to the item. |
+| `POST /api/v1/work/items/{ref}/code` | `signed-in` | `work.code_link` | Ties a `{kind, repo, ref, title, state}` to the item; the same kind, repository and reference updates it. |
+| `GET /api/v1/work/items/{ref}/delivery` | `signed-in` | — | Where the item's merged change is running, per environment, from real deployments, with a sentence. `null` before anything merged. |
+| `GET /api/v1/work/items/{ref}/attachments` | `signed-in` | — | The files on the item (name, type, size, SHA-256, kind, who, when). |
+| `POST /api/v1/work/items/{ref}/attachments` | `signed-in` | `work.attach` | Adds a file (up to 10 MB; 50 an item). `kind` is `file`, `transcript` or `evidence`. |
+| `GET /api/v1/work/attachments/{id}` | `signed-in` | — | One file, as a download (PNG, JPEG, GIF, WebP and plain text may be shown in a page; `?download=1` forces a download). Sniffing is off. |
+| `GET /api/v1/work/views` | `signed-in` | — | Saved queries you may use: yours, and shared ones. |
+| `POST /api/v1/work/views` | `signed-in` | `work.view_save` | Saves a query under a name `{scope, name, query, shared}`. |
+| `DELETE /api/v1/work/views/{id}` | `signed-in` | `work.view_delete` | Deletes a view of yours. |
+| `GET /api/v1/work/by-code` | `signed-in` | — | The items tied to a commit, pull request or branch: `?kind=&repo=&ref=`. |
+| `GET /api/v1/work/board` | `signed-in` | — | The board of a scope: a column for each state, items in backlog order, over-limit warnings. `?scope=`, `?q=`, `?lanes=assignee, epic or priority`, `?sprint=` (a name, or `active`). |
+| `GET /api/v1/work/milestones` | `signed-in` | — | Milestones of a scope with their progress. |
+| `POST /api/v1/work/milestones` | `signed-in` | `work.milestone_create` | Creates a milestone `{scope, title, description, due_at}`. |
+| `PATCH /api/v1/work/milestones/{id}` | `signed-in` | `work.milestone_update` | Changes a milestone, or closes it. |
+| `GET /api/v1/work/sprints` | `signed-in` | — | Sprints of a scope, newest first, with committed, completed and added work and capacity advice. |
+| `POST /api/v1/work/sprints` | `signed-in` | `work.sprint_create` | Plans a sprint `{scope, name, goal, start_at, end_at, capacity}`. |
+| `GET /api/v1/work/sprints/{id}` | `signed-in` | — | One sprint with its numbers. |
+| `PATCH /api/v1/work/sprints/{id}` | `signed-in` | `work.sprint_update` | Changes a planned or active sprint's name, goal, dates or capacity. |
+| `POST /api/v1/work/sprints/{id}/start` | `signed-in` | `work.sprint_start` | Starts a planned sprint and records what it committed to. One sprint of a scope is active. Not for agents. |
+| `POST /api/v1/work/sprints/{id}/complete` | `signed-in` | `work.sprint_complete` | Completes the active sprint; `{carry_to}` names the sprint unfinished items move to (none returns them to the backlog). Not for agents. |
+| `GET /api/v1/work/sprints/{id}/burndown` | `signed-in` | — | The burndown of a sprint, day by day. |
+| `GET /api/v1/work/charts/velocity` | `signed-in` | — | What the last completed sprints committed to and completed, and the average. |
+| `GET /api/v1/work/charts/flow` | `signed-in` | — | The cumulative flow: items in each state each day (`?days=`, 30 by default). |
+| `GET /api/v1/work/charts/times` | `signed-in` | — | Lead and cycle time of the work finished in the last `?days=` (90 by default): median, 85th percentile, mean, a histogram and each item. |
+| `GET /api/v1/work/roadmap` | `signed-in` | — | Epics, milestones and sprints of a scope with dates and progress (draw them as bars, or read them as a table). |
+| `GET /api/v1/work/release-notes` | `signed-in` | — | The work finished between `?since=` and `?until=`, grouped by type, with a Markdown text. |
+| `GET /api/v1/work/settings` | `signed-in` | — | The settings of a level, those in force after inheritance, the autonomy policy and where it comes from, and whether you may change them. See the [work format](work-format.md#settings). |
+| `PUT /api/v1/work/settings` | `signed-in` | `work.settings` | Replaces the settings of one level `{scope, settings}`. Needs a person who maintains it; loosening what agents may do needs a reason. |
+| `GET /api/v1/work/inbox` | `signed-in` | — | Your inbox entries, newest first (`?unread=true`), and the unread count. |
+| `POST /api/v1/work/inbox/read` | `signed-in` | `work.inbox_read` | Marks entries read by id, or all of them. |
+| `GET /api/v1/work/home` | `signed-in` | — | What Home shows about work: yours, and what agents did for you and what waits for your review. |
+| `GET /api/v1/work/agents` | `signed-in` | — | The agents you may see, with what each holds, took today and has waiting. |
+| `POST /api/v1/work/agents` | `signed-in` | `work.agent_create` | Registers an agent and answers its token **once**. Needs a person who maintains the scope; `403` for anyone else. `201`. |
+| `GET /api/v1/work/agents/{name}` | `signed-in` | — | One agent. |
+| `PATCH /api/v1/work/agents/{name}` | `signed-in` | `work.agent_update` | Changes an agent's projects, types, labels, limits, budgets, model, class or owner, or switches it off (`disabled`): its token stops working at once and what it holds returns to Ready. |
+| `DELETE /api/v1/work/agents/{name}` | `signed-in` | `work.agent_delete` | Deletes an agent. |
+| `POST /api/v1/work/agents/{name}/rotate-token` | `signed-in` | `work.agent_rotate` | Replaces the token and answers the new one once; the old one stops working. |
+| `GET /api/v1/work/agents/{name}/actions` | `signed-in` | — | What the agent did lately: claims, heartbeats, hand-backs, reviews. |
+| `GET /api/v1/work/spend` | `signed-in` | — | What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items. |
+| `POST /api/v1/work/autonomy/clear-pause` | `signed-in` | `work.autonomy_clear_pause` | A person who maintains the scope lets autonomy resume `{scope, reason}`. |
+| `GET /api/v1/work/samples` | `signed-in` | — | Merges an agent approved that were flagged for a person to look at, those not yet looked at unless `?all=true`. |
+| `POST /api/v1/work/samples/{id}/complete` | `signed-in` | `work.sample_complete` | Records that a maintainer looked at a flagged merge. |
+| `GET /api/v1/work/agent/me` | `signed-in` | — | For an agent token: who the agent is, its limits and what it holds. |
+| `GET /api/v1/work/agent/queue` | `signed-in` | — | For an agent token: what waits for it, in order (`?limit=`). |
+| `POST /api/v1/work/agent/claim` | `signed-in` | `work.agent_claim` | For an agent token: takes the named item, or the next, on a lease (`{item, lease_seconds, note}`). `409` when a limit or a budget is reached or the item is held. |
+| `POST /api/v1/work/agent/items/{ref}/heartbeat` | `signed-in` | `work.agent_heartbeat` | For an agent token: extends the lease; `409` when it has run out. |
+| `POST /api/v1/work/agent/items/{ref}/hand-back` | `signed-in` | `work.agent_hand_back` | For an agent token: gives the item back to Ready with a reason (required). |
+| `POST /api/v1/work/agent/items/{ref}/request-review` | `signed-in` | `work.agent_request_review` | For an agent token: moves the item to In review, ends the lease and tells the people concerned. It never finishes the item. |
+| `POST /api/v1/work/agent/items/{ref}/usage` | `signed-in` | `work.agent_usage` | For an agent token: reports tokens, cents and seconds used; the answer says when a budget is used up. |
+| `POST /api/v1/work/agent/pull-review` | `signed-in` | `work.agent_pull_review` | For an agent token: stores a structured review of a pull request; whether it counts as an approval depends on the policy and the reviewer's independence. |
+| `GET /api/v1/work/pull-reviews` | `signed-in` | — | The agents' reviews of a pull request (`?repo=&pull=`), each with whether it counts and, if not, why. |
+| `POST /api/v1/work/import/stories` | `signed-in` | `work.import_stories` | Imports epics and stories from the [stories JSON](work-format.md#stories-json) shape; `preview` and `update`. |
+| `POST /api/v1/work/import/archive` | `signed-in` | `work.import_archive` | Promotes a repository's read-only archive into live items; `preview` counts only. |
+| `GET /api/v1/work/proposals` | `signed-in` | — | The groups of findings analyzers proposed at a scope (`?scope=&state=`), each with its state, severity, open count, item and occurrences. |
+| `POST /api/v1/work/proposals` | `signed-in` | `work.propose` | An analyzer's batch (`{scope, source, run_id, report_url, complete, proposals}`): grouped by group key, capped, and held for a review unless the level lets the source file without one. Not for agent tokens. |
+| `POST /api/v1/work/proposals/accept` | `signed-in` | `work.proposal_accept` | Opens the items of proposed groups (`{scope, source, groups, edits}`), each with a checklist; `edits` changes a title, body or priority first. |
+| `POST /api/v1/work/proposals/dismiss` | `signed-in` | `work.proposal_dismiss` | Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again. |
+| `POST /api/v1/work/proposals/merge` | `signed-in` | `work.proposal_merge` | Joins proposed groups of one source into the group named in `into`. |
+| `POST /api/v1/work/health` | `signed-in` | `work.health` | Checks a hosted repository (`{repository}`) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group. |
 
 ## MCP
 

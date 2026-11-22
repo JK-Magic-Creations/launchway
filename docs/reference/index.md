@@ -17,6 +17,8 @@ behind it.
 | [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
 | [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
 | [Archive format](archive-format.md) | the document that stores another server's issues and comments read-only in a repository |
+| [Work formats](work-format.md) | the stories file, promoting an archive, and the settings that configure work at a level |
+| [Work queries](work-queries.md) | the query language of work search, views and boards |
 | [Events and audit actions](events.md) | the Sortie (run) event log, the live stream and the Logbook |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
 | [Policy rules](policy-rules.md) | the policy rule catalog |

@@ -9518,7 +9518,7 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
         post:
-            description: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository (pull_request and pull_request_review are reserved). 201 with {"hook", "secret", "secret_note"}; 400 for an address that is not http(s)://, carries a password, or an unknown event.'
+            description: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository and work_item (pull_request and pull_request_review are reserved). 201 with {"hook", "secret", "secret_note"}; 400 for an address that is not http(s)://, carries a password, or an unknown event.'
             operationId: post_api_v1_repositories_owner_name_hooks
             parameters:
                 - in: path
@@ -9549,7 +9549,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository (pull_request and pull_request_review are reserved).'
+            summary: 'Adds one: {"name", "url", "events", "active", "secret"}; events are push, create, delete, repository and work_item (pull_request and pull_request_review are reserved).'
             tags:
                 - repositories
             x-launchway-access: repo-admin
@@ -14509,6 +14509,2078 @@ paths:
             tags:
                 - waivers
             x-launchway-access: signed-in
+    /api/v1/work/agent/claim:
+        post:
+            description: 'For an agent token: takes the named item, or the next, on a lease ({item, lease_seconds, note}). 409 when a limit or a budget is reached or the item is held.'
+            operationId: post_api_v1_work_agent_claim
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: takes the named item, or the next, on a lease ({item, lease_seconds, note}).'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_claim
+    /api/v1/work/agent/items/{ref}/hand-back:
+        post:
+            description: 'For an agent token: gives the item back to Ready with a reason (required).'
+            operationId: post_api_v1_work_agent_items_ref_hand_back
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: gives the item back to Ready with a reason (required).'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_hand_back
+    /api/v1/work/agent/items/{ref}/heartbeat:
+        post:
+            description: 'For an agent token: extends the lease; 409 when it has run out.'
+            operationId: post_api_v1_work_agent_items_ref_heartbeat
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: extends the lease; 409 when it has run out.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_heartbeat
+    /api/v1/work/agent/items/{ref}/request-review:
+        post:
+            description: 'For an agent token: moves the item to In review, ends the lease and tells the people concerned. It never finishes the item.'
+            operationId: post_api_v1_work_agent_items_ref_request_review
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: moves the item to In review, ends the lease and tells the people concerned.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_request_review
+    /api/v1/work/agent/items/{ref}/usage:
+        post:
+            description: 'For an agent token: reports tokens, cents and seconds used; the answer says when a budget is used up.'
+            operationId: post_api_v1_work_agent_items_ref_usage
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: reports tokens, cents and seconds used; the answer says when a budget is used up.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_usage
+    /api/v1/work/agent/me:
+        get:
+            description: 'For an agent token: who the agent is, its limits and what it holds.'
+            operationId: get_api_v1_work_agent_me
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: who the agent is, its limits and what it holds.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/agent/pull-review:
+        post:
+            description: 'For an agent token: stores a structured review of a pull request; whether it counts as an approval depends on the policy and the reviewer''s independence.'
+            operationId: post_api_v1_work_agent_pull_review
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: stores a structured review of a pull request; whether it counts as an approval depends on the policy and the reviewer''s independence.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_pull_review
+    /api/v1/work/agent/queue:
+        get:
+            description: 'For an agent token: what waits for it, in order (?limit=).'
+            operationId: get_api_v1_work_agent_queue
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'For an agent token: what waits for it, in order (?limit=).'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/agents:
+        get:
+            description: The agents you may see, with what each holds, took today and has waiting.
+            operationId: get_api_v1_work_agents
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The agents you may see, with what each holds, took today and has waiting.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Registers an agent and answers its token **once**. Needs a person who maintains the scope; 403 for anyone else. 201.
+            operationId: post_api_v1_work_agents
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Registers an agent and answers its token **once**.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_create
+    /api/v1/work/agents/{name}:
+        delete:
+            description: Deletes an agent.
+            operationId: delete_api_v1_work_agents_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes an agent.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_delete
+        get:
+            description: One agent.
+            operationId: get_api_v1_work_agents_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'GET /api/v1/work/agents/{name}: One agent.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+        patch:
+            description: 'Changes an agent''s projects, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
+            operationId: patch_api_v1_work_agents_name
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes an agent''s projects, types, labels, limits, budgets, model, class or owner, or switches it off (disabled): its token stops working at once and what it holds returns to Ready.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_update
+    /api/v1/work/agents/{name}/actions:
+        get:
+            description: 'What the agent did lately: claims, heartbeats, hand-backs, reviews.'
+            operationId: get_api_v1_work_agents_name_actions
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What the agent did lately: claims, heartbeats, hand-backs, reviews.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/agents/{name}/rotate-token:
+        post:
+            description: Replaces the token and answers the new one once; the old one stops working.
+            operationId: post_api_v1_work_agents_name_rotate_token
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replaces the token and answers the new one once; the old one stops working.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.agent_rotate
+    /api/v1/work/attachments/{id}:
+        get:
+            description: One file, as a download (PNG, JPEG, GIF, WebP and plain text may be shown in a page; ?download=1 forces a download). Sniffing is off.
+            operationId: get_api_v1_work_attachments_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One file, as a download (PNG, JPEG, GIF, WebP and plain text may be shown in a page; ?download=1 forces a download).
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/autonomy/clear-pause:
+        post:
+            description: A person who maintains the scope lets autonomy resume {scope, reason}.
+            operationId: post_api_v1_work_autonomy_clear_pause
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A person who maintains the scope lets autonomy resume {scope, reason}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.autonomy_clear_pause
+    /api/v1/work/board:
+        get:
+            description: 'The board of a scope: a column for each state, items in backlog order, over-limit warnings. ?scope=, ?q=, ?lanes=assignee, epic or priority, ?sprint= (a name, or active).'
+            operationId: get_api_v1_work_board
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The board of a scope: a column for each state, items in backlog order, over-limit warnings.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/by-code:
+        get:
+            description: 'The items tied to a commit, pull request or branch: ?kind=&repo=&ref=.'
+            operationId: get_api_v1_work_by_code
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The items tied to a commit, pull request or branch: ?kind=&repo=&ref=.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/charts/flow:
+        get:
+            description: 'The cumulative flow: items in each state each day (?days=, 30 by default).'
+            operationId: get_api_v1_work_charts_flow
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The cumulative flow: items in each state each day (?days=, 30 by default).'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/charts/times:
+        get:
+            description: 'Lead and cycle time of the work finished in the last ?days= (90 by default): median, 85th percentile, mean, a histogram and each item.'
+            operationId: get_api_v1_work_charts_times
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Lead and cycle time of the work finished in the last ?days= (90 by default): median, 85th percentile, mean, a histogram and each item.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/charts/velocity:
+        get:
+            description: What the last completed sprints committed to and completed, and the average.
+            operationId: get_api_v1_work_charts_velocity
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: What the last completed sprints committed to and completed, and the average.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/comments/{id}:
+        patch:
+            description: The author edits a comment; the earlier text is kept.
+            operationId: patch_api_v1_work_comments_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The author edits a comment; the earlier text is kept.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.comment_edit
+    /api/v1/work/comments/{id}/edits:
+        get:
+            description: The earlier texts of a comment, oldest first.
+            operationId: get_api_v1_work_comments_id_edits
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The earlier texts of a comment, oldest first.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/health:
+        post:
+            description: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
+            operationId: post_api_v1_work_health
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Checks a hosted repository ({repository}) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.health
+    /api/v1/work/home:
+        get:
+            description: 'What Home shows about work: yours, and what agents did for you and what waits for your review.'
+            operationId: get_api_v1_work_home
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What Home shows about work: yours, and what agents did for you and what waits for your review.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/import/archive:
+        post:
+            description: Promotes a repository's read-only archive into live items; preview counts only.
+            operationId: post_api_v1_work_import_archive
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Promotes a repository's read-only archive into live items; preview counts only.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.import_archive
+    /api/v1/work/import/stories:
+        post:
+            description: Imports epics and stories from the [stories JSON](work-format.md#stories-json) shape; preview and update.
+            operationId: post_api_v1_work_import_stories
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Imports epics and stories from the [stories JSON](work-format.md#stories-json) shape; preview and update.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.import_stories
+    /api/v1/work/inbox:
+        get:
+            description: Your inbox entries, newest first (?unread=true), and the unread count.
+            operationId: get_api_v1_work_inbox
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Your inbox entries, newest first (?unread=true), and the unread count.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/inbox/read:
+        post:
+            description: Marks entries read by id, or all of them.
+            operationId: post_api_v1_work_inbox_read
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Marks entries read by id, or all of them.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.inbox_read
+    /api/v1/work/items:
+        get:
+            description: Lists items you may see. ?scope=, ?q= (the [query language](work-queries.md)), ?sort=, ?desc=true, ?limit=, ?offset=, ?parent=. Answers {items, total, limit, offset}.
+            operationId: get_api_v1_work_items
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Lists items you may see.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: 'Creates an item: {scope, type, title, body, state, priority, estimate, labels, assignees, parent, milestone, sprint, criteria, custom, confidential, …}..  201.'
+            operationId: post_api_v1_work_items
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Creates an item: {scope, type, title, body, state, priority, estimate, labels, assignees, parent, milestone, sprint, criteria, custom, confidential, …}..'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.create
+    /api/v1/work/items/{ref}:
+        get:
+            description: One item with its comments count, links, code, criteria, claim and, once merged, [where the fix is running](../guide/work-and-code.md#where-the-fix-is-running). {ref} is PAY-12. 404 for one you may not see.
+            operationId: get_api_v1_work_items_ref
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One item with its comments count, links, code, criteria, claim and, once merged, [where the fix is running](../guide/work-and-code.md#where-the-fix-is-running).
+            tags:
+                - work
+            x-launchway-access: signed-in
+        patch:
+            description: Changes fields, labels, assignees, criteria, state, parent, milestone, sprint, or watching. expected_version makes it fail with 409 if the item changed. The workflow and the agent rules apply.
+            operationId: patch_api_v1_work_items_ref
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes fields, labels, assignees, criteria, state, parent, milestone, sprint, or watching.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.update
+    /api/v1/work/items/{ref}/attachments:
+        get:
+            description: The files on the item (name, type, size, SHA-256, kind, who, when).
+            operationId: get_api_v1_work_items_ref_attachments
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The files on the item (name, type, size, SHA-256, kind, who, when).
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Adds a file (up to 10 MB; 50 an item). kind is file, transcript or evidence.
+            operationId: post_api_v1_work_items_ref_attachments
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Adds a file (up to 10 MB; 50 an item).
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.attach
+    /api/v1/work/items/{ref}/code:
+        get:
+            description: The commits, branches, pull requests and runs tied to the item.
+            operationId: get_api_v1_work_items_ref_code
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The commits, branches, pull requests and runs tied to the item.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Ties a {kind, repo, ref, title, state} to the item; the same kind, repository and reference updates it.
+            operationId: post_api_v1_work_items_ref_code
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Ties a {kind, repo, ref, title, state} to the item; the same kind, repository and reference updates it.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.code_link
+    /api/v1/work/items/{ref}/comments:
+        get:
+            description: Comments, oldest first.
+            operationId: get_api_v1_work_items_ref_comments
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Comments, oldest first.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Adds a comment ({body}, up to 64 KiB); @name tells that person.
+            operationId: post_api_v1_work_items_ref_comments
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Adds a comment ({body}, up to 64 KiB); @name tells that person.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.comment
+    /api/v1/work/items/{ref}/delivery:
+        get:
+            description: Where the item's merged change is running, per environment, from real deployments, with a sentence. null before anything merged.
+            operationId: get_api_v1_work_items_ref_delivery
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Where the item's merged change is running, per environment, from real deployments, with a sentence.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/items/{ref}/history:
+        get:
+            description: 'The item''s history, oldest first: who (person, agent or system), how, what changed.'
+            operationId: get_api_v1_work_items_ref_history
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The item''s history, oldest first: who (person, agent or system), how, what changed.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/items/{ref}/links:
+        get:
+            description: Links to other items (blocks, relates, duplicates), both directions, hiding items you may not see.
+            operationId: get_api_v1_work_items_ref_links
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Links to other items (blocks, relates, duplicates), both directions, hiding items you may not see.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Adds a link {kind, to}. 400 for a cycle of blocks, which names the chain; 409 for a link that exists.
+            operationId: post_api_v1_work_items_ref_links
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Adds a link {kind, to}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.link
+    /api/v1/work/items/{ref}/move:
+        post:
+            description: 'Moves a card: {state, before}. The same call the drag, the menu and the keyboard make.'
+            operationId: post_api_v1_work_items_ref_move
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Moves a card: {state, before}.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.move
+    /api/v1/work/items/{ref}/rank:
+        post:
+            description: Puts the item top, bottom, before or after another item of the same Project ({where, other}). Not for agents.
+            operationId: post_api_v1_work_items_ref_rank
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Puts the item top, bottom, before or after another item of the same Project ({where, other}).
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.rank
+    /api/v1/work/items/{ref}/take-over:
+        post:
+            description: 'A person takes the item from an agent: the lease ends, the person is the assignee, the agent''s branch stays.'
+            operationId: post_api_v1_work_items_ref_take_over
+            parameters:
+                - in: path
+                  name: ref
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A person takes the item from an agent: the lease ends, the person is the assignee, the agent''s branch stays.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.take_over
+    /api/v1/work/links/{id}:
+        delete:
+            description: Removes a link.
+            operationId: delete_api_v1_work_links_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a link.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.unlink
+    /api/v1/work/milestones:
+        get:
+            description: Milestones of a scope with their progress.
+            operationId: get_api_v1_work_milestones
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Milestones of a scope with their progress.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Creates a milestone {scope, title, description, due_at}.
+            operationId: post_api_v1_work_milestones
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Creates a milestone {scope, title, description, due_at}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.milestone_create
+    /api/v1/work/milestones/{id}:
+        patch:
+            description: Changes a milestone, or closes it.
+            operationId: patch_api_v1_work_milestones_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes a milestone, or closes it.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.milestone_update
+    /api/v1/work/proposals:
+        get:
+            description: The groups of findings analyzers proposed at a scope (?scope=&state=), each with its state, severity, open count, item and occurrences.
+            operationId: get_api_v1_work_proposals
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The groups of findings analyzers proposed at a scope (?scope=&state=), each with its state, severity, open count, item and occurrences.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: 'An analyzer''s batch ({scope, source, run_id, report_url, complete, proposals}): grouped by group key, capped, and held for a review unless the level lets the source file without one. Not for agent tokens.'
+            operationId: post_api_v1_work_proposals
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'An analyzer''s batch ({scope, source, run_id, report_url, complete, proposals}): grouped by group key, capped, and held for a review unless the level lets the source file without one.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.propose
+    /api/v1/work/proposals/accept:
+        post:
+            description: Opens the items of proposed groups ({scope, source, groups, edits}), each with a checklist; edits changes a title, body or priority first.
+            operationId: post_api_v1_work_proposals_accept
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Opens the items of proposed groups ({scope, source, groups, edits}), each with a checklist; edits changes a title, body or priority first.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_accept
+    /api/v1/work/proposals/dismiss:
+        post:
+            description: Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again.
+            operationId: post_api_v1_work_proposals_dismiss
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_dismiss
+    /api/v1/work/proposals/merge:
+        post:
+            description: Joins proposed groups of one source into the group named in into.
+            operationId: post_api_v1_work_proposals_merge
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Joins proposed groups of one source into the group named in into.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.proposal_merge
+    /api/v1/work/pull-reviews:
+        get:
+            description: The agents' reviews of a pull request (?repo=&pull=), each with whether it counts and, if not, why.
+            operationId: get_api_v1_work_pull_reviews
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The agents' reviews of a pull request (?repo=&pull=), each with whether it counts and, if not, why.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/release-notes:
+        get:
+            description: The work finished between ?since= and ?until=, grouped by type, with a Markdown text.
+            operationId: get_api_v1_work_release_notes
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The work finished between ?since= and ?until=, grouped by type, with a Markdown text.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/roadmap:
+        get:
+            description: Epics, milestones and sprints of a scope with dates and progress (draw them as bars, or read them as a table).
+            operationId: get_api_v1_work_roadmap
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Epics, milestones and sprints of a scope with dates and progress (draw them as bars, or read them as a table).
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/samples:
+        get:
+            description: Merges an agent approved that were flagged for a person to look at, those not yet looked at unless ?all=true.
+            operationId: get_api_v1_work_samples
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Merges an agent approved that were flagged for a person to look at, those not yet looked at unless ?all=true.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/samples/{id}/complete:
+        post:
+            description: Records that a maintainer looked at a flagged merge.
+            operationId: post_api_v1_work_samples_id_complete
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Records that a maintainer looked at a flagged merge.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.sample_complete
+    /api/v1/work/settings:
+        get:
+            description: The settings of a level, those in force after inheritance, the autonomy policy and where it comes from, and whether you may change them. See the [work format](work-format.md#settings).
+            operationId: get_api_v1_work_settings
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The settings of a level, those in force after inheritance, the autonomy policy and where it comes from, and whether you may change them.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        put:
+            description: Replaces the settings of one level {scope, settings}. Needs a person who maintains it; loosening what agents may do needs a reason.
+            operationId: put_api_v1_work_settings
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replaces the settings of one level {scope, settings}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.settings
+    /api/v1/work/spend:
+        get:
+            description: 'What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items.'
+            operationId: get_api_v1_work_spend
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What agents reported spending: each agent over 24 hours against its budget, each Project over all time, and the costliest items.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/sprints:
+        get:
+            description: Sprints of a scope, newest first, with committed, completed and added work and capacity advice.
+            operationId: get_api_v1_work_sprints
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Sprints of a scope, newest first, with committed, completed and added work and capacity advice.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Plans a sprint {scope, name, goal, start_at, end_at, capacity}.
+            operationId: post_api_v1_work_sprints
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Plans a sprint {scope, name, goal, start_at, end_at, capacity}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.sprint_create
+    /api/v1/work/sprints/{id}:
+        get:
+            description: One sprint with its numbers.
+            operationId: get_api_v1_work_sprints_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One sprint with its numbers.
+            tags:
+                - work
+            x-launchway-access: signed-in
+        patch:
+            description: Changes a planned or active sprint's name, goal, dates or capacity.
+            operationId: patch_api_v1_work_sprints_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes a planned or active sprint's name, goal, dates or capacity.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.sprint_update
+    /api/v1/work/sprints/{id}/burndown:
+        get:
+            description: The burndown of a sprint, day by day.
+            operationId: get_api_v1_work_sprints_id_burndown
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The burndown of a sprint, day by day.
+            tags:
+                - work
+            x-launchway-access: signed-in
+    /api/v1/work/sprints/{id}/complete:
+        post:
+            description: Completes the active sprint; {carry_to} names the sprint unfinished items move to (none returns them to the backlog). Not for agents.
+            operationId: post_api_v1_work_sprints_id_complete
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Completes the active sprint; {carry_to} names the sprint unfinished items move to (none returns them to the backlog).
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.sprint_complete
+    /api/v1/work/sprints/{id}/start:
+        post:
+            description: Starts a planned sprint and records what it committed to. One sprint of a scope is active. Not for agents.
+            operationId: post_api_v1_work_sprints_id_start
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Starts a planned sprint and records what it committed to.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.sprint_start
+    /api/v1/work/views:
+        get:
+            description: 'Saved queries you may use: yours, and shared ones.'
+            operationId: get_api_v1_work_views
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Saved queries you may use: yours, and shared ones.'
+            tags:
+                - work
+            x-launchway-access: signed-in
+        post:
+            description: Saves a query under a name {scope, name, query, shared}.
+            operationId: post_api_v1_work_views
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Saves a query under a name {scope, name, query, shared}.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.view_save
+    /api/v1/work/views/{id}:
+        delete:
+            description: Deletes a view of yours.
+            operationId: delete_api_v1_work_views_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes a view of yours.
+            tags:
+                - work
+            x-launchway-access: signed-in
+            x-launchway-audit: work.view_delete
     /auth/callback:
         get:
             description: Where the provider returns. Checks the answer, sets the launchway_session cookie and redirects to next. A failure redirects to /signin?error=<code>.

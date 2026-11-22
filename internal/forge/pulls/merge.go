@@ -111,6 +111,11 @@ func (s *Service) mergeGate(ctx context.Context, repoID string, p PullRequest, i
 	if in.ExpectHead != "" && in.ExpectHead != p.HeadSHA {
 		return g, conflict("the pull request changed while you were looking at it (new commits arrived); look again before merging")
 	}
+	if s.MergeCheck != nil {
+		if err := s.MergeCheck(ctx, repoID, p, in.Actor); err != nil {
+			return g, err
+		}
+	}
 	set, err := s.Store.Settings(ctx, repoID)
 	if err != nil {
 		return g, err

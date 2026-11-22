@@ -14,6 +14,7 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 | [Airfields (environments) and deployments](environments-and-deployments.md) | What is a place my software runs, and how does a change get there safely? |
 | [Approvals](approvals.md) | How does a person say go or no-go? |
 | [Review and the merge queue](review-and-the-merge-queue.md) | How does a change get reviewed and tested before it joins a branch? |
+| [Tracking work with people and agents](tracking-work.md) | How is work planned, done and followed, by people and by agents? |
 | [High availability](high-availability.md) | What happens when a server, a Station (runner) or the database fails? |
 
 ## The words Launchway uses

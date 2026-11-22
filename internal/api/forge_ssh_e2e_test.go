@@ -142,7 +142,7 @@ func TestSSHCloneFetchPushAndProtocolV2(t *testing.T) {
 	key, pub := h.key(t, "ada")
 	h.register(t, ada, "laptop", pub)
 
-	src := work(t)
+	src := workingCopy(t)
 	h.mustGit(t, key, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/main")
 	c := t.TempDir()
 	h.mustGit(t, key, c, "clone", "-q", h.url("acme/shop"), "c")
@@ -217,7 +217,7 @@ func TestSSHAndHTTPSRefuseAPushAlike(t *testing.T) {
 	ottoTok := h.e.tokenFor(t, "otto", "t")
 	vicTok := h.e.tokenFor(t, "vic", "t")
 
-	src := work(t)
+	src := workingCopy(t)
 	h.mustGit(t, adaKey, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/main")
 	if r := ada.do("PUT", h.e.srv.URL+"/api/v1/repositories/acme/shop/protected-branches", `{"patterns":["main","release/*"]}`); r.status != 200 {
 		t.Fatalf("protect: %d %s", r.status, r.body)
@@ -277,7 +277,7 @@ func TestSSHDeployKeys(t *testing.T) {
 	ada := h.e.signIn(t, "ada")
 	adaKey, adaPub := h.key(t, "ada")
 	h.register(t, ada, "a", adaPub)
-	src := work(t)
+	src := workingCopy(t)
 	h.mustGit(t, adaKey, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/main")
 	h.mustGit(t, adaKey, src, "push", "-q", h.url("acme/other"), "HEAD:refs/heads/main")
 
@@ -479,7 +479,7 @@ func TestSSHConcurrentPushesToOneBranchOneWins(t *testing.T) {
 	ada := h.e.signIn(t, "ada")
 	key, pub := h.key(t, "ada")
 	h.register(t, ada, "a", pub)
-	src := work(t)
+	src := workingCopy(t)
 	h.mustGit(t, key, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/main")
 	const n = 4
 	clones := make([]string, n)
@@ -574,7 +574,7 @@ func TestSSHCertificatesFromTheConfiguredAuthority(t *testing.T) {
 	}
 	good := sign("good", ca, nil)
 	// ssh offers <key>-cert.pub next to the identity file by itself.
-	src := work(t)
+	src := workingCopy(t)
 	h.mustGit(t, good, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/topic")
 	h.mustGit(t, good, t.TempDir(), "clone", "-q", h.url("acme/shop"), "x")
 

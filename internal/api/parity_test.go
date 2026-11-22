@@ -53,7 +53,7 @@ func TestParityEveryRouteHasARow(t *testing.T) {
 func TestParityMCPToolsExist(t *testing.T) {
 	e := mcpEnv(t, envOpts{})
 	cs := mcpSession(t, e.mcpURL(), e.tokenFor(t, "ada", "all"), nil, nil)
-	have := toolNames(t, cs)
+	have := append(toolNames(t, cs), agentToolNames(t, e)...)
 	used := map[string]bool{}
 	for _, r := range parity.Rows() {
 		for _, tool := range r.Tools() {

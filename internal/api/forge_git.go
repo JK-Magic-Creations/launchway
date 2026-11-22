@@ -15,6 +15,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
+	"github.com/jk-magic-creations/launchway/internal/work"
 )
 
 // Git over smart HTTP. The same handler answers /git/<owner>/<name>.git/...
@@ -192,7 +193,7 @@ func (s *Server) gitAuthenticate(w http.ResponseWriter, r *http.Request, q gitRe
 			return c, false
 		}
 		c.pipe = &claim
-	case q.present && strings.HasPrefix(q.tok, tokenPrefix):
+	case q.present && (strings.HasPrefix(q.tok, tokenPrefix) || strings.HasPrefix(q.tok, work.TokenPrefix)):
 		id, err := s.tokenIdentity(r, q.tok, true)
 		if err != nil {
 			s.fail(w, err)

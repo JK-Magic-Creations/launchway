@@ -9,10 +9,10 @@ import { SideNav } from "../shell/SideNav";
 const ctx = (f: Partial<Facts> = {}, m = me()) => ({ me: m, facts: { ...NO_FACTS, ...f } });
 
 describe("the top route", () => {
-  it("shows the ten areas, in order, with the current one marked", () => {
+  it("shows the eleven areas, in order, with the current one marked", () => {
     render(<Route ctx={ctx()} on="projects" needs={0} />);
     expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(
-      ["Tower", "Code", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
+      ["Tower", "Code", "Work", "Pipelines", "Images", "Launches", "Radar", "Changes", "Activity", "Library", "Settings"]);
     expect(screen.getByRole("link", { name: "Code" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Tower" })).not.toHaveAttribute("aria-current");
   });

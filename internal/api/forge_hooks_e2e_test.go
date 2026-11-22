@@ -127,7 +127,7 @@ func TestWebhookPushIsSignedAndComplete(t *testing.T) {
 	}
 
 	tok := e.tokenFor(t, "ada", "t")
-	src := work(t)
+	src := workingCopy(t)
 	id := strings.TrimSpace(mustGit(t, src, "rev-parse", "HEAD"))
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/git/acme/shop.git", tok), "HEAD:refs/heads/main")
 	whUntil(t, h, "the push and create events", func() bool { return rcv.count() == 2 && ownerRcv.count() == 1 })
@@ -215,7 +215,7 @@ func TestWebhookRetriesTestAndRedelivery(t *testing.T) {
 	hook, _ := whAdd(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
 	id := hook["id"].(string)
 	tok := e.tokenFor(t, "ada", "t")
-	mustGit(t, work(t), "push", "-q", withToken(e.srv.URL, "/git/acme/shop.git", tok), "HEAD:refs/heads/main")
+	mustGit(t, workingCopy(t), "push", "-q", withToken(e.srv.URL, "/git/acme/shop.git", tok), "HEAD:refs/heads/main")
 	whUntil(t, h, "the third attempt to succeed", func() bool { return rcv.count() >= 3 })
 	var log struct {
 		Items []struct {
@@ -271,7 +271,7 @@ func TestWebhookTurnsOffAfterSustainedFailureWithANotice(t *testing.T) {
 	hook, _ := whAdd(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
 	id := hook["id"].(string)
 	tok := e.tokenFor(t, "ada", "t")
-	src := work(t)
+	src := workingCopy(t)
 	for _, ref := range []string{"a", "b", "c"} {
 		mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/git/acme/shop.git", tok), "HEAD:refs/heads/"+ref)
 		h.Hooks.Sweep(t.Context())

@@ -468,6 +468,80 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/variables/{name}/lock` | `lock_variable` | `variables lock` | `planned: resource launchway_variable (lock block)` | equal |
 | `GET /api/v1/verifications` | `get_verification` | `verifications list` | — | equal |
 | `GET /api/v1/waivers` | — | `waivers list` | — | gap: no MCP tool lists waivers yet |
+| `POST /api/v1/work/agent/claim` | `claim_next_work` | `work agent claim` | — | equal |
+| `POST /api/v1/work/agent/items/{ref}/hand-back` | `hand_back_work` | `work agent hand-back` | — | equal |
+| `POST /api/v1/work/agent/items/{ref}/heartbeat` | `heartbeat_work` | `work agent heartbeat` | — | equal |
+| `POST /api/v1/work/agent/items/{ref}/request-review` | `request_work_review` | `work agent request-review` | — | equal |
+| `POST /api/v1/work/agent/items/{ref}/usage` | `report_work_usage` | `work agent usage` | — | equal |
+| `GET /api/v1/work/agent/me` | `get_agent_identity` | `work agent me` | — | equal |
+| `POST /api/v1/work/agent/pull-review` | `review_pull_request_as_agent` | `work agent pull-review` | — | equal |
+| `GET /api/v1/work/agent/queue` | `get_work_queue` | `work agent queue` | — | equal |
+| `GET /api/v1/work/agents` | `list_work_agents` | `work agents list` | — | equal |
+| `POST /api/v1/work/agents` | `create_work_agent` | `work agents create` | — | equal |
+| `DELETE /api/v1/work/agents/{name}` | `delete_work_agent` | `work agents delete` | — | equal |
+| `GET /api/v1/work/agents/{name}` | `get_work_agent` | `work agents show` | — | equal |
+| `PATCH /api/v1/work/agents/{name}` | `update_work_agent` | `work agents update` | — | equal |
+| `GET /api/v1/work/agents/{name}/actions` | `get_work_agent_actions` | `work agents actions` | — | equal |
+| `POST /api/v1/work/agents/{name}/rotate-token` | `rotate_agent_token` | `work agents rotate-token` | — | equal |
+| `GET /api/v1/work/attachments/{id}` | `get_work_attachment` | `work items file` | — | equal |
+| `POST /api/v1/work/autonomy/clear-pause` | `clear_autonomy_pause` | `work autonomy clear-pause` | — | equal |
+| `GET /api/v1/work/board` | `list_work_board` | `work board` | — | equal |
+| `GET /api/v1/work/by-code` | `find_work_by_code` | `work items by-code` | — | equal |
+| `GET /api/v1/work/charts/flow` | `get_work_chart` | `work charts flow` | — | equal |
+| `GET /api/v1/work/charts/times` | `get_work_chart` | `work charts times` | — | equal |
+| `GET /api/v1/work/charts/velocity` | `get_work_chart` | `work charts velocity` | — | equal |
+| `PATCH /api/v1/work/comments/{id}` | `edit_work_comment` | `work items comment` | — | equal |
+| `GET /api/v1/work/comments/{id}/edits` | `get_work_comment_edits` | `work items history` | — | equal |
+| `POST /api/v1/work/health` | `run_repository_health` | `work health` | — | equal |
+| `GET /api/v1/work/home` | `get_work_home` | `work home` | — | equal |
+| `POST /api/v1/work/import/archive` | `promote_archive` | `work import --format archive` | — | equal |
+| `POST /api/v1/work/import/stories` | `import_work_stories` | `work import --format stories-json` | — | equal |
+| `GET /api/v1/work/inbox` | `get_work_inbox` | `work inbox` | — | equal |
+| `POST /api/v1/work/inbox/read` | `mark_work_inbox_read` | `work inbox --read` | — | equal |
+| `GET /api/v1/work/items` | `list_work_items` | `work items list` | — | equal |
+| `POST /api/v1/work/items` | `create_work_item` | `work items create` | — | equal |
+| `GET /api/v1/work/items/{ref}` | `get_work_item` | `work items show` | — | equal |
+| `PATCH /api/v1/work/items/{ref}` | `update_work_item` | `work items update` | — | equal |
+| `GET /api/v1/work/items/{ref}/attachments` | `get_work_item` | `work items show` | — | equal |
+| `POST /api/v1/work/items/{ref}/attachments` | `attach_work_file` | `work items attach` | — | equal |
+| `GET /api/v1/work/items/{ref}/code` | `get_work_item` | `work items show` | — | equal |
+| `POST /api/v1/work/items/{ref}/code` | `link_work_code` | `work items code-link` | — | equal |
+| `GET /api/v1/work/items/{ref}/comments` | `get_work_item` | `work items show` | — | equal |
+| `POST /api/v1/work/items/{ref}/comments` | `comment_on_work_item` | `work items comment` | — | equal |
+| `GET /api/v1/work/items/{ref}/delivery` | `get_work_item` | `work items show` | — | equal |
+| `GET /api/v1/work/items/{ref}/history` | `get_work_history` | `work items history` | — | equal |
+| `GET /api/v1/work/items/{ref}/links` | `get_work_item` | `work items show` | — | equal |
+| `POST /api/v1/work/items/{ref}/links` | `link_work_items` | `work items link` | — | equal |
+| `POST /api/v1/work/items/{ref}/move` | `move_work_item` | `work items move` | — | equal |
+| `POST /api/v1/work/items/{ref}/rank` | `rank_work_item` | `work items rank` | — | equal |
+| `POST /api/v1/work/items/{ref}/take-over` | `take_over_work_item` | `work items take-over` | — | equal |
+| `DELETE /api/v1/work/links/{id}` | `unlink_work_items` | `work items unlink` | — | equal |
+| `GET /api/v1/work/milestones` | `list_work_milestones` | `work milestones list` | — | equal |
+| `POST /api/v1/work/milestones` | `create_work_milestone` | `work milestones create` | — | equal |
+| `PATCH /api/v1/work/milestones/{id}` | `update_work_milestone` | `work milestones update` | — | equal |
+| `GET /api/v1/work/proposals` | `list_work_proposals` | `work proposals list` | — | equal |
+| `POST /api/v1/work/proposals` | `propose_work` | `work propose` | — | equal |
+| `POST /api/v1/work/proposals/accept` | `accept_work_proposals` | `work proposals accept` | — | equal |
+| `POST /api/v1/work/proposals/dismiss` | `dismiss_work_proposals` | `work proposals dismiss` | — | equal |
+| `POST /api/v1/work/proposals/merge` | `merge_work_proposals` | `work proposals merge` | — | equal |
+| `GET /api/v1/work/pull-reviews` | `list_work_pull_reviews` | `work agents reviews` | — | equal |
+| `GET /api/v1/work/release-notes` | `release_notes` | `work release-notes` | — | equal |
+| `GET /api/v1/work/roadmap` | `get_work_roadmap` | `work roadmap` | — | equal |
+| `GET /api/v1/work/samples` | `list_work_samples` | `work samples list` | — | equal |
+| `POST /api/v1/work/samples/{id}/complete` | `complete_work_sample` | `work samples complete` | — | equal |
+| `GET /api/v1/work/settings` | `get_work_settings`, `get_autonomy` | `work settings show` | — | equal |
+| `PUT /api/v1/work/settings` | `set_work_settings` | `work settings set` | — | equal |
+| `GET /api/v1/work/spend` | `get_work_spend` | `work spend` | — | equal |
+| `GET /api/v1/work/sprints` | `list_work_sprints` | `work sprints list` | — | equal |
+| `POST /api/v1/work/sprints` | `create_work_sprint` | `work sprints create` | — | equal |
+| `GET /api/v1/work/sprints/{id}` | `get_work_sprint` | `work sprints show` | — | equal |
+| `PATCH /api/v1/work/sprints/{id}` | `update_work_sprint` | `work sprints update` | — | equal |
+| `GET /api/v1/work/sprints/{id}/burndown` | `get_work_burndown` | `work sprints burndown` | — | equal |
+| `POST /api/v1/work/sprints/{id}/complete` | `complete_work_sprint` | `work sprints complete` | — | equal |
+| `POST /api/v1/work/sprints/{id}/start` | `start_work_sprint` | `work sprints start` | — | equal |
+| `GET /api/v1/work/views` | `list_work_views` | `work views list` | — | equal |
+| `POST /api/v1/work/views` | `save_work_view` | `work views save` | — | equal |
+| `DELETE /api/v1/work/views/{id}` | `delete_work_view` | `work views delete` | — | equal |
 | `GET /auth/callback` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /auth/login` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /auth/logout` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

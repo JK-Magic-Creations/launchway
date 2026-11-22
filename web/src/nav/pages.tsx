@@ -77,6 +77,7 @@ const ConfigHomePage = lz(() => import("../pages/ConfigHome"), "ConfigHomePage")
 const ConfigListPage = lz(() => import("../pages/ConfigList"), "ConfigListPage");
 const ConfigObjectPage = lz(() => import("../pages/ConfigObject"), "ConfigObjectPage");
 const SetupGuidePage = lz(() => import("../pages/SetupGuide"), "SetupGuidePage");
+const WorkRoutes = lazy(() => import("../work/WorkRoutes"));
 const WizardPage = lz(() => import("../pages/wizards/Wizards"), "WizardPage");
 
 /** The page for an address. The key makes a page that shows one thing start afresh for another. */
@@ -84,6 +85,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
   const at = locate(path);
   if (!at) return <NotFound />;
   const p = at.params;
+  if (at.info.section === "work") return <WorkRoutes path={path} />;
   switch (at.info.pattern) {
     case "/": return <HomePage />;
     case "/projects": return <ProjectsPage />;

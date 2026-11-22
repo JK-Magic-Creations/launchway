@@ -43,8 +43,8 @@ func mustGit(t *testing.T, dir string, args ...string) string {
 	return out
 }
 
-// work makes a working copy with one commit.
-func work(t *testing.T) string {
+// workingCopy makes a working copy with one commit.
+func workingCopy(t *testing.T) string {
 	t.Helper()
 	d := t.TempDir()
 	mustGit(t, d, "init", "-q")
@@ -83,7 +83,7 @@ func TestGitCloneFetchPushWithAToken(t *testing.T) {
 	e, _ := hostedEnv(t, envOpts{})
 	hostedRepo(t, e, "acme/shop")
 	tok := e.tokenFor(t, "ada", "git")
-	src := work(t)
+	src := workingCopy(t)
 	for i, form := range []string{"/git/acme/shop.git", "/acme/shop.git", "/acme/shop"} {
 		u := withToken(e.srv.URL, form, tok)
 		if i == 0 {
@@ -155,7 +155,7 @@ func TestGitTokenOutsideItsScopeIsRefusedLikeAMissingRepository(t *testing.T) {
 		t.Errorf("unreadable %d %q, missing %d %q, no binding %d %q", c1, b1, c2, b2, c3, b3)
 	}
 	// A viewer reads but cannot push: 403 and an audit entry.
-	src := work(t)
+	src := workingCopy(t)
 	if out, err := git(t, src, "push", withToken(e.srv.URL, "/acme/shop.git", vic), "HEAD:refs/heads/main"); err == nil || !strings.Contains(out, "403") {
 		t.Errorf("a viewer pushed: %v\n%s", err, out)
 	}
@@ -237,7 +237,7 @@ func TestGitAnonymousReadOnlyWhenPublic(t *testing.T) {
 	e, h := hostedEnv(t, envOpts{})
 	hostedRepo(t, e, "acme/shop")
 	tok := e.tokenFor(t, "ada", "git")
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/acme/shop.git", tok), "HEAD:refs/heads/main")
 	anon := e.srv.URL + "/acme/shop.git"
 	if out, err := git(t, t.TempDir(), "clone", "-q", anon, "x"); err == nil {
@@ -261,7 +261,7 @@ func TestGitRunTokenReadsOneRepositoryOnly(t *testing.T) {
 	e, h := hostedEnv(t, envOpts{})
 	shop, other := hostedRepo(t, e, "acme/shop"), hostedRepo(t, e, "acme/other")
 	ada := e.tokenFor(t, "ada", "git")
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/acme/shop.git", ada), "HEAD:refs/heads/main")
 	run, err := h.RunTokens.MintForRun(shop.ID, "run_1", time.Minute)
 	if err != nil {
@@ -289,7 +289,7 @@ func TestGitHiddenRefsAndUnreachableObjects(t *testing.T) {
 	repo := hostedRepo(t, e, "acme/shop")
 	tok := e.tokenFor(t, "ada", "git")
 	u := withToken(e.srv.URL, "/acme/shop.git", tok)
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", u, "HEAD:refs/heads/main")
 	// The reserved namespace cannot be pushed to, and is not advertised.
 	if out, err := git(t, src, "push", u, "HEAD:refs/launchway/evil"); err == nil {
@@ -333,7 +333,7 @@ func TestGitLimits(t *testing.T) {
 	hostedRepo(t, e, "acme/shop")
 	tok := e.tokenFor(t, "ada", "git")
 	u := withToken(e.srv.URL, "/acme/shop.git", tok)
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", u, "HEAD:refs/heads/main")
 	pushed := strings.TrimSpace(mustGit(t, src, "rev-parse", "HEAD"))
 	// An object over the limit is refused with a message from the remote.
@@ -398,7 +398,7 @@ func TestGitGzipRequestAndLargeCloneAndDeepPaths(t *testing.T) {
 	repo := hostedRepo(t, e, "acme/shop")
 	tok := e.tokenFor(t, "ada", "git")
 	u := withToken(e.srv.URL, "/acme/shop.git", tok)
-	src := work(t)
+	src := workingCopy(t)
 	deep := strings.Repeat("d/", 150) + "file.txt"
 	commit(t, src, deep, "deep\n", "deep")
 	blob := make([]byte, 24<<20)

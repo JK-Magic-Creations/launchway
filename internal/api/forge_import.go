@@ -119,5 +119,12 @@ func (s *Server) importRepos(w http.ResponseWriter, r *http.Request) {
 		detail = detail[:600] + "…"
 	}
 	setAudit(r, what, detail)
+	if !in.DryRun {
+		for _, it := range res.Items {
+			if it.State != mirror.StateSkipped && it.State != mirror.StateFailed && it.Repository != "" {
+				s.healthAfterImport(r.Context(), it.Repository)
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, res)
 }
