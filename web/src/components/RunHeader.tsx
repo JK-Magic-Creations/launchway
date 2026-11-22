@@ -1,3 +1,4 @@
+import { CopyValue } from "./Security";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import type { ReactNode } from "react";
@@ -72,6 +73,10 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
           </div>
           <p className="sentence" aria-live="polite">{runSentence(run, now)}{run.status === "failed" && <> <LearnLink to={EXPLAIN.stopped} /></>}</p>
           <RunEstimateLine run={run} now={now} />
+          {run.trace_id && (
+            <p className="run-trace small">Trace <CopyValue value={run.trace_id} label="the trace id" keep={32} />
+              {run.trace_url && <> · <a href={run.trace_url} target="_blank" rel="noreferrer">Open in the trace viewer<span className="visually-hidden"> (opens in a new tab)</span></a></>}</p>
+          )}
         </div>
         <div className="acts">
           <DensityToggle value={density} onChange={onDensity} />

@@ -890,6 +890,22 @@ HPAReplicas abortedAt alb albs availableReplicas blueGreen canary collisionCount
 {{/* The metrics token and settings a pod gets: the bearer token from a Secret when one is named. */}}
 {{- define "launchway.shared.metricsEnv" -}}
 {{- $m := .Values.metrics | default dict -}}
+{{- $tr := .Values.tracing | default dict -}}
+{{- if $tr.enabled }}
+- name: LAUNCHWAY_TRACING_ENDPOINT
+  value: {{ $tr.endpoint | quote }}
+{{- if not (kindIs "invalid" $tr.sampleRatio) }}
+- name: LAUNCHWAY_TRACING_SAMPLE_RATIO
+  value: {{ $tr.sampleRatio | quote }}
+{{- end }}
+{{- if and $tr.headers $tr.headers.existingSecret }}
+- name: LAUNCHWAY_TRACING_HEADERS
+  valueFrom:
+    secretKeyRef:
+      name: {{ $tr.headers.existingSecret }}
+      key: {{ $tr.headers.existingSecretKey | default "headers" }}
+{{- end }}
+{{- end }}
 {{- if and $m.enabled $m.token $m.token.existingSecret }}
 - name: LAUNCHWAY_METRICS_TOKEN
   valueFrom:

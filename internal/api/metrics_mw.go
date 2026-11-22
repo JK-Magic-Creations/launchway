@@ -3,11 +3,14 @@ package api
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/metrics"
+	"github.com/jk-magic-creations/launchway/internal/trace"
 )
 
 // requestMetrics counts and times every request by route template, method and
@@ -26,6 +29,7 @@ func (s *Server) requestMetrics(next http.Handler) http.Handler {
 			route := hold.route()
 			metrics.HTTPRequests.Inc(route, r.Method, metrics.ClassOf(sw.status))
 			metrics.HTTPDuration.Observe(time.Since(start).Seconds(), route, r.Method)
+			requestSpan(r, route, sw.status, start)
 		}()
 		next.ServeHTTP(sw, r)
 	})
@@ -125,3 +129,42 @@ func countAudit(e *engine.AuditEntry) {
 	}
 	metrics.SignIns.Inc(method, outcome)
 }
+
+// requestSpan records a span for a request when trace export is on, continuing the trace a caller sent in
+// a traceparent header (a Station does, for its step) or starting one. The Stations' own polling is not traced
+// unless it comes with a trace context.
+func requestSpan(r *http.Request, route string, status int, start time.Time) {
+	if !trace.Enabled() {
+		return
+	}
+	parent, ok := trace.FromRequest(r.Header)
+	if !ok && strings.HasPrefix(route, "/api/runner/") {
+		return
+	}
+	sp := trace.Span{Name: "HTTP " + r.Method + " " + route, Server: true, Start: start, End: time.Now(), Failed: status >= 500, SpanID: trace.NewSpanID()}
+	if ok {
+		sp.TraceID, sp.ParentID = parent.TraceID, parent.SpanID
+	} else {
+		sp.TraceID = trace.NewTraceID()
+	}
+	sp.Set("http.route", route)
+	sp.Set("http.request.method", r.Method)
+	sp.Set("http.response.status_code", strconv.Itoa(status))
+	trace.Record(sp)
+}
+
+// addTrace gives a run's detail its trace id, and a link to the trace viewer when the installation has one.
+func addTrace(d *engine.RunDetail) {
+	if !trace.Enabled() {
+		return
+	}
+	d.TraceID = trace.RunTraceID(d.ID)
+	if tpl := traceViewer.Load(); tpl != nil && *tpl != "" {
+		d.TraceURL = strings.ReplaceAll(*tpl, "{trace_id}", d.TraceID)
+	}
+}
+
+var traceViewer atomic.Pointer[string]
+
+// SetTraceViewer sets the trace viewer address template, with {trace_id} in it (observability.tracing.viewer_url_template).
+func SetTraceViewer(tpl string) { traceViewer.Store(&tpl) }

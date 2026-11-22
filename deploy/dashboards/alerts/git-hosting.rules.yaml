@@ -1,0 +1,38 @@
+# Alert rules for Git hosting. Examples: change the thresholds to what your installation needs.
+groups:
+  - name: launchway-git-hosting
+    rules:
+      - alert: LaunchwayRepositoryDiskLow
+        expr: min(launchway_data_free_bytes) / min(launchway_data_total_bytes) < 0.15
+        for: 15m
+        labels: { severity: page }
+        annotations:
+          summary: Less than 15 percent is free on the volume that holds repositories
+          description: Hosted repositories and working files are kept on this volume. Grow it, or move repositories, before pushes start failing.
+      - alert: LaunchwayRepositoryDiskFillingFast
+        expr: predict_linear(launchway_data_free_bytes[6h], 24 * 3600) < 0
+        for: 30m
+        labels: { severity: ticket }
+        annotations:
+          summary: The volume that holds repositories will be full within a day at this rate
+          description: The free space has been falling steadily for hours.
+      - alert: LaunchwayGitErrors
+        expr: sum(rate(launchway_git_operations_total{outcome="error"}[15m])) / sum(rate(launchway_git_operations_total[15m])) > 0.1
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: More than 10 percent of Git operations fail
+          description: Look at the Git operation time and the server logs.
+      - alert: LaunchwayMirrorBehind
+        expr: max(launchway_mirror_lag_seconds_max) > 6 * 3600
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: A mirror has gone more than six hours without a successful synchronisation
+          description: Open the mirrors page of the repository to see its last error.
+      - alert: LaunchwayWebhooksFailing
+        expr: sum(increase(launchway_webhook_deliveries_total{direction="out",outcome="failed"}[1h])) > 10
+        labels: { severity: ticket }
+        annotations:
+          summary: Many webhook deliveries to other systems failed in the last hour
+          description: A receiver is down or refuses the calls.

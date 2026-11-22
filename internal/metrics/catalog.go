@@ -106,6 +106,11 @@ var (
 	TokenUses = Default.New(Desc{Name: "launchway_token_uses_total", Kind: Counter, Labels: []string{"kind"},
 		Help: "Requests authenticated by a token, by kind (session, api, station, service)."})
 
+	DataFreeBytes = Default.New(Desc{Name: "launchway_data_free_bytes", Kind: Gauge,
+		Help: "Free bytes on the volume holding the server's data directory (where hosted repositories and the working files are kept); absent where the system does not say."})
+	DataTotalBytes = Default.New(Desc{Name: "launchway_data_total_bytes", Kind: Gauge,
+		Help: "Size in bytes of the volume holding the server's data directory."})
+
 	Spans = Default.New(Desc{Name: "launchway_trace_spans_total", Kind: Counter, Labels: []string{"outcome"},
 		Help: "Trace spans handed to the exporter; outcome is exported or dropped (queue full or the endpoint failed)."})
 

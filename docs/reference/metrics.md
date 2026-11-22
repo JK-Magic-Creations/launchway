@@ -14,11 +14,13 @@ Labels come from small closed sets. A repository, a branch, a person or a run id
 | `launchway_build_info` | gauge | `version`, `go_version` | Always 1; the version and Go version are its labels. |
 | `launchway_cache_bytes_total` | counter | `direction` | Bytes of build cache moved; direction is restored or saved. |
 | `launchway_cache_lookups_total` | counter | `result` | Build cache lookups; result is hit or miss. |
+| `launchway_data_free_bytes` | gauge | none | Free bytes on the volume holding the server's data directory (where hosted repositories and the working files are kept); absent where the system does not say. |
+| `launchway_data_total_bytes` | gauge | none | Size in bytes of the volume holding the server's data directory. |
 | `launchway_db_pool_connections` | gauge | `state` | Database connections held by this process; state is open, in_use or idle. |
 | `launchway_db_pool_wait_seconds_total` | counter | none | Total time queries waited for a free database connection. |
 | `launchway_db_pool_wait_total` | counter | none | Times a query had to wait for a free database connection. |
 | `launchway_db_query_duration_seconds` | histogram | `family` | Database statement durations by statement family: select, insert, update, delete, other. Never the statement text. |
-| `launchway_deploys_total` | counter | `outcome` | Deploys finished, by outcome (succeeded, failed, rolled_back, canceled). |
+| `launchway_deploys_total` | counter | `verdict` | Deploys closed, by verdict: deployed, failed, rolled_back, rollback_failed or abandoned. |
 | `launchway_flight_runs_finished_total` | counter | `flight`, `outcome` | Runs finished per Flight. Recorded only when observability.metrics.name_labels is on (default off), and held to 300 series. |
 | `launchway_git_operation_duration_seconds` | histogram | `operation` | Time a Git operation took, by operation. |
 | `launchway_git_operations_total` | counter | `operation`, `outcome` | Git operations served or made: operation is fetch (served to a client), push (received) or checkout (a Station's clone); outcome is ok or error. |

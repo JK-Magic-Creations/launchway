@@ -49,6 +49,7 @@ func observeTransitions(before *runSnapshot, st *RunState, now int64) {
 	if st == nil {
 		return
 	}
+	traceTransitions(before, st, now)
 	prevRun := RunStatus("")
 	if before != nil {
 		prevRun = before.status

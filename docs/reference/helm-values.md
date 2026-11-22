@@ -648,3 +648,9 @@ Metrics are served on a port of their own on every pod, never through the Ingres
 | `runner.autoscaling.targetMemoryUtilizationPercentage` | integer | none | Target memory use of the requests |
 | `runner.autoscaling.extraMetrics` | list | `[]` | More HPA v2 metric specs; the queue depth is the best signal for Stations |
 | `runner.autoscaling.behavior` | map | `{}` | The HPA behavior |
+| `tracing.enabled` | boolean | `false` | Send traces over OTLP/HTTP (JSON encoding) to a collector. Written to the servers' configuration only when on, and to the Stations as environment variables |
+| `tracing.endpoint` | text | none | The collector's traces address, such as `https://collector.observability.svc:4318/v1/traces`. Allow it in the installation's `egress.allow` and in `networkPolicy.server.extraEgress` (and `networkPolicy.runner.extraEgress` for the Stations) |
+| `tracing.headers.existingSecret` | text | none | A Secret holding extra request headers as one value, `Name=value,Name2=value2` |
+| `tracing.headers.existingSecretKey` | text | `headers` | The key of that Secret |
+| `tracing.sampleRatio` | number | all | The share of traces kept, from 0 to 1 |
+| `tracing.viewerURLTemplate` | text | none | An address with `{trace_id}` in it; the run page then links to the trace |

@@ -222,18 +222,20 @@ const (
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID   string            `json:"lease_id"`
-	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
-	Beat      pipeline.Duration `json:"beat,omitempty"` // heartbeat every; 0 (older server): a third of LeaseTTL
-	RunID     string            `json:"run_id"`
-	Project   string            `json:"project"`
-	RunNumber int               `json:"run_number"`
-	Pipeline  string            `json:"pipeline"`
-	StepID    string            `json:"step_id"`
-	Attempt   int               `json:"attempt"`
-	Image     string            `json:"image"`
-	Script    string            `json:"script"`
-	Env       map[string]string `json:"env"`
+	// Traceparent is the W3C trace context the step's Station continues (empty when tracing is off).
+	Traceparent string            `json:"traceparent,omitempty"`
+	LeaseID     string            `json:"lease_id"`
+	LeaseTTL    pipeline.Duration `json:"lease_ttl"`
+	Beat        pipeline.Duration `json:"beat,omitempty"` // heartbeat every; 0 (older server): a third of LeaseTTL
+	RunID       string            `json:"run_id"`
+	Project     string            `json:"project"`
+	RunNumber   int               `json:"run_number"`
+	Pipeline    string            `json:"pipeline"`
+	StepID      string            `json:"step_id"`
+	Attempt     int               `json:"attempt"`
+	Image       string            `json:"image"`
+	Script      string            `json:"script"`
+	Env         map[string]string `json:"env"`
 	// Secrets are references only. The runner looks the values up, adds
 	// them to the environment and masks them in the step's output.
 	Secrets map[string]pipeline.SecretRef `json:"secrets,omitempty"`

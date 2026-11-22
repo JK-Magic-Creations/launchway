@@ -37,6 +37,7 @@ func announceSetup(srv *api.Server, cfg *config.Config, log *slog.Logger) error 
 // startServices starts what runs beside the API: Git hosting, and the first-run setup code.
 func startServices(ctx context.Context, eff, cfg *config.Config, eng *engine.Engine, log *slog.Logger, srv *api.Server) error {
 	startMetrics(ctx, cfg, eng, version, log)
+	startTracing(cfg, log)
 	if err := setProxy(srv, cfg, log); err != nil {
 		return err
 	}

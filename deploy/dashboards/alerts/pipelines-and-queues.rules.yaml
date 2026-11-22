@@ -1,0 +1,43 @@
+# Alert rules for pipelines, queues and Stations. Examples: change the thresholds to what your installation needs.
+groups:
+  - name: launchway-pipelines-and-queues
+    rules:
+      - alert: LaunchwayQueueStuck
+        expr: max by (pool) (launchway_queue_oldest_wait_seconds) > 900
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: "Steps have waited more than 15 minutes in the pool {{ $labels.pool }}"
+          description: Check that Stations of that pool are online and not held back for room.
+      - alert: LaunchwayStationsLost
+        expr: sum by (pool) (launchway_stations_online) == 0 and on (pool) sum by (pool) (launchway_queue_depth) > 0
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "No Station is online in the pool {{ $labels.pool }} and steps are waiting"
+          description: Steps queue forever when no Station of the pool is there to take them.
+      - alert: LaunchwayStationHeartbeatsMissed
+        expr: sum(increase(launchway_station_heartbeats_missed_total[30m])) > 3
+        labels: { severity: ticket }
+        annotations:
+          summary: Several steps lost their Station in the last half hour
+          description: A Station that stops reporting loses its steps, which run again elsewhere. Look for crashing or evicted Station pods.
+      - alert: LaunchwayStepsWaitingForRoom
+        expr: sum(increase(launchway_step_room_waits_total[30m])) > 20
+        labels: { severity: ticket }
+        annotations:
+          summary: Steps keep waiting for room to start
+          description: The step namespace's quota or the cluster has no room for the step pods.
+      - alert: LaunchwayRunFailureRate
+        expr: sum(rate(launchway_runs_finished_total{outcome="failed"}[1h])) / sum(rate(launchway_runs_finished_total{outcome=~"succeeded|failed"}[1h])) > 0.5
+        for: 30m
+        labels: { severity: ticket }
+        annotations:
+          summary: More than half of the runs that finish fail
+          description: Check whether one step or one Station pool is failing everything. The Insights pages show the flakiest steps.
+      - alert: LaunchwayApprovalWaitingLong
+        expr: max(launchway_approval_oldest_age_seconds) > 86400
+        labels: { severity: ticket }
+        annotations:
+          summary: An approval has waited more than a day
+          description: A deploy or a gate is waiting for a person.

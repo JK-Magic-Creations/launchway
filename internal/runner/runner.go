@@ -25,6 +25,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/starters"
+	"github.com/jk-magic-creations/launchway/internal/trace"
 )
 
 // Runner leases steps and executes them, Concurrency at a time.
@@ -276,7 +277,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	// minute of a step, and the server then took a long step back). Each call
 	// bounds itself. Only what comes after the step, delivering the last lines
 	// and the result, gets a deadline (resultWithin).
-	live, stopLive := context.WithCancel(context.Background())
+	live, stopLive := context.WithCancel(trace.WithParent(context.Background(), job.Traceparent))
 	defer stopLive()
 	report := live
 
@@ -374,7 +375,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		})
 	}()
 
-	res, collect := r.runStep(ctx, job, sys, logs.add)
+	res, collect := r.runStepTraced(ctx, job, sys, logs.add)
 
 	mu.Lock()
 	wasRequested, wasLost := requested, lost

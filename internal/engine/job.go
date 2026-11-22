@@ -18,7 +18,8 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	return &Job{
 		WorkspaceExclude: exclude,
 		Container:        st.Pipeline.ContainerFor(def), Containers: c.runContainers(), StepContainer: c.stepContainer(def), ResourcesAsked: def.Resources != nil,
-		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),
+		Traceparent: runTraceparent(st.ID, stepID, s.Attempt),
+		LeaseID:     leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), Beat: pipeline.Duration(c.e.beat()),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		// advance fails a draft's step that asks for secrets it may not
 		// read before it is queued; stepSecrets is a second guard, so that

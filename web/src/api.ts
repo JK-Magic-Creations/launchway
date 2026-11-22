@@ -619,6 +619,9 @@ export interface Graph {
 }
 
 export interface RunDetail extends RunSummary {
+  /** The run's trace id, when the installation exports traces; trace_url links to it in the installation's trace viewer. */
+  trace_id?: string;
+  trace_url?: string;
   source: { kind: string; url?: string; path?: string; libraries?: { name: string; url: string; commit: string }[] };
   graph: Graph;
   levels: string[][];

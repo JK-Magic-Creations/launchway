@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/trace"
 	"io"
 	"net/http"
 	"strings"
@@ -77,6 +78,9 @@ func (c *Client) do(ctx context.Context, method, url, contentType string, body [
 		}
 		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("Authorization", "Bearer "+tok)
+		if tp := trace.ParentFrom(ctx); tp != "" {
+			req.Header.Set(trace.Header, tp) // the server's request spans join the step's trace
+		}
 		if k := idemKey(url, body); k != "" {
 			req.Header.Set("Idempotency-Key", k)
 		}

@@ -547,6 +547,27 @@ metrics:
     # -- The namespace to create it in. Default: the release namespace.
     namespace: ""
 
+# ---------------------------------------------------------------------------------------------
+# Trace export (off by default). The servers and the Stations send spans over OTLP/HTTP (JSON
+# encoding) to a collector you run. Spans carry no command line, environment value, secret or token.
+# The collector's address must be allowed by the installation's egress setting (egress.allow) and by
+# networkPolicy.server.extraEgress.
+# ---------------------------------------------------------------------------------------------
+tracing:
+  # -- Send traces.
+  enabled: false
+  # -- The collector's traces address, such as https://collector.observability.svc:4318/v1/traces.
+  endpoint: ""
+  headers:
+    # -- A Secret holding extra request headers as one value, `Name=value,Name2=value2` (an API key).
+    existingSecret: ""
+    existingSecretKey: headers
+  # -- The share of traces kept, from 0 to 1. Unset: all.
+  sampleRatio:
+  # -- An address with {trace_id} in it, such as https://traces.example.com/trace/{trace_id}; the run
+  # page then links to the trace. Unset: the page shows the id with a copy button.
+  viewerURLTemplate: ""
+
 server:
   # -- Number of servers. Two or more for high availability.
   replicas: 2

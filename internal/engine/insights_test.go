@@ -11,7 +11,9 @@ func TestComputeInsights(t *testing.T) {
 	from := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	day := 24 * time.Hour
 	out := &Insights{From: from.UnixMilli(), To: from.Add(3 * day).UnixMilli(), Series: []InsightPoint{}, SlowestSteps: []InsightStepRow{}, FlakiestSteps: []InsightStepRow{}}
-	at := func(d int, h int) int64 { return from.Add(time.Duration(d)*day + time.Duration(h)*time.Hour).UnixMilli() }
+	at := func(d int, h int) int64 {
+		return from.Add(time.Duration(d)*day + time.Duration(h)*time.Hour).UnixMilli()
+	}
 	runs := []store.InsightRun{
 		{Project: "a", Status: "succeeded", CreatedAt: at(0, 1), StartedAt: at(0, 1), FinishedAt: at(0, 1) + 10_000},
 		{Project: "a", Status: "failed", CreatedAt: at(0, 2), StartedAt: at(0, 2), FinishedAt: at(0, 2) + 30_000},

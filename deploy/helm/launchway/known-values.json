@@ -483,5 +483,15 @@
       "type": true
     }
   },
-  "strictValues": true
+  "strictValues": true,
+  "tracing": {
+    "enabled": true,
+    "endpoint": true,
+    "headers": {
+      "existingSecret": true,
+      "existingSecretKey": true
+    },
+    "sampleRatio": true,
+    "viewerURLTemplate": true
+  }
 }
