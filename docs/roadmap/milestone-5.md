@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 1 in progress · 24 planned · 27 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 2 in progress · 24 planned · 28 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -47,7 +47,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Know what you run](#g-know-what-you-run) | 10 | 1 | 0 | 9 |
+| [Know what you run](#g-know-what-you-run) | 11 | 1 | 1 | 9 |
 | [Fix it safely](#g-fix-it-safely) | 6 | 1 | 1 | 4 |
 | [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
 
@@ -150,6 +150,14 @@ From an advisory, see which deployed services and environments are affected and 
 **Depends on:** What is deployed where.
 
 [Area page](software-graph.md)
+
+#### One graph from code to hardware {#one-graph-from-code-to-hardware}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+The software graph holds code and what it needs, what is built from it (images per architecture, operating-system images, machine images), the machines that satisfy those needs, and what is deployed where, with the source of every link. Built, tested on its own branch and in final integration; not yet on the main branch. It feeds dependency order and impact.
+
+[Area page](dependency-order.md)
 
 ### Fix it safely {#g-fix-it-safely}
 

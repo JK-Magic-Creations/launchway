@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 2 in progress · 66 planned · 68 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 3 in progress · 65 planned · 69 capabilities</p>
 
 Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.
 
@@ -47,7 +47,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
-| [Sign up and go](#g-sign-up-and-go) | 7 | 0 | 0 | 7 |
+| [Sign up and go](#g-sign-up-and-go) | 8 | 0 | 0 | 8 |
 | [Three ways to run, and easy moves between them](#g-three-ways-to-run-and-easy-moves-between-them) | 8 | 0 | 0 | 8 |
 | [A size ceiling, with notices, and nothing held hostage](#g-a-size-ceiling-with-notices-and-nothing-held-hostage) | 2 | 0 | 0 | 2 |
 | [Never a place to park files](#g-never-a-place-to-park-files) | 5 | 0 | 0 | 5 |
@@ -55,8 +55,8 @@ flowchart TD
 | [Plans that follow your choices](#g-plans-that-follow-your-choices) | 1 | 0 | 0 | 1 |
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
-| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 2 | 5 |
-| [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 0 | 12 |
+| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 1 | 1 | 5 |
+| [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 2 | 10 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
 
@@ -203,6 +203,14 @@ The service is protected from its customers’ code and content, and customers a
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Export a whole Base in an open format, then delete it: after a grace period its keys are destroyed, which makes every copy, including backups, unreadable, and a certificate says so. The export imports into a self-hosted installation, so leaving is a move, not a loss.
+
+[Area page](hosted-service.md)
+
+#### Addresses on one domain {#addresses-on-one-domain}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each Base is a first-level name under one domain, with one wildcard record and one certificate, so nobody buys a second domain and DNS stays simple. Access to a Base is still limited to its own people.
 
 [Area page](hosted-service.md)
 
@@ -568,9 +576,9 @@ The controls enterprises and regulated teams ask for.
 
 #### Built-in accounts with MFA {#built-in-accounts-with-mfa}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. Built: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn) and outgoing mail.
+Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. On the main branch: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn) and outgoing mail.
 
 [Read the documentation](../guide/built-in-accounts.md) · [Area page](installing.md)
 
@@ -625,9 +633,9 @@ On the hosted product every customer has its own complete Base. The service oper
 
 #### Every customer has its own Base {#every-customer-has-its-own-base}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. Inside it the usual levels apply.
+A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. The first stage is being built and is not on a branch yet. Inside it the usual levels apply.
 
 [Area page](hosted-service.md)
 
@@ -641,9 +649,9 @@ The service operator’s own Base is a separate Base that no customer or demonst
 
 #### Nothing crosses between Bases {#nothing-crosses-between-bases}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Identifiers cannot be listed or guessed.
+No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. The first stage is being built and is not on a branch yet. Identifiers cannot be listed or guessed.
 
 [Area page](hosted-service.md)
 

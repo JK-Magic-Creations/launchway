@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 54 planned · 62 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 10 in progress · 57 planned · 69 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -46,14 +46,14 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Write pipelines your way](#g-write-pipelines-your-way) | 15 | 0 | 0 | 15 |
+| [Write pipelines your way](#g-write-pipelines-your-way) | 17 | 0 | 2 | 15 |
 | [Builds use every machine sensibly](#g-builds-use-every-machine-sensibly) | 6 | 0 | 0 | 6 |
-| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 0 | 1 |
+| [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 1 | 0 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
-| [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
+| [Share and reuse across projects](#g-share-and-reuse-across-projects) | 8 | 2 | 1 | 5 |
 | [Every popular build tool, with a cache that is never stale](#g-every-popular-build-tool-with-a-cache-that-is-never-stale) | 13 | 0 | 5 | 8 |
-| [The developer comes first](#g-the-developer-comes-first) | 12 | 0 | 1 | 11 |
+| [The developer comes first](#g-the-developer-comes-first) | 16 | 0 | 1 | 15 |
 
 ### Write pipelines your way {#g-write-pipelines-your-way}
 
@@ -205,6 +205,22 @@ Each step has a page: where its code lives, its inputs and types, and which pipe
 
 [Area page](pipelines.md)
 
+#### An event log that explains every decision {#an-event-log-that-explains-every-decision}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Every received event is listed with the decision for each trigger and why, can be replayed, and may come from a signed per-project webhook source with filters, deduplication and debouncing; a trigger can follow another project's result. Built, tested on its own branch and in final integration; not yet on the main branch. 
+
+[Area page](pipelines.md)
+
+#### Standing orders for every repository {#standing-orders-for-every-repository}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A profile of checks per language and ecosystem, set by level and kept in Git, with findings in one list; a gate that blocks only what a change introduces. Built, tested on its own branch and in final integration; not yet on the main branch. 
+
+[Area page](repository-standards.md)
+
 ### Builds use every machine sensibly {#g-builds-use-every-machine-sensibly}
 
 A team’s machines share the work by what is free, and nobody’s laptop is taken over.
@@ -275,9 +291,9 @@ Test results that are a pleasure to read and easy to hand to someone else.
 
 #### Polished test reports as HTML and PDF {#polished-test-reports-as-html-and-pdf}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account. Builds on the thirteen test formats and coverage already available.
+Every run can produce a detailed, well-laid-out test report as a web page and as a PDF that can be sent to someone without an account. Built, tested on its own branch and in final integration; not yet on the main branch. Builds on the thirteen test formats and coverage already available.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -424,6 +440,14 @@ A connection to a registry, a cluster or a cloud set up once at a level and used
 For any template, library or connection, a list of every project that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
 
 **Depends on:** Templates and Flight plans by level.
+
+[Area page](pipelines.md)
+
+#### Starters that deliver end to end {#starters-that-deliver-end-to-end}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A library of starters per language and kind, proven through delivery, with detection, a gallery and `launchway init`. Built, tested on its own branch and in final integration; not yet on the main branch. 
 
 [Area page](pipelines.md)
 
@@ -632,6 +656,38 @@ Detect the tool, apply the recipe and its Flight plan, and get a green build, wi
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Lead time, failure rate, time to restore, queue time and flaky rate for teams; an individual sees only their own numbers. No per-person ranking anywhere.
+
+[Area page](developer-experience.md)
+
+#### A preview address for every pull request {#a-preview-address-for-every-pull-request}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each pull request gets a live address to show a client or colleague, torn down when it closes. Static site starters with quality reports and static-host providers come with it.
+
+[Area page](pipelines.md)
+
+#### A Base per client, with hand-over {#a-base-per-client-with-hand-over}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Give each client their own space, invite them as viewer or approver, and hand over the whole thing (repository, pipelines, history, releases) at the end. Needs the wall between Bases.
+
+[Area page](hosted-service.md)
+
+#### Builds on macOS and Windows machines {#builds-on-macos-and-windows-machines}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Runners for Apple and Windows, signing and store upload, very large files and long builds, for mobile and games. A first basic version of the runner for each is a small step; signing and store upload come after.
+
+[Area page](build-tools-caches.md)
+
+#### A development environment in the browser, optional {#a-development-environment-in-the-browser-optional}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Use a full editor environment inside Launchway, turned on by choice and off by default; it is made available, not copied. Your normal editor stays as it is: the plug-in route gives it Launchway features.
 
 [Area page](developer-experience.md)
 

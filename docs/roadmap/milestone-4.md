@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 4 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 15 planned · 16 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 2 in progress · 14 planned · 17 capabilities</p>
 
 Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [The registry](#g-the-registry) | 16 | 1 | 0 | 15 |
+| [The registry](#g-the-registry) | 17 | 1 | 2 | 14 |
 
 ### The registry {#g-the-registry}
 
@@ -54,9 +54,9 @@ Images, charts and other artifacts stored beside the code, under the same permis
 
 #### A built-in OCI registry {#a-built-in-oci-registry}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
+Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run. Built, tested on its own branch and in final integration; not yet on the main branch. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
 
 **Depends on:** Built-in artifact storage.
 
@@ -203,6 +203,14 @@ Go and npm clients talk to Launchway directly, and Python, Maven, NuGet, Cargo a
 A library page shows which projects fetched which version and which are behind. Comes from publish and fetch records.
 
 [Area page](dependency-order.md)
+
+#### The Depot: one area for everything stored {#the-depot-one-area-for-everything-stored}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. Built, tested on its own branch and in final integration; not yet on the main branch. The old Images tab becomes one section of it.
+
+[Area page](registry.md)
 
 ## What done means
 

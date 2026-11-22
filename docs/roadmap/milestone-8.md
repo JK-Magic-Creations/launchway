@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 1 in progress · 46 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 2 in progress · 45 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -40,7 +40,7 @@ flowchart TD
 
 *One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a queue reader or a function alias.*
 
-**Builds on:** [Milestone 3: Delivery depth](milestone-3.md). **Leads to:** [Milestone 10: Databases](milestone-10.md), [Milestone 11: Kubernetes and VMs](milestone-11.md).
+**Builds on:** [Milestone 3: Delivery depth](milestone-3.md). **Leads to:** [Milestone 10: Databases](milestone-10.md), [Milestone 11: Kubernetes and VMs](milestone-11.md), [Milestone 13: Work, releases and health](milestone-13.md).
 
 **Go deeper:** [Zero-downtime delivery](zero-downtime.md) · [How the build is ordered](build-order.md).
 
@@ -49,7 +49,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
-| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 0 | 5 |
+| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 1 | 4 |
 | [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
 | [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 0 | 6 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
@@ -164,9 +164,9 @@ A few plain questions (what is it, how do users reach it, how do we know it is h
 
 #### The rollout panel {#the-rollout-panel}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
+One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order. Built, tested on its own branch and in final integration; not yet on the main branch. You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.
 
 **Depends on:** Every rollout strategy.
 
