@@ -5,8 +5,8 @@
 #     --set externalURL=https://launchway.example.com
 #
 # Everything else has a safe default: sign-in required (built-in accounts, first administrator
-# made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on an 8Gi
-# volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
+# made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on a
+# 1Gi volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
 # runner token, the database password and the setup code ITSELF, once, and keeps them across
 # upgrades, `helm template` and GitOps syncs (a pre-install/pre-upgrade hook Job; see
 # docs/reference/helm-values.md). Nothing here needs Vault, an operator or an identity provider.
@@ -19,7 +19,7 @@
 #
 # Then, only if you need them (each is a block just below):
 #   database          your own PostgreSQL instead of the bundled one: database.url or existingSecret
-#   postgresql        the bundled database's volume size (8Gi) and storage class
+#   postgresql        the bundled database's volume size (1Gi default) and storage class
 #   ingress / httpRoute   publish the address through an Ingress or a Gateway API route. Either
 #                     one also tells the servers they sit behind a proxy (trust_proxy).
 #   server.replicas   2 by default (high availability); 1 for a trial
@@ -73,9 +73,11 @@ postgresql:
   # (the default), the hook Job makes a random one once and keeps it across upgrades.
   password: ""
   persistence:
-    # -- The volume. With artifacts kept in the database (the default), the chart caps them well
-    # below this (half) and refuses a larger config.artifacts.database.maxTotalGiB.
-    size: 8Gi
+    # -- The volume. 1Gi is what the previous chart made, so an upgrade changes nothing (a claim
+    # cannot shrink, and cannot grow on a StorageClass that does not expand). For a new installation
+    # that keeps artifacts set 8Gi or more. With artifacts kept in the database (the default) the
+    # chart caps them at half of it and refuses a larger config.artifacts.database.maxTotalGiB.
+    size: 1Gi
     # -- The StorageClass for the volume (default: the cluster's default).
     storageClass: ""
   resources:

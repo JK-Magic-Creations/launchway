@@ -40,9 +40,11 @@
 {{/* With the bundled database: the artifact cap (GiB) derived from its volume, half of it. */}}
 {{- define "launchway.derivedArtifactCapGiB" -}}
 {{- $vol := include "launchway.quantityMiB" .Values.postgresql.persistence.size | int64 -}}
+{{- /* Half of the volume, but at least 1 GiB on a volume of 1Gi or more: an installation made by the previous chart has a 1Gi claim, which cannot be resized, and must still render. */ -}}
 {{- $cap := div $vol 2048 -}}
+{{- if and (lt $cap 1) (ge $vol 1024) -}}{{ $cap = 1 }}{{- end -}}
 {{- if lt $cap 1 -}}
-{{- fail (printf "\n\npostgresql.persistence.size %s is too small to keep artifacts in the database (half of it must be at least 1Gi). Use 2Gi or more, or keep artifacts elsewhere with config.artifacts.store (s3 or filesystem).\n" .Values.postgresql.persistence.size) -}}
+{{- fail (printf "\n\npostgresql.persistence.size %s is too small to keep artifacts in the database (it must be at least 1Gi). Use 1Gi or more, or keep artifacts elsewhere with config.artifacts.store (s3 or filesystem).\n" .Values.postgresql.persistence.size) -}}
 {{- end -}}
 {{- $cap -}}
 {{- end -}}
@@ -105,3 +107,4 @@ deploy-pool-token={{ include "launchway.deployPoolSecretName" . }}
 setup-code={{ include "launchway.setupCodeSecretName" . }}
 {{ end -}}
 {{- end -}}
+

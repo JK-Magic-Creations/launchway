@@ -46,7 +46,7 @@ externalURL: https://launchway.example.com
 
 Left out of a new installation with built-in accounts (or with `ingress` or `httpRoute`), the install fails and says so; an installation that already has its own sign-in (`auth.mode: oidc`, or an explicit `none`) and publishes nothing through the chart needs none. The chart then starts with sign-in required
 (built-in accounts, the first administrator made with a one-time setup code), encryption at rest on, a bundled
-PostgreSQL on an 8Gi volume, default-deny network policies and restricted pods. Nothing else is assumed: no
+PostgreSQL on a 1Gi volume (set `postgresql.persistence.size` for more), default-deny network policies and restricted pods. Nothing else is assumed: no
 secrets manager, operator or identity provider. `values.yaml` leads with the same short list and keeps
 everything else below an "ADVANCED" divider.
 
@@ -431,7 +431,7 @@ trial. It is not highly available. For production at scale use a managed or oper
 | `postgresql.database` | string | `launchway` | |
 | `postgresql.username` | string | `launchway` | |
 | `postgresql.password` | string | `""` | Letters, digits and `. _ ~ -` only. Empty (the default): the hook Job makes a random password once and keeps it |
-| `postgresql.persistence.size` | quantity | `8Gi` | The volume. With artifacts kept in the database (the default) the chart caps them at half of it, and refuses a larger `config.artifacts.database.maxTotalGiB` (more than three quarters of the volume) with a message saying so. Below `2Gi` it asks you to store artifacts elsewhere |
+| `postgresql.persistence.size` | quantity | `1Gi` | The volume. `1Gi` is what the previous chart made, so an upgrade changes nothing (a claim cannot shrink, and cannot grow on a StorageClass that does not expand). Set `8Gi` or more for a new installation that keeps artifacts. With artifacts kept in the database (the default) the chart caps them at half of it, and refuses a larger `config.artifacts.database.maxTotalGiB` (more than three quarters of the volume) with a message saying so. Below `1Gi` it asks you to store artifacts elsewhere |
 | `postgresql.persistence.storageClass` | string | `""` | Default: the cluster's default StorageClass |
 | `postgresql.resources` | object | requests `50m` CPU, `128Mi`, `64Mi` ephemeral storage; limits `512Mi`, `512Mi` ephemeral storage | |
 

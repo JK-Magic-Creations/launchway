@@ -35,10 +35,11 @@ metadata:
     "helm.sh/hook-weight": "-30"
     "helm.sh/hook-delete-policy": before-hook-creation
 rules:
-  # Reading is limited to the named Secrets.
+  # Reading, and marking as kept (annotations only, see internal/bootstrap protect), is limited
+  # to the named Secrets.
   - apiGroups: [""]
     resources: [secrets]
-    verbs: [get]
+    verbs: [get, patch]
     resourceNames:
       {{- range $names }}
       - {{ . }}

@@ -58,8 +58,8 @@ func TestChartDefaultsAreSecure(t *testing.T) {
 		`"helm.sh/hook": pre-install,pre-upgrade`, // the secrets Job
 		"helm.sh/hook-delete-policy\": before-hook-creation,hook-succeeded",
 		"ephemeral-storage",
-		"max_total_gib: 4", // artifact cap below the 8Gi volume
-		"storage: 8Gi",
+		"max_total_gib: 1", // artifact cap below the 1Gi volume
+		"storage: 1Gi",
 	} {
 		if want == "LAUNCHWAY_REQUIRE" {
 			want = "LAUNCHWAY_ENCRYPTION_REQUIRE"
@@ -111,7 +111,7 @@ func TestChartRefusesWhatCannotWork(t *testing.T) {
 	for _, c := range []struct{ set, say string }{
 		{"externalURL=https://x.example.com/path", "externalURL"},
 		{"postgresql.enabled=false", "needs a PostgreSQL database"},
-		{"postgresql.persistence.size=1Gi", "too small"},
+		{"postgresql.persistence.size=512Mi", "too small"},
 		{"config.artifacts.database.maxTotalGiB=50", "cap must stay under"},
 	} {
 		out, err := exec.Command("helm", "template", "t", chartDir, "--set", "externalURL=https://launchway.example.com", "--set", c.set).CombinedOutput()
