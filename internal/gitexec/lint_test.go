@@ -11,8 +11,9 @@ import (
 )
 
 // exempt may keep a plain call: test support code, which builds repositories
-// for tests and is never part of the product.
-var exempt = map[string]bool{"internal/testlib": true}
+// for tests and is never part of the product (the fake Git servers of the outside-host providers serve a real
+// repository with Git itself, for their tests only).
+var exempt = map[string]bool{"internal/testlib": true, "internal/forge/providers/anygit/anygitfake": true, "internal/forge/providers/codecommit/codecommitfake": true}
 
 // TestNoOtherPackageRunsGit fails when production code outside this package
 // starts git itself (exec.Command or exec.CommandContext with "git") or

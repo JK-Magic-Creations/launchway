@@ -8,21 +8,21 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/stepkit"
 )
 
 func gitLines(dir string, args ...string) []string {
-	out, err := exec.CommandContext(context.Background(), "git", append([]string{"-C", dir}, args...)...).Output() //nolint:gosec // G204: git with fixed subcommands, in a library directory the person gave
+	out, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: dir, Args: args})
 	if err != nil {
 		return nil
 	}
 	var lines []string
-	for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for _, l := range strings.Split(strings.TrimSpace(out), "\n") {
 		if l != "" {
 			lines = append(lines, l)
 		}
@@ -37,7 +37,9 @@ func manifestIn(dir, ref, name string) *stepkit.Manifest {
 	if ref == "" {
 		data, err = os.ReadFile(filepath.Join(dir, filepath.FromSlash(stepkit.ManifestPath(name)))) //nolint:gosec // G703: a library directory the person gave on the command line
 	} else {
-		data, err = exec.CommandContext(context.Background(), "git", "-C", dir, "show", ref+":"+stepkit.ManifestPath(name)).Output() //nolint:gosec // G204: git show of a tag of a library directory the person gave
+		var out string
+		out, err = gitexec.Output(context.Background(), gitexec.Spec{Dir: dir, Args: []string{"show", ref + ":" + stepkit.ManifestPath(name)}})
+		data = []byte(out)
 	}
 	if err != nil {
 		return nil

@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -19,6 +18,7 @@ import (
 	"syscall"
 
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/stepkit"
 	"github.com/jk-magic-creations/launchway/internal/steptest"
 )
@@ -280,19 +280,19 @@ func manifestAt(dir, ref string) (*stepkit.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	top, err := exec.CommandContext(context.Background(), "git", "-C", abs, "rev-parse", "--show-toplevel").Output() //nolint:gosec // G204: git with fixed arguments, in the directory the person named
+	top, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: abs, Args: []string{"rev-parse", "--show-toplevel"}})
 	if err != nil {
 		return nil, err
 	}
-	rel, err := filepath.Rel(strings.TrimSpace(string(top)), abs)
+	rel, err := filepath.Rel(strings.TrimSpace(top), abs)
 	if err != nil {
 		return nil, err
 	}
-	out, err := exec.CommandContext(context.Background(), "git", "-C", abs, "show", ref+":"+filepath.ToSlash(rel)+"/step.yaml").Output() //nolint:gosec // G204: git show of a ref the person named, in their own repository
+	out, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: abs, Args: []string{"show", ref + ":" + filepath.ToSlash(rel) + "/step.yaml"}})
 	if err != nil {
 		return nil, err
 	}
-	m, probs := stepkit.ParseManifest(out)
+	m, probs := stepkit.ParseManifest([]byte(out))
 	if len(probs) > 0 {
 		return nil, probs
 	}

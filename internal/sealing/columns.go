@@ -170,6 +170,7 @@ var explained = []struct{ column, why string }{
 	{"caches.hash_state", "the state of a running digest of cache content"},
 
 	// References to where a secret lives, and public keys: never the secret.
+	{"custom_step_uses.secrets", "the names of the secrets a custom step's manifest says it reads, comma-separated: names, never values"},
 	{"forge_connections.cred_env", "the name of an environment variable"},
 	{"forge_connections.cred_file", "a file path, or sealed:NAME, the name of a token kept sealed in meta"},
 	{"repo_mirrors.cred_env", "the name of an environment variable"},
