@@ -386,18 +386,18 @@ func (s *Store) SeeDelivery(ctx context.Context, connection, delivery string) (b
 // evictDeliveries drops the oldest keys of a connection beyond the cap. It looks only when a new key is
 // written, and removes at once what is beyond the cap plus a tenth, so it runs rarely.
 func (s *Store) evictDeliveries(ctx context.Context, connection string) error {
-	max := s.MaxDeliveries
-	if max <= 0 {
-		max = DefaultMaxDeliveries
+	limit := s.MaxDeliveries
+	if limit <= 0 {
+		limit = DefaultMaxDeliveries
 	}
 	var n int
 	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM forge_deliveries WHERE connection_id = ?`, connection).Scan(&n); err != nil {
 		return err
 	}
-	if n <= max {
+	if n <= limit {
 		return nil
 	}
-	keep := max - max/10
+	keep := limit - limit/10
 	_, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE connection_id = ? AND at <= (
 		SELECT at FROM forge_deliveries WHERE connection_id = ? ORDER BY at DESC LIMIT 1 OFFSET ?)`, connection, connection, keep)
 	return err
