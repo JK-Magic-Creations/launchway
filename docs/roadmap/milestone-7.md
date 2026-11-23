@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 3 in progress · 68 planned · 72 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 3 in progress · 74 planned · 78 capabilities</p>
 
 Sign up and go, or keep your files on your own machines; hosted, hosted with your own machines, or self-hosted, with easy moves between them, and a wall around every customer’s Base.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
+| [Hosted service and demo](#g-hosted-service-and-demo) | 9 | 0 | 0 | 9 |
 | [Sign up and go](#g-sign-up-and-go) | 8 | 0 | 0 | 8 |
 | [Three ways to run, and easy moves between them](#g-three-ways-to-run-and-easy-moves-between-them) | 9 | 0 | 0 | 9 |
 | [A size ceiling, with notices, and nothing held hostage](#g-a-size-ceiling-with-notices-and-nothing-held-hostage) | 2 | 0 | 0 | 2 |
@@ -55,7 +55,7 @@ flowchart TD
 | [Plans that follow your choices](#g-plans-that-follow-your-choices) | 1 | 0 | 0 | 1 |
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
-| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 9 | 1 | 1 | 7 |
+| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 14 | 1 | 1 | 12 |
 | [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 2 | 10 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
@@ -86,9 +86,9 @@ A free tier, and pay-for-use billing from the start, with no extras for basics. 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Choose where your data lives. Region choices are shown at sign-up and recorded.
+Choose where your data lives. Region choices are shown at sign-up and recorded. A Base is pinned to its region at creation; its rows, stored files, logs, backups and standby copies stay there, each region being a whole installation of its own. The region is written into every evidence pack and export. Moving region is a guided, recorded move. With a Detachment, builds, secrets, logs and Cargo stay on the customer's side as well.
 
-**Depends on:** Hosted service.
+**Depends on:** Hosted service
 
 [Area page](hosted-service.md)
 
@@ -140,6 +140,16 @@ Several Wings on one installation, isolated from each other, with the level name
 
 [Area page](hosted-service.md)
 
+#### Roles you can scale apart, in one program {#roles-you-can-scale-apart-in-one-program}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Tell each server which parts of Launchway to run, so the web interface and API, the engine, the Git host, the Depot and the schedulers each grow on their own signal. Today every server runs every role. A role is a setting of the same program and version, never a separate program, and the default stays all roles. Servers that run only some roles still share one database and one record and answer their readiness check for the roles they run. A role is split out only when measured load, the blast radius of a fault or a different network reach justify it; a different release rhythm never does.
+
+**Depends on:** Launchway's own footprint, measured.
+
+[Area page](installing.md)
+
 ### Sign up and go {#g-sign-up-and-go}
 
 The first customers are start-ups, freelancers and small teams, so the front door is short and safe.
@@ -156,7 +166,7 @@ One front door where anyone signs up with an email address or an existing accoun
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The account is bound to something only its owner has: a passkey, preferably, or an authenticator app, with recovery codes shown once. The owner and every administrator must use one of the strong ones. Text-message codes are not offered on purpose, because they can be taken over. An email code proves an address; it is never treated as a second factor for owners.
+The account is bound to something only its owner has: a passkey, preferably, or an authenticator app, with recovery codes shown once. The owner and every administrator must use one of the strong ones. Text-message codes are not offered on purpose, because they can be taken over. An email code proves an address; it is never treated as a second factor for owners. Passkeys come to the built-in accounts of every installation, self-hosted included, not only the hosted service; today built-in accounts offer authenticator codes and say passkeys are not built yet.
 
 **Depends on:** Built-in accounts with MFA.
 
@@ -290,9 +300,9 @@ Everything on your own machines, installed with the guided installer, with the s
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Move one Flight or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted.
+Move one Flight or a whole Base, in either direction, from a button or one command, after a preview that lists what will move and what you must decide. A move mirrors first, verifies every reference and object, switches in seconds, keeps the old address redirecting and offers a Return to base window before the source is deleted. The record moves whole with its hash chain checked; Cargo and images by digest, caches not at all; Stations are never moved and are enrolled again with new join tokens; connections and Hardpoint credentials are re-granted; the switch waits for no airborne Launch; Return to base runs at the source until the switch and at the destination after.
 
-**Depends on:** Leave completely.
+**Depends on:** Leave completely
 
 [Area page](hosted-service.md)
 
@@ -424,9 +434,9 @@ A free plan with every feature, and no surprises on the bill.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The free plan turns every feature on. A plan changes limits, never features, and a new account’s spend limit starts at zero, so nothing can be charged until its owner raises it. Prices and numeric limits are not decided and are not published here.
+The free plan turns every feature on. A plan changes limits, never features, and a new account’s spend limit starts at zero, so nothing can be charged until its owner raises it. Prices and numeric limits are not decided and are not published here. The limits a plan may set are the people in a Base, private repositories and their size, other storage, hosted Station minutes, the Base's size ceiling, and how the hosted side runs (shared or dedicated, one site or two). Every Base is walled off on every plan; verified domains and the dedicated shape change no feature.
 
-**Depends on:** Hosted service.
+**Depends on:** Hosted service
 
 [Area page](hosted-service.md)
 
@@ -528,9 +538,9 @@ The same Detachment serves a self-hosted installation, so moving between them is
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An offline bundle and a customer-run relay for networks with no outside access. It later includes the interface served by your own Detachment.
+An offline bundle and a customer-run relay for networks with no outside access. It later includes the interface served by your own Detachment. The relay is the same program in a relay role at the network's edge: it fetches and verifies signed releases, daily advisory updates, Maintenance data and allowed images, and serves them inside on one address or writes a transfer file for a carried disk. Every import is an event. Findings and the System page show the age of advisory data, and a Standing order can warn or hold Launches when it is older than a set limit.
 
-**Depends on:** The Detachment.
+**Depends on:** The Detachment
 
 [Area page](hosted-service.md)
 
@@ -594,8 +604,9 @@ Small teams without an identity provider still get secure sign-in with authentic
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-LDAP and Active Directory groups mapped to roles at each level, leavers removed automatically, and a view of who can do what, and why. Roles are custom and permissions are clear.
+LDAP and Active Directory groups mapped to roles at each level, leavers removed automatically, and a view of who can do what, and why. Roles are custom and permissions are clear. A custom role is a named set of actions from the server's own route table, granted at any level and per Airfield, never above the granter's rights, never silently widened by an upgrade, on every plan with no cap.
 
+[Area page](security-trust.md)
 
 #### Other single sign-on and provisioning {#other-single-sign-on-and-provisioning}
 
@@ -610,8 +621,11 @@ SAML sign-in and automatic user provisioning for larger companies. Works beside 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An audit trail nobody can quietly edit, streamed to your security tools. Entries are chained so a gap shows.
+An audit trail nobody can quietly edit, streamed to your security tools. Entries are chained so a gap shows. This is the same chain as Tamper-evident audit trail in Milestone 12: one chain per Base over the one record, built once, with its head exportable. Streaming uses the events-out extension point: signed, numbered deliveries in the open standard event format, with retries and a delivery log.
 
+**Depends on:** Tamper-evident audit trail; One record behind every view.
+
+[Area page](security-trust.md)
 
 #### Retention, legal hold and encryption at rest {#retention-legal-hold-and-encryption-at-rest}
 
@@ -624,9 +638,11 @@ Choose how long data is kept, prove deletion, and encrypt logs and Cargo with ro
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Policy templates and an evidence report that maps controls to requirements. It supports your compliance work and is not a certification. Controls are listed with evidence.
+Policy templates and an evidence report that maps controls to requirements. It supports your compliance work and is not a certification. Controls are listed with evidence drawn from evidence packs, the Logbook and the separation-of-duties report; every page says Evidence support, not a certification or attestation.
 
-[Read the documentation](../security/controls-and-compliance.md)
+**Depends on:** An evidence pack for every release
+
+[Read the documentation](../security/controls-and-compliance.md) · [Area page](security-trust.md)
 
 #### Zero trust throughout {#zero-trust-throughout}
 
@@ -648,6 +664,54 @@ Every HTTP path is either public or internal, and only the public ones can be re
 
 When Launchway sits behind a web edge or proxy, lockout and rate limits count the address of the person, not of the proxy. An address is trusted only from the proxies you name, so it cannot be forged by the caller.
 
+
+#### An evidence pack for every release {#an-evidence-pack-for-every-release}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+One signed document per release shows what was built, tested, scanned, judged, cleared, launched and watched. Produced from the record when asked for, as a page, a printable document and a machine-readable file; signed by the Base and verifiable offline.
+
+**Depends on:** Releases with notes and evidence
+
+[Area page](policy-and-governance.md)
+
+#### The Logbook at every level {#the-logbook-at-every-level}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Commander reads the Logbook of their own level and below, without being an administrator of the Base. Sign-ins, tokens, monitoring queries and vendor actions need a second, higher permission.
+
+**Depends on:** Directory groups and custom roles
+
+[Area page](policy-and-governance.md)
+
+#### Reads recorded where they matter {#reads-recorded-where-they-matter}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Opening evidence, reading the Logbook, resolving a secret reference and every monitoring query are recorded. Reads are recorded by reference, never with the value read.
+
+[Area page](policy-and-governance.md)
+
+#### Read-only access for auditors, granted for a time {#read-only-access-for-auditors-granted-for-a-time}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An Observer with the evidence permission reads and exports evidence for a scope until the grant ends. No new role; every page opened and every export is in the Logbook of the scope.
+
+**Depends on:** The Logbook at every level
+
+[Area page](policy-and-governance.md)
+
+#### Setting changes recorded as a difference {#setting-changes-recorded-as-a-difference}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every setting change is kept with what each field was before and after, for every kind of setting. Secrets appear only as version references; the difference is part of the event the setting-change point judged; changes from files link to their commit; the Logbook shows it and the export carries before and after; put back makes a new judged change.
+
+**Depends on:** Audit lines for every sensitive action
+
+[Area page](security-trust.md)
 
 ### Your own Base, and what the service sees {#g-your-own-base-and-what-the-service-sees}
 

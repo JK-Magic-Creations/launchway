@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Beyond · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 0 in progress · 8 planned · 8 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 0 in progress · 9 planned · 9 capabilities</p>
 
 Ideas that grow naturally from one connected platform. Planned, but behind everything above.
 
@@ -35,7 +35,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Operate what you ship](#g-operate-what-you-ship) | 8 | 0 | 0 | 8 |
+| [Operate what you ship](#g-operate-what-you-ship) | 9 | 0 | 0 | 9 |
 
 ### Operate what you ship {#g-operate-what-you-ship}
 
@@ -45,10 +45,11 @@ Ideas that grow naturally from one connected platform.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See what each service, team and Airfield costs to run, next to what it delivers. Includes the cost of Ramps.
+See what each service, team and Airfield costs to run, next to what it delivers. Includes the cost of Ramps. Budgets and anomalies kept by the connected cost source are shown on the cost card with the source named and the nearest Launch marked; Launchway's own meters give a plain notice when a Sortie, Ramp or agent costs far above its usual. Rules over cloud resources stay in a connected tool whose findings join the findings list.
 
-**Depends on:** The software graph.
+**Depends on:** The software graph
 
+[Area page](kubernetes-vms.md)
 
 #### A developer portal and service catalog {#a-developer-portal-and-service-catalog}
 
@@ -88,19 +89,11 @@ Ready-made Airfields to work on a Flight from a browser. Reuses preview Airfield
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Protect running services from known attack patterns. Builds on traffic protection.
+Protect running services from known attack patterns. Builds on traffic protection. The team's own runtime protection tool reports through the events-in Hardpoint; each finding is tied to the digest that was serving and to its owner, shown in the one findings list as seen in production, and a rule can refuse a new digest that still carries the named component. Never blocks Return to base.
 
-**Depends on:** Rate limiting and traffic protection.
+**Depends on:** Rate limiting and traffic protection
 
-
-#### Ticket to code agent {#ticket-to-code-agent}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-An agent that takes a work item to a proposed change. A person always reviews.
-
-**Depends on:** Agents as users.
-
+[Area page](security-trust.md)
 
 #### Attestation programme {#attestation-programme}
 
@@ -110,6 +103,26 @@ Publish signed attestations about how Launchway itself is built. Everyone can ve
 
 **Depends on:** Signed releases and installers.
 
+
+#### Service scorecards from Standing orders {#service-scorecards-from-standing-orders}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each service in the catalog shows its Standing orders verdicts as a scorecard, with what to fix and who owns it. No second rules engine: the scorecard is the verdict the repository already gets.
+
+**Depends on:** A developer portal and service catalog.
+
+[Area page](software-graph.md)
+
+#### A catalog feed for an outside portal {#a-catalog-feed-for-an-outside-portal}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An outside developer portal can show Launchway's services, owners, Airfields, versions and health through a published feed. Read-only, permission-filtered, versioned; Launchway stays the source of truth for delivery.
+
+**Depends on:** A developer portal and service catalog.
+
+[Area page](software-graph.md)
 
 ## What done means
 

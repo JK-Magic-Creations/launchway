@@ -157,16 +157,6 @@ Observed use against requested size, with a proposal to change it. Nothing is ch
 
 [Area page](kubernetes-vms.md)
 
-#### Serverless on-premises and in the cloud {#serverless-on-premises-and-in-the-cloud}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-Knative revisions as a shifter with per-revision proofs, and eventing shown on the map. Function frameworks come later.
-
-**Depends on:** Shifters.
-
-[Area page](kubernetes-vms.md)
-
 #### Scaling during a rollout and a test {#scaling-during-a-rollout-and-a-test}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
@@ -174,6 +164,16 @@ Knative revisions as a shifter with per-revision proofs, and eventing shown on t
 A rollout and a performance test understand the autoscaler and ask it for headroom instead of fighting it. It uses the temporary capacity step in Milestone 8.
 
 **Depends on:** Temporary capacity for tests.
+
+[Area page](kubernetes-vms.md)
+
+#### Autoscalers in view during a Launch {#autoscalers-in-view-during-a-launch}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The Launch page shows what each autoscaler did while the Launch ran, per version, and why a share of traffic moved when it did. Copies wanted and running for the stable and the new version, each scaling event on the Launch timeline, a warning when the traffic split follows the ratio of copies and a scaler changes it, and a two-fleet swap that sizes the new fleet to the stable fleet's current copies rather than its minimum. Scale stays unavailable while an autoscaler manages the count, as today.
+
+**Depends on:** The scaling view
 
 [Area page](kubernetes-vms.md)
 
@@ -215,9 +215,9 @@ Watch and control live migration, and open a console or an access session with t
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Machines on Kubernetes and elsewhere in one inventory with what runs on each. Other hypervisors appear as hosts.
+Machines on Kubernetes and elsewhere in one inventory with what runs on each. Other hypervisors appear as hosts. The first version is the fleet page of Milestone 3, which already lists every fleet host with its release; this adds virtual machines on Kubernetes to the same list.
 
-**Depends on:** See and create virtual machines through Git.
+**Depends on:** See and create virtual machines through Git; Fleets held in the product
 
 [Area page](kubernetes-vms.md)
 

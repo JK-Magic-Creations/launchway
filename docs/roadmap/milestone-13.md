@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 13 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 1 in progress · 5 planned · 8 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 1 in progress · 17 planned · 21 capabilities</p>
 
 Work is planned and tracked beside the code, releases are managed as things that move through Airfields, and the services Launchway delivers are watched, diagnosed and, where you allow it, fixed.
 
@@ -42,9 +42,10 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Work tracking](#g-work-tracking) | 3 | 1 | 1 | 1 |
-| [Release management](#g-release-management) | 1 | 1 | 0 | 0 |
-| [Keep it healthy](#g-keep-it-healthy) | 4 | 0 | 0 | 4 |
+| [Work tracking](#g-work-tracking) | 7 | 1 | 1 | 5 |
+| [Release management](#g-release-management) | 2 | 1 | 0 | 1 |
+| [Keep it healthy](#g-keep-it-healthy) | 5 | 0 | 0 | 5 |
+| [One home for insight and health](#g-one-home-for-insight-and-health) | 7 | 1 | 0 | 6 |
 
 ### Work tracking {#g-work-tracking}
 
@@ -74,6 +75,46 @@ When repositories are imported, and on demand afterwards, Launchway scans and an
 
 [Area page](repository-standards.md)
 
+#### Requirements from an outside tool, traced to evidence {#requirements-from-an-outside-tool-traced-to-evidence}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Connect a requirements tool as the provider in charge of requirements; items, tests and releases link to its requirements and the evidence is written back. Acceptance criteria on items are the built-in default. The tool owns requirement text and versions; Launchway reads keys, titles, versions and status live for pickers, and writes back linked items, pull requests, releases, the tests that verify each requirement with their latest results, and the Airfields where it runs. A changed requirement version flags what was verified against the old one. The evidence pack carries a requirement-to-test-to-release trace with gaps named. Rules read Launchway's own record, so nothing waits on the tool.
+
+**Depends on:** Issues and work items; Releases with notes and evidence.
+
+[Area page](git-hosting.md)
+
+#### The launch line starts at the work item {#the-launch-line-starts-at-the-work-item}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An item shows the launch line of every change it carries, from branch to production, with each station opening its evidence. Today the item states its delivery status as a sentence and a line per Airfield. This draws the same facts with the launch line component, one line per change, and updates on a Return to base.
+
+**Depends on:** Follow a change on its launch line; Issues and work items.
+
+[Area page](guided-interface.md)
+
+#### An outside tracker in charge of work {#an-outside-tracker-in-charge-of-work}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Choose an outside tracker as the provider in charge of work for a Squadron; code and delivery still link to its tickets. One provider in charge per Squadron, shown as served by. References in branches, commits and pull requests resolve to the outside keys, the delivery status is written back, release notes read the linked tickets, and agents claim through the same holding pattern. Both run at once only while migrating, with a visible end.
+
+**Depends on:** Import and sync from other trackers.
+
+[Area page](git-hosting.md)
+
+#### Work item forms built from typed inputs {#work-item-forms-built-from-typed-inputs}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+New items, issue forms and custom fields use the same typed forms as Sorties, so values are picked and checked, not typed. Assignees, sprints, parents, labels and select fields come from searchable lists; a required field and a wrong value are explained in a sentence beside the field.
+
+**Depends on:** Templates for changes and work; One form engine for every wizard.
+
+[Area page](inputs-and-forms.md)
+
 ### Release management {#g-release-management}
 
 A release is what moves through Airfields.
@@ -85,6 +126,16 @@ A release is what moves through Airfields.
 A release has a version, notes and assets, is immutable once published, and is promoted through Airfields with checklists, windows, freezes and approvals. Things released together are grouped, and four delivery measures are reported.
 
 [Area page](git-hosting.md)
+
+#### Versions and release notes by branch role {#versions-and-release-notes-by-branch-role}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each role has its version scheme: prereleases or calendar versions on the trunk, a version line per release branch, tags per component; notes for a release line say what was carried back. Builds on the version schemes and generated notes that exist today; a person still confirms each version.
+
+**Depends on:** Branch roles that pipelines read
+
+[Area page](branching.md)
 
 ### Keep it healthy {#g-keep-it-healthy}
 
@@ -121,6 +172,88 @@ When an Airfield or site is unhealthy, traffic moves to a healthy one under rule
 Every detection and every automatic fix is announced to the channels you choose. Notification channels are on the main branch; the events are planned.
 
 [Area page](pipelines.md)
+
+#### On-call and incident tools, connected {#on-call-and-incident-tools-connected}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Alerts come in through a signed events Hardpoint, are linked to the nearest change, and the incident in your on-call tool is given the Launch, the timeline and the record. Paging, schedules, escalation and status pages stay in the connected tool. Time to restore is computed from Launchway's record.
+
+**Depends on:** Cards and events in, notifications out.
+
+[Area page](zero-downtime.md)
+
+### One home for insight and health {#g-one-home-for-insight-and-health}
+
+Launchway’s own numbers, delivery measures, cost and reliability targets in one place, each opening on the record behind it.
+
+#### Panels from a connected dashboard tool {#panels-from-a-connected-dashboard-tool}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Pin a named panel from the dashboard tool a team runs on a Flight, Airfield or Launch page, drawn with the viewer's own permissions and with Launch, Switch and Clearance markers. The panel's query runs through the guarded query layer with selectors pinned to what the viewer may see; a panel that cannot be read or narrowed is shown as a link card with the reason. Never required; every panel names its source and opens in the tool.
+
+**Depends on:** Signal sources; Guarded queries for monitoring data.
+
+[Area page](delivery.md)
+
+#### What AI work costs and what it delivered {#what-ai-work-costs-and-what-it-delivered}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Insights show model spend by purpose, model, Flight and agent against limits, and what AI work delivered: agent changes merged, reverted and returned to base, and cost per merged change. Read from the gateway's usage entries and the record. Agents may be compared; people never are, and a person sees only their own use. Every number opens the calls and changes behind it.
+
+**Depends on:** Usage monitoring.
+
+[Area page](ai.md)
+
+#### Launchway's own metrics and traces, exported {#launchway-s-own-metrics-and-traces-exported}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Servers and Stations expose their metrics in the standard text format and can send traces to a collector, so any monitoring tool can watch Launchway. Labels come from small closed sets and never name a repository, branch, person or Sortie. The Sortie page links to its trace. Documented in the metrics reference and the server configuration.
+
+[Read the documentation](../reference/metrics.md) · [Area page](delivery.md)
+
+#### Lead time from request to production {#lead-time-from-request-to-production}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Measure from the work item's creation to its change running in production, beside the commit-based lead time. Uses the delivery status that items already carry; shows waiting and working time per station.
+
+**Depends on:** Issues and work items; Releases that are promoted.
+
+[Area page](delivery.md)
+
+#### Cost sources, connected and named {#cost-sources-connected-and-named}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Connect the cost tool or cloud billing export a team already has, and see its numbers beside each Launch with the source named. One cost source in charge per Wing, shown as served by; resources map to Flights and Airfields through the software graph.
+
+**Depends on:** The software graph.
+
+[Area page](kubernetes-vms.md)
+
+#### Error budgets that guard production Launches {#error-budgets-that-guard-production-launches}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A typed Standing order holds production Launches when a service's error budget is nearly spent, except fixes with a Clearance, and Overwatch watches the burn rate. Advance is held; a Return to base never is. The threshold is set per Airfield and can be locked from above.
+
+**Depends on:** Service reliability targets; The watch.
+
+[Area page](traffic.md)
+
+#### A picture of each Squadron and Flight {#a-picture-of-each-squadron-and-flight}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Squadron or Flight page made of cards: needs you, delivery measures, Sortie and test health, work velocity, applications, cost and recent releases. Built from the same cards as the Tower, with a shared layout per level and personal layouts on top.
+
+**Depends on:** Shared layouts and personal layouts.
+
+[Area page](guided-interface.md)
 
 ## What done means
 

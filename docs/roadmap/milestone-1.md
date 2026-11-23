@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 59 available · 18 in progress · 51 planned · 128 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 61 available · 24 in progress · 57 planned · 142 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,19 +48,20 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 22 | 10 | 0 | 12 |
-| [Review and merge changes](#g-review-and-merge-changes) | 10 | 5 | 1 | 4 |
+| [Host your code](#g-host-your-code) | 23 | 10 | 3 | 10 |
+| [Review and merge changes](#g-review-and-merge-changes) | 11 | 5 | 3 | 3 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 5 | 2 | 4 |
-| [People and access on the host](#g-people-and-access-on-the-host) | 8 | 0 | 1 | 7 |
+| [People and access on the host](#g-people-and-access-on-the-host) | 9 | 0 | 1 | 8 |
 | [Move your repositories in](#g-move-your-repositories-in) | 5 | 2 | 1 | 2 |
-| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 7 | 0 | 3 | 4 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 9 | 1 | 3 |
+| [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 8 | 0 | 3 | 5 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 13 | 10 | 1 | 2 |
 | [Easy to start, easy to write](#g-easy-to-start-easy-to-write) | 8 | 6 | 2 | 0 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 2 | 4 |
-| [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
-| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 11 | 4 | 4 | 3 |
-| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 8 | 1 | 3 |
+| [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 1 | 1 | 0 |
+| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 16 | 4 | 4 | 8 |
+| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 15 | 8 | 1 | 6 |
 | [Organized, and yours to arrange](#g-organized-and-yours-to-arrange) | 10 | 7 | 0 | 3 |
+| [Run forms that offer, not ask](#g-run-forms-that-offer-not-ask) | 2 | 0 | 0 | 2 |
 
 ### Host your code {#g-host-your-code}
 
@@ -106,13 +107,13 @@ Git over HTTPS from the command line asks you to sign in in the browser instead 
 
 #### Create, rename, archive and set visibility {#create-rename-archive-and-set-visibility}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-The everyday repository lifecycle: create, rename with redirects, transfer, archive as read-only, and private, internal or public visibility. The same wizard connects an existing repository from another host or creates a hosted one, so people do not need to learn two flows. Old addresses keep working after a rename.
+The everyday repository lifecycle: create, rename with redirects, transfer, archive as read-only, and private, internal or public visibility. The same wizard connects an existing repository from another host or creates a hosted one, so people do not need to learn two flows. Old addresses keep working after a rename. Built: rename and transfer with old addresses that keep working for Git, the API and the web pages, and never reveal where a private repository went. Still to confirm or build: archive as read-only and the single wizard that connects an existing repository or creates a hosted one.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/renaming-repositories.md) · [Area page](git-hosting.md)
 
 #### Browse and search your code {#browse-and-search-your-code}
 
@@ -176,13 +177,13 @@ Scheduled housekeeping, an integrity check, a size report and a health note on t
 
 #### Repository trash {#repository-trash}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A deleted repository goes to a trash and can come back within a set time. Delete is reversible for a period you choose, and both the delete and the restore are in the Logbook.
+A deleted repository goes to a trash and can come back within a set time. Delete is reversible for a period you choose, and both the delete and the restore are in the Logbook. The guide documents the trash as working: a deleted repository keeps its refs, packs, pull requests, keys and rules until its day comes.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/repository-trash.md) · [Area page](git-hosting.md)
 
 #### Mirrors in and out {#mirrors-in-and-out}
 
@@ -226,21 +227,21 @@ List, rename, delete and restore branches, set the default, and delete merged br
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Store large binary files outside the normal history, with locks and quotas. Quotas and usage are shown next to the repository. The Station image includes the tooling, so builds fetch large files without extra setup.
+Store large binary files outside the normal history, with locks and quotas. Quotas and usage are shown next to the repository. The Station image includes the tooling, so builds fetch large files without extra setup. Large files travel by the common Git large-file protocol, so existing clients work unchanged, and are kept by SHA-256 in the same blob store as the Depot, so a file stored twice costs once. Files matching the repository's lockable patterns are read-only until locked; a push that changes a file someone else has locked is refused with who holds it, and a pull request that changes a locked file shows the lock and cannot merge until it is released or the holder approves. Quotas and usage are shown next to the repository and come from the one quota model shared with the Depot, Cargo and logs. Cleanup is the Depot's mark and sweep: an object no ref, release or fork still points to goes after a grace period, with a preview. The Station image includes the tooling and fetches only the large files a step's paths need.
 
-**Depends on:** Built-in Git hosting.
+**Depends on:** Built-in Git hosting; Repository quotas and size limits
 
 [Area page](git-hosting.md)
 
 #### Forks and templates {#forks-and-templates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Fork a repository to propose changes from your own copy, and start new repositories from templates. A template can carry a pipeline and an Airfield setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.
+Fork a repository to propose changes from your own copy, and start new repositories from templates. A template can carry a pipeline and an Airfield setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets. Built: forks with their parent, root and fork point, visibility never wider than the parent, sync, pull requests from a fork, maintainer edits, and restricted Sorties for fork pull requests with first-time contributors held for a person, over the API, the agent endpoint and the command line. Not built: the Fork button and fork line in the web interface, and template repositories that carry a pipeline and an Airfield setup.
 
 **Depends on:** Pull requests on the built-in host.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/forks.md) · [Area page](git-hosting.md)
 
 #### Repository quotas and size limits {#repository-quotas-and-size-limits}
 
@@ -281,6 +282,16 @@ An inbox, watching and muting, and email for mentions, reviews and failures, inc
 **Depends on:** Built-in Git hosting.
 
 [Read the documentation](../guide/notifications-for-people.md) · [Area page](git-hosting.md)
+
+#### A push that carries a secret is refused {#a-push-that-carries-a-secret-is-refused}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A push to a hosted repository that brings a new secret is refused with the file, the line and how to remove it, over HTTPS and SSH alike. It uses the secret check of the repository's Standing orders, at the same place a push is already checked for branch rules and verified commits. Only new secrets are refused; a person with the right role can let one through with a reason, recorded in the Logbook. Off, advice or block, like every other check.
+
+**Depends on:** Built-in Git hosting; Vulnerability, secret, dependency and license checks.
+
+[Area page](repository-standards.md)
 
 ### Review and merge changes {#g-review-and-merge-changes}
 
@@ -348,19 +359,19 @@ Queue approved changes and test the real merged result with the real pipeline be
 
 #### Resolve conflicts in the browser {#resolve-conflicts-in-the-browser}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See the conflict, choose a side or edit, and finish the merge on the page. Conflict detection runs as soon as the target moves, so the page tells you early.
+See the conflict, choose a side or edit, and finish the merge on the page. Conflict detection runs as soon as the target moves, so the page tells you early. Built: each conflict as data and the merge commit that resolves it, over the HTTP API, the agent endpoint and launchway pr, for pull requests inside a repository and from a fork. Not built: the editor page in the web interface. The resolving commit is a new commit like any other: the required checks run again on it and approvals given before it are dismissed where the repository dismisses stale approvals.
 
-**Depends on:** Pull requests on the built-in host.
+**Depends on:** Pull requests on the built-in host
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/resolving-conflicts.md) · [Area page](git-hosting.md)
 
 #### Findings and failures on the diff {#findings-and-failures-on-the-diff}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Security findings and test failures appear as notes on the lines they concern. The same results feed the policy verdict, so what you read on the line is what blocks the merge.
+Security findings and test failures appear as notes on the lines they concern. The same results feed the policy verdict, so what you read on the line is what blocks the merge. Also uncovered changed lines, code quality findings and accessibility issues where they can be placed, each marked new or existing.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -368,13 +379,13 @@ Security findings and test failures appear as notes on the lines they concern. T
 
 #### Templates for changes and work {#templates-for-changes-and-work}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Templates that pre-fill the description of a pull request or work item, and issue forms. Teams keep their expectations in one place and new contributors get a prompt instead of a blank box.
+Templates that pre-fill the description of a pull request or work item, and issue forms. Teams keep their expectations in one place and new contributors get a prompt instead of a blank box. Built: a pull request description starts from .launchway/pull_request_template.md on the target branch, from every way in. Labels, milestones and templates for work items are their own Available item. Not built: issue forms with typed fields.
 
 **Depends on:** Pull requests on the built-in host.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/pull-requests.md) · [Area page](git-hosting.md)
 
 #### Pull-request status everywhere {#pull-request-status-everywhere}
 
@@ -384,6 +395,16 @@ Report each Sortie back to the pull request as a status and block a merge that d
 
 **Depends on:** Every Git host, equally.
 
+
+#### Required results from outside tools {#required-results-from-outside-tools}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A branch rule can require a result that an outside system reports on the pull request, beside the results of Sorties. The outside system reports through a Hardpoint with a scoped token that may only post results for named checks; the rule names the check, and the plain reason a change cannot merge names it too. A result that never arrives holds the merge with a sentence, never silently.
+
+**Depends on:** Branch rules and protected tags; Published extension points.
+
+[Area page](git-hosting.md)
 
 ### Work items and decisions {#g-work-items-and-decisions}
 
@@ -473,9 +494,9 @@ Items visible only to chosen people, and branches started from an item that carr
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A wiki that is itself a Git repository, with history, linked live to pipelines and deployments. Pages can show current status. A vault of notes can stay in step with it (see the Obsidian sync).
+A wiki that is itself a Git repository, with history, linked live to pipelines and deployments. Pages can show current status. A vault of notes can stay in step with it (see the Obsidian sync). The wiki is a repository beside the code with the code's permissions; a repository's own documents folder is shown the same way, with a table of contents. Live blocks (an Airfield's version, the last Sortie of a pipeline, a Launch, a Switch's state, open work) are typed and picked from lists, and each is drawn with the reader's permissions. Wiki edits are commits; a level can require a pull request for chosen pages. Code search covers wiki pages and documents, and the catalog of services reads each service's overview page.
 
-**Depends on:** Built-in Git hosting.
+**Depends on:** Built-in Git hosting
 
 [Area page](git-hosting.md)
 
@@ -483,9 +504,9 @@ A wiki that is itself a Git repository, with history, linked live to pipelines a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Publish a static site from a branch of a repository, built by a pipeline. The site is served by Launchway with its own address and the same access rules as the repository.
+Publish a static site from a branch of a repository, built by a pipeline. The site is served by Launchway with its own address and the same access rules as the repository. A publish step stores the built site in the Depot as one item by digest; a branch serves the digest its latest Sortie published, so switching to a new version, or back to the one before, is one atomic change of a pointer, recorded like a Launch. Each pull request gets the site at its own preview address, reusing the preview Airfield and removed when the pull request closes. Your own domain is offered with certificates obtained and renewed automatically. Retention keeps every digest a branch or an open pull request serves.
 
-**Depends on:** Built-in Git hosting.
+**Depends on:** Built-in Git hosting; A built-in OCI registry; A preview address for every pull request
 
 [Area page](git-hosting.md)
 
@@ -579,6 +600,14 @@ A translated interface, light and dark, and custom themes. Accessibility checks 
 
 [Area page](git-hosting.md)
 
+#### Four roles, stored as four roles {#four-roles-stored-as-four-roles}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Commander, Controller, Pilot and Observer become four stored roles, so a team can give the right to start Sorties without the right to approve them, or the reverse. Today the server stores admin, operator and viewer, and the words page maps Commander to admin and both Controller and Pilot to operator. On upgrade, admin becomes owner and operator becomes both developer and approver, so nobody gains or loses a right. Environment-limited bindings, tokens and agents keep their rules: never more than their maker. Custom roles and directory groups build on the same four.
+
+[Area page](git-hosting.md)
+
 ### Move your repositories in {#g-move-your-repositories-in}
 
 A tested path from another Git host, so switching is a step and not a leap.
@@ -587,10 +616,11 @@ A tested path from another Git host, so switching is a step and not a leap.
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time. Today a connection to another host lists its repositories, and each can be imported or mirrored.
+Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time. Today a connection to another host lists its repositories, and each can be imported or mirrored. Planned addition: the repository is the optional first step of the guided import; its verify report gates the pipeline scan; the mirror back keeps the old pipelines running during side by side; and the repository cut-over is a separate decision offered only after its pipelines have cut over.
 
-**Depends on:** Built-in Git hosting.
+**Depends on:** Built-in Git hosting
 
+[Area page](git-hosting.md)
 
 #### An acceptance suite for hosting {#an-acceptance-suite-for-hosting}
 
@@ -653,10 +683,11 @@ Hosts you run yourself, with their own addresses and certificates, are first-cla
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Hosts that cannot call Launchway are watched through polling or a bridge from their event service. The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature.
+Hosts that cannot call Launchway are watched through polling or a bridge from their event service. The result is the same: a push starts a Sortie. Launchway posts status as a comment and an approval where the host has no status feature. The triggers page shows, per connected host, whether events arrive by webhook, by polling or by polling only, the median and slowest delay from push to Sortie over the last day, the last verified delivery, and a next step when polling has lasted over an hour; a long stretch of polling raises a notice.
 
-**Depends on:** Every Git host, equally.
+**Depends on:** Every Git host, equally
 
+[Area page](git-hosting.md)
 
 #### One identity across hosts {#one-identity-across-hosts}
 
@@ -690,6 +721,16 @@ Read the common hosted workflow format and run the usual cases as they are, or c
 
 [Area page](pipelines.md)
 
+#### The code host a Flight uses, shown as served by {#the-code-host-a-flight-uses-shown-as-served-by}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each Flight's code page says which provider serves its code, the built-in host or a named connection, what that provider adds and what it cannot do. Exactly one provider is in charge of a Flight's code. A second place is allowed only in a named role: a push mirror kept alongside for one stated purpose, or an import that is migrating and ends. Pipelines say pull_request and push, never the name of a host. Moving from one provider to the other is a guided step with a dry run and counts one for one.
+
+**Depends on:** One provider in charge for each capability; A common provider model.
+
+[Read the documentation](../guide/outside-host.md) · [Area page](git-hosting.md)
+
 ### Pipelines that match what teams expect from hosted CI {#g-pipelines-that-match-what-teams-expect-from-hosted-ci}
 
 Everything a hosted CI service offers, in one place.
@@ -714,7 +755,7 @@ Keep dependencies between runs so builds start warm, with rules for who may read
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Services with readiness checks and logs, a Station and workspace of their own per step, approval quorums, and loops that tolerate chosen members. This completes the control a complex pipeline needs without dropping into scripts.
+Services with readiness checks and logs, a Station and workspace of their own per step, approval quorums, and loops that tolerate chosen members. This completes the control a complex pipeline needs without dropping into scripts. Readiness checks (a command, a TCP port or an HTTP path) are documented on Kubernetes and with the container executor. Still to come for services: a start order between services (after), a time limit for a service's whole life, each service's output kept as its own masked log shown as a tab beside the step's log, and readiness and stop events on the record.
 
 [Area page](pipelines.md)
 
@@ -722,7 +763,7 @@ Services with readiness checks and logs, a Station and workspace of their own pe
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Still to come: values read from an earlier step's output or a file in the repository, and Stations with the right platform chosen automatically.
+Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and Debrief for each combination, a grid on the Sortie page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Still to come: values read from an earlier step's output (see Fan-out over a list a step produced) or a file in the repository, and Stations with the right platform chosen automatically.
 
 [Area page](pipelines.md)
 
@@ -730,17 +771,17 @@ Run the same steps across versions, systems and architectures from one definitio
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the Flight, branch and Airfield.
+Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. The trust is set up in the cloud once, and the token carries the Flight, branch and Airfield. One issuer in Launchway serves this item, Workload identity and dynamic credentials, and the short-lived credential a Sortie uses to publish to the Depot; tokens follow OpenID Connect, live no longer than the step's lease, are never stored, and are recorded as issued, never as the token.
 
 [Area page](pipelines.md)
 
 #### Re-run only what failed {#re-run-only-what-failed}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Re-run just the failed steps of a Sortie, with earlier results reused. Re-running from a chosen step already works. Combined with caches, a flaky test costs minutes instead of a full run.
+Re-run just the failed steps of a Sortie, with earlier results reused. Re-running from a chosen step already works. Combined with caches, a flaky test costs minutes instead of a full run. The approvals-and-re-runs guide documents re-running from several steps and Re-run failed steps.
 
-[Area page](pipelines.md)
+[Read the documentation](../guide/approvals-and-reruns.md) · [Area page](pipelines.md)
 
 #### Per-step runner and workspace {#per-step-runner-and-workspace}
 
@@ -822,7 +863,7 @@ Write a step once as a template and use it in many pipelines, with its inputs ch
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file. Built-in starters for the common languages are on the main branch. Missing: assistant instruction files, formatter and linter configuration and a test layout written into the repository.
+Ready-made starting pipelines for the common languages, so a new repository starts from good practice, not a blank file. Built-in starters for the common languages are on the main branch. Missing: a starter for the scripting language self-hosted automation servers use for pipelines (one of the first languages named), assistant instruction files, formatter and linter configuration and a test layout written into the repository.
 
 [Area page](developer-experience.md)
 
@@ -862,7 +903,9 @@ A published description of the pipeline format that gives completion and inline 
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server. On the main branch: `launchway validate` checks a pipeline without a server, can name a library and a directory to check against, and shows the fully resolved result.
+Check a pipeline, with its templates and shared libraries expanded, on your own machine with no server. On the main branch: `launchway validate` checks a pipeline without a server, can name a library and a directory to check against, and shows the fully resolved result. `launchway validate --resolved` reads the locked library commits from the lockfile, through the server or a local mirror, so the expanded pipeline can be printed without a directory for each library.
+
+**Depends on:** A lockfile for everything a pipeline borrows
 
 [Area page](pipelines.md)
 
@@ -938,7 +981,7 @@ A search box that finds pages and starts guided actions such as turn a toggle of
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-An approval is a card with what, who, risk, evidence and what happens next, readable in seconds. Reject needs a reason. A decision can be undone until it has acted.
+An approval is a card with what, who, risk, evidence and what happens next, readable in seconds. Reject needs a reason. A decision can be undone until it has acted. Later, the same card shows the fields a Clearance asks the approver to fill.
 
 **Depends on:** Approvals and protected Airfields.
 
@@ -970,19 +1013,21 @@ Bring pipelines across in waves, without surprises.
 
 #### A converter and a move-over guide {#a-converter-and-a-move-over-guide}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Bring pipelines written for other CI services across in waves, with a report of anything that needs a person. The converter says what it could not translate, and why. The guide covers running both side by side while you compare results.
+Bring pipelines written for other build systems across in waves, with a report of anything that needs a person. The converter says what it could not translate, and why. The guide covers running both side by side while you compare results. Built: five file formats (hosted workflow files, stage-based YAML, declarative files of a self-hosted automation server, job-based hosted configuration, task pipelines), 205 known constructs each classified as converted exactly, with a stated difference or needing a person, a dry mode that keeps delivery off, a web wizard, the command launchway import pipeline, an API call and an agent tool.
 
+[Area page](pipelines.md)
 
 #### Run old and new side by side {#run-old-and-new-side-by-side}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Compare a Launchway run with the run it replaces and see where results differ. This is how a team gains confidence before switching.
+Compare a Launchway run with the run it replaces and see where results differ. This is how a team gains confidence before switching. Built: a dry import writes every delivering step behind an enable_delivery input that is off by default, so both systems can run on every push. Missing: the comparison page, pairing by commit and step, and reading the old system's results from the code host's commit statuses.
 
 **Depends on:** A converter and a move-over guide.
 
+[Area page](pipelines.md)
 
 ### Foundations that finish alongside {#g-foundations-that-finish-alongside}
 
@@ -1037,7 +1082,7 @@ Run Launchway's own checks locally in the same containers the pipeline uses, so 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-An upgrade that cannot half-apply: the server learns which chart revision rendered it and warns when it is older than the binary expects, the encryption key is never generated on a shared database, and parent applications sync before their children. The first self-upgrade exposed ordering problems; they are fixed and guarded by tests, and the remaining gate work is in progress.
+An upgrade that cannot half-apply: the server learns which chart revision rendered it and warns when it is older than the binary expects, the encryption key is never generated on a shared database, and parent applications sync before their children. The first self-upgrade exposed ordering problems; they are fixed and guarded by tests, and the remaining gate work is in progress. The release gate also upgrades and returns to base through a real GitOps controller, not only a simulated one, and on a second network plugin, which the installing page lists as known gaps today.
 
 [Area page](installing.md)
 
@@ -1072,6 +1117,52 @@ The step log states the limit and the setting to raise, instead of a bare exit c
 Audit entries also go to standard output as JSON lines with a request id, for any log collector. On the main branch.
 
 [Area page](security-trust.md)
+
+#### Servers grow on request load {#servers-grow-on-request-load}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Servers are added and removed on requests in flight and time to answer, inside a floor and a ceiling, with at least two always running on Kubernetes. Today the chart has a server autoscaler on processor and memory, off by default, with room for other metrics, and a disruption budget that lets one server go at a time. This item turns autoscaling on by default in the recommended shape, adds a request-load metric the servers publish themselves, and sets the floor and ceiling from measured numbers. The Stations' and builds' half is in Builds never take room from the platform and Stations added and removed by the steps waiting.
+
+**Depends on:** Launchway's own footprint, measured.
+
+[Area page](installing.md)
+
+#### Launchway's own footprint, measured {#launchway-s-own-footprint-measured}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Real numbers for what Launchway itself uses: each server, the database and each Station, typical and peak, reserved against used, with trends and a forecast for a given load. Shown on the System page and available through the API, the command line and the agent endpoint, so a team can size an installation before it buys hardware and the floors and ceilings of autoscaling come from measurement, not guesses. Per-step and per-pipeline numbers are the Stations chapter's; this item covers the platform's own parts.
+
+[Area page](installing.md)
+
+#### A published description of the HTTP API {#a-published-description-of-the-http-api}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every release publishes a description of the HTTP API in the OpenAPI format, generated from the server's route table, so tools can read it, generate clients and check calls. Each route carries its access class, its Logbook action and its other ways in. The parity test fails when a route is missing from the description or an entry has no route, and the API tests are checked against it so it matches what the server really does. Every server serves the description for its version, and a list of what changed since the last release is published beside it.
+
+**Depends on:** One capability, every interface.
+
+[Read the documentation](../reference/http-api.md) · [Area page](developer-experience.md)
+
+#### The web interface in the parity test {#the-web-interface-in-the-parity-test}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The parity table gains a web column naming the screen and action, or wizard, for each operation, checked in a browser both ways. A control is shown working only when the server's actions list says the action is available; a wizard's final call must be the row's route; Return to base and Abort can never be a gap; web gaps may only shrink.
+
+**Depends on:** Fix actions with their consequence.
+
+[Read the documentation](../reference/interface-parity.md) · [Area page](guided-interface.md)
+
+#### A recorded accessibility check for every release {#a-recorded-accessibility-check-for-every-release}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A release is published only when its accessibility record is complete: the automated runs and a person's screen-reader and keyboard check, written down. The conformance statement is generated from the record. Today the person's check happens but is not written down per release.
+
+[Read the documentation](../guide/accessibility.md) · [Area page](guided-interface.md)
 
 ### Install Launchway in minutes {#g-install-launchway-in-minutes}
 
@@ -1169,7 +1260,37 @@ On an existing cluster the installer checks storage, a way in, certificates, a n
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-One file with everything Launchway needs, for networks with no internet. The same walk-through, ending in the browser.
+One file with everything Launchway needs, for networks with no internet. The same walk-through, ending in the browser. The bundle holds the signed program and Station images for each architecture, the chart and installer, the optional small Kubernetes, the step images of the built-in steps and starters, the scanners with dated advisory data, Flight school, and a manifest, checksums, a bill of materials and a signature checked before anything installs. Images load into the built-in Depot. A release is not cut unless the bundle installs and runs a first Sortie on a cluster with outbound network denied.
+
+[Area page](installing.md)
+
+#### From one server to several, guided {#from-one-server-to-several-guided}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Move a single server from its built-in database to PostgreSQL, and then to several servers on Kubernetes, with a check at every step and a way back until the end. The wizard copies the data, verifies every Flight, Sortie, setting and repository against the source, switches in one step and keeps the old server ready to take back over until you confirm. The root key moves with it and is never generated a second time. Today the way up is a backup and a restore by hand.
+
+**Depends on:** One command, three targets.
+
+[Area page](installing.md)
+
+#### An upgrade preview {#an-upgrade-preview}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Before an upgrade, see the version you run, the signed release you will get, whether a Return to base stays safe, whether a recent backup exists, and what is still connected on an older version. The preview changes nothing. It reads the migrations the new release would apply and says whether any is breaking, counts older servers and Stations, runs the network checks, and names the one thing to do first when something is missing. The same preview is in the interface, the command line, the API and the agent endpoint.
+
+**Depends on:** The upgrade gate.
+
+[Area page](installing.md)
+
+#### Scheduled backups with a restore drill, on any installation {#scheduled-backups-with-a-restore-drill-on-any-installation}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Back up the database and stored files on a Patrol to storage you name, and prove every backup by restoring it into a throwaway installation that can run and send nothing. Works on SQLite and PostgreSQL before the highly available mode exists. The drill checks the schema, opens every sealed secret with the root key kept apart, verifies the record's chain to its recorded head, finds every stored file the record refers to and resolves every Git ref; it measures time to restore and how much would be lost, records a verdict, and shows it on the System page. A missing or failed drill is shown as 'Not proven' and sends a notice. Clean-up of stored files waits until no backup in the window can refer to them.
+
+**Depends on:** Configuration in the database; Rides through outages.
 
 [Area page](installing.md)
 
@@ -1256,6 +1377,30 @@ Less green, more meaning in color, an overview first and detail one click down; 
 A person who starts a run on a one-person team can be allowed to approve it, with a plain note in the record; larger teams keep separation of duties. Pending approvals show up in the running list, so nothing waits where nobody looks, and the page says who can approve and why.
 
 [Area page](guided-interface.md)
+
+### Run forms that offer, not ask {#g-run-forms-that-offer-not-ask}
+
+Starting a Sortie means choosing from real values, seeing what will run before it runs, and meeting the same checks from every way in.
+
+#### A run form that offers real values {#a-run-form-that-offers-real-values}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Starting a Sortie means picking from real branches, tags, Depot images and the Airfields you may launch to, instead of typing names and versions. A pipeline input can take its options from the Flight's own repository, from the Depot, or from the Airfields the person may act on, and every list is filtered by the asker's rights: an option you may not see is absent. Lists are searched as you type, paged, and show when they were fetched with a refresh button. A source that is slow or down fails only its own field, after a time limit. Today options are a fixed list and a version must be typed.
+
+**Depends on:** Pipelines as code.
+
+[Area page](inputs-and-forms.md)
+
+#### Plain messages for every input rule {#plain-messages-for-every-input-rule}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every rule on an input has a sentence a person can act on, shown beside the field as they type and returned the same way by the server. A pattern carries its own message, and common patterns (semantic version, host name, email, identifier, commit) need no regular expression. Ranges, lengths, required-when, rules across fields, values that must still exist when the Sortie starts, and values that must be unique each name the field, the rule and the fix. A re-run is checked again with today's rules and says what changed.
+
+**Depends on:** Pipelines as code.
+
+[Area page](inputs-and-forms.md)
 
 ## What done means
 

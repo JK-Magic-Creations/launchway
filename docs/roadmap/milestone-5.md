@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 5 available · 1 in progress · 22 planned · 28 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 5 available · 6 in progress · 16 planned · 27 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -47,9 +47,9 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Know what you run](#g-know-what-you-run) | 11 | 2 | 1 | 8 |
+| [Know what you run](#g-know-what-you-run) | 11 | 2 | 3 | 6 |
 | [Fix it safely](#g-fix-it-safely) | 6 | 2 | 0 | 4 |
-| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 1 | 0 | 10 |
+| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 10 | 1 | 3 | 6 |
 
 ### Know what you run {#g-know-what-you-run}
 
@@ -105,19 +105,21 @@ Record which vulnerabilities apply, import vendor statements that they do not, a
 
 #### Who owns what {#who-owns-what}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Each component, service and repository has an owner, and findings go to that owner. Questions like which services use this library get an answer.
+Each component, service and repository has an owner, and findings go to that owner. Questions like which services use this library get an answer. Built: owner nodes and owned-by edges, and impact answers grouped by owner. Not yet: findings routed to the owner, and one owners file read by both review and the graph (review reads .launchway/owners; the graph reads a root owners file in another format).
 
 **Depends on:** What is deployed where.
 
-[Area page](software-graph.md)
+[Read the documentation](../guide/software-graph.md) · [Area page](software-graph.md)
 
 #### Code search across repositories {#code-search-across-repositories}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Search symbols and text across every repository, hosted or connected, filtered by what you may see. Results include pipelines, templates and steps.
+Search symbols and text across every repository, hosted or connected, filtered by what you may see. Results include pipelines, templates and steps. The search runs inside Launchway with no search cluster: an index step on a Station builds a compact index per repository and commit, kept in the blob store with its record in the database; the server narrows candidates with it and confirms every hit against the commit, so a result is never wrong about the text it shows. Exact text, regular expressions, file names and symbols, filtered by Squadron, repository, language, path and kind. It indexes the default branch, release tags and the commit each Airfield runs, so you can search the code that runs in prod. Rights are checked at query time; a repository you may not read is never opened or counted. Repositories pushed since their last index are searched live with the existing bounded search and marked so.
+
+**Depends on:** Search inside a repository; One graph from code to hardware
 
 [Area page](software-graph.md)
 
@@ -125,9 +127,9 @@ Search symbols and text across every repository, hosted or connected, filtered b
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Definitions, references and call information, for people and for agents. Gives agents the context they need without sending whole repositories.
+Definitions, references and call information, for people and for agents. Gives agents the context they need without sending whole repositories. An indexer step per language writes an open, language-neutral code index for a commit, stored as Cargo keyed by repository and commit. The code browser and the pull request show definitions, references and callers from it; where no index exists, search-based answers are shown and marked approximate. Symbols that cross repositories resolve through the graph's package nodes to the exact version a lock file names. A pull request lists the callers of each changed function in other repositories and which of them run in each Airfield. The Wingman reads the same answers through the agent endpoint, with every answer citing repository, commit and line.
 
-**Depends on:** Code search across repositories.
+**Depends on:** Code search across repositories
 
 [Area page](software-graph.md)
 
@@ -143,13 +145,13 @@ Answer AI questions from a graph of code and deployments instead of pasting file
 
 #### Blast radius of a vulnerability {#blast-radius-of-a-vulnerability}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-From an advisory, see which deployed services and Airfields are affected and who owns them. The list becomes a set of proposed fixes.
+From an advisory, see which deployed services and Airfields are affected and who owns them. The list becomes a set of proposed fixes. Built: for a package, the versions in use with known advisories, what uses each and the deployments that run them, on request, from the same vulnerability data Maintenance uses; impact from a repository, package, component, base image, machine or platform, grouped by owner. Not yet: started by a new advisory without anyone asking, and turned into a set of proposed fixes.
 
 **Depends on:** What is deployed where.
 
-[Area page](software-graph.md)
+[Read the documentation](../guide/software-graph.md) · [Area page](software-graph.md)
 
 #### One graph from code to hardware {#one-graph-from-code-to-hardware}
 
@@ -167,7 +169,7 @@ Patch as a normal change, with checks and a controlled rollout.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD. The loop is propose, test, approve, roll out and verify, and every step is recorded.
+Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD or any other way a Flight launches, until Overwatch sees the fixed version healthy in every affected Airfield. The loop is propose, test, approve, roll out and verify, and every step is recorded. A finding closes only when the fixed digest is seen running and Overwatch has passed, in each Airfield where the vulnerable one ran. Production may require a person; a Hold stops the Launch and never the Return to base.
 
 **Depends on:** What is deployed where.
 
@@ -229,19 +231,19 @@ Launchway works the order out from what your code says and shows how it knew; yo
 
 #### One dependency graph, with where each link came from {#one-dependency-graph-with-where-each-link-came-from}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Every link says where it was found, how sure Launchway is and offers the fix right there: add a link, ignore a wrong one with a reason. Built on the software graph, not a second graph.
+Every link says where it was found, how sure Launchway is and offers the fix right there: add a link, ignore a wrong one with a reason. Built on the software graph, not a second graph. Built: every edge carries its source, the commit or time, how sure (declared, extracted or inferred) and when it held; edges are closed, never deleted; corrections (before, ignore, pin) need a reason, are audited and survive a rebuild. Not yet: adding a missing link from the graph page.
 
-[Area page](dependency-order.md)
+[Read the documentation](../guide/software-graph.md) · [Area page](dependency-order.md)
 
 #### Libraries first, then what uses them {#libraries-first-then-what-uses-them}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-When a library changes it is built and published first, and each application that uses it is built after, once, in order. Go, npm, Maven, Gradle, Python and base images first.
+When a library changes it is built and published first, and each application that uses it is built after, once, in order. Go, npm, Maven, Gradle, Python and base images first. Built: the rebuild set after a push, and triggers on results made from the graph, off until a Flight asks and each allowed by the Flight depended on. Not yet: starting the downstream builds by itself without those triggers, and batching (see Limits on build storms).
 
-[Area page](dependency-order.md)
+[Read the documentation](../guide/software-graph.md) · [Area page](dependency-order.md)
 
 #### Dependents checked before a change merges {#dependents-checked-before-a-change-merges}
 
@@ -269,17 +271,19 @@ Repositories are ordered providers first, cycles are shown with their path, and 
 
 #### Formations: things that go together {#formations-things-that-go-together}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A Formation is a release unit of applications, databases and configuration that are delivered together in the right order. No new kind of object: a Formation is a plan with members.
+A Formation is a release unit of applications, databases and configuration that are delivered together in the right order. No new kind of object: a Formation is a plan with members. Built: a Formation of releases of several Flights, promoted all or nothing to begin with, one after another, in an order you write or the graph's dependency order, with a report of what launched. Not yet: one Clearance, one watch and one way back for the whole Formation (see One go or no-go, one watch, one way back), and databases and configuration as members.
 
-[Area page](dependency-order.md)
+[Read the documentation](../guide/promoting-releases.md) · [Area page](dependency-order.md)
 
 #### One go or no-go, one watch, one way back {#one-go-or-no-go-one-watch-one-way-back}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A Formation has one decision, one timeline and one watch, and returns to the stable state in reverse order. If part of a Formation fails, the others return to the stable state.
+A Formation has one decision, one timeline and one watch, and returns to the stable state in reverse order. If part of a Formation fails, the others return to the stable state. One Clearance card lists every member with its digest, its difference against what runs now, its Preflight verdict and the order of the way back; one Go covers the set of digests and is voided by a change to any member, and the person who gives it wrote none of the members. Members launch in graph order or the written order, a database change first and only its expand half. Each member keeps its own Overwatch and the Formation adds a joint proof, such as checkout success at the edge or contract tests between members; the Formation passes only when all pass. On a fail, members already launched return in reverse order, each taking its lock in that order, never blocked; the expand half of a database change stays and is named as safe for both versions. One Formation record links the member Launches, the Clearance, the joint verdict and the return.
+
+**Depends on:** Formations: things that go together; Database first, then the application
 
 [Area page](dependency-order.md)
 
@@ -304,14 +308,6 @@ One change that spans several repositories is tracked, tested and merged togethe
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a Flight plan. Each says what it implies for branches, triggers, versions, Airfields and fixes.
-
-[Area page](dependency-order.md)
-
-#### A recommender for the branching pattern {#a-recommender-for-the-branching-pattern}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-When a repository is created or imported, six plain questions lead to the simplest pattern that fits, with the reason and the trade-offs, set up in one step. Help, never enforcement.
 
 [Area page](dependency-order.md)
 

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 2 in progress · 42 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 2 in progress · 66 planned · 70 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -48,13 +48,14 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
-| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 1 | 0 | 4 |
-| [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
-| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 2 | 1 | 3 |
-| [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
-| [Argo CD, first class](#g-argo-cd-first-class) | 9 | 0 | 0 | 9 |
-| [Prove it: chaos, performance and temporary capacity](#g-prove-it-chaos-performance-and-temporary-capacity) | 7 | 0 | 0 | 7 |
+| [One model for every deployment](#g-one-model-for-every-deployment) | 11 | 0 | 1 | 10 |
+| [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 7 | 1 | 0 | 6 |
+| [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 6 | 1 | 0 | 5 |
+| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 4 | 0 | 1 | 3 |
+| [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 13 | 0 | 0 | 13 |
+| [Argo CD, first class](#g-argo-cd-first-class) | 11 | 0 | 0 | 11 |
+| [Prove it: chaos, performance and temporary capacity](#g-prove-it-chaos-performance-and-temporary-capacity) | 9 | 0 | 0 | 9 |
+| [Serverless, one kind of target](#g-serverless-one-kind-of-target) | 9 | 0 | 0 | 9 |
 
 ### One model for every deployment {#g-one-model-for-every-deployment}
 
@@ -138,6 +139,36 @@ Launchway reads your application and tells you what stands in the way of a safe 
 
 [Area page](zero-downtime.md)
 
+#### One Launch lifecycle for every target {#one-launch-lifecycle-for-every-target}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Launch to a cluster, a host group, an image-based fleet or a function passes through the same states, shown with the same words. Requested, Preflight, waiting for Clearance, Holding for the lock, Airborne (applying, then shifting), Overwatch, and then Mission complete, Failed, Scrubbed or Returned to base. Image-based hosts add a staged state between applying and shifting, because activation is a reboot. A machine that is offline during a Launch is shown as waiting for that host rather than silently missed.
+
+**Depends on:** Delivery plans
+
+[Area page](zero-downtime.md)
+
+#### A zero-downtime proof on every Launch {#a-zero-downtime-proof-on-every-launch}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every Launch records whether it kept its promise: the fewest healthy copies against the floor, and failed requests during the shift against the baseline. Launchway measures, from readiness and from the traffic sources a team already has, how many copies were healthy and serving at every moment of the Launch and how many requests failed compared with the same time before it. The Launch record shows the answer in one sentence with its evidence, and says not measured, never zero, when a source is missing.
+
+**Depends on:** Proofs; Guarded queries for monitoring data
+
+[Area page](zero-downtime.md)
+
+#### A floor of healthy copies {#a-floor-of-healthy-copies}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each service in an Airfield has a floor of healthy, serving copies that no Launch may go below, set as a Standing order and on by default for protected Airfields. Every strategy plans its batches from the floor; Preflight refuses a plan that would break it and says why (for example two copies with a floor of two cannot roll one at a time without a surge). The floor is also written as the platform's own disruption limit where one exists, so node maintenance keeps it too.
+
+**Depends on:** Delivery plans; Safeguards on by default
+
+[Area page](zero-downtime.md)
+
 ### Rollouts: every strategy, with an assistant {#g-rollouts-every-strategy-with-an-assistant}
 
 First phase. Complete coverage of Argo Rollouts, created, seen and controlled from one panel.
@@ -192,6 +223,26 @@ Choose an earlier version and return to it, with what that will change spelled o
 
 [Area page](zero-downtime.md)
 
+#### A Clearance between Pathfinder steps {#a-clearance-between-pathfinder-steps}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Pathfinder plan can stop between two steps for a person's Go, with the step's evidence on the card, holding no Station while Overwatch keeps watching. Weights stay where they are and the server keeps the Launch's state; any Station that serves the target continues after the Go. A fail while the card waits returns to base at once. The card shows the step's verdict, charts, per-subset verdicts, exposure and the next step. It is answered by a Controller who did not start the Launch; on expiry the plan returns to base by default.
+
+**Depends on:** Every rollout strategy
+
+[Area page](zero-downtime.md)
+
+#### Shadow traffic as a strategy {#shadow-traffic-as-a-strategy}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Send a copy of live requests to the new version, discard its answers, and compare errors and latency with the stable version before any user is served by it. Only where the gateway or mesh can copy requests, and only for requests marked safe to repeat (reads by default); a team opts a write path in only with a sandbox behind it. Off by default. The share copied is capped, and the copy stops by itself when the new version's errors or the stable version's latency rise.
+
+**Depends on:** Route a subset of clients or requests
+
+[Area page](zero-downtime.md)
+
 ### Guarded after the deploy, and back to stable by itself {#g-guarded-after-the-deploy-and-back-to-stable-by-itself}
 
 First phase. The release is not finished when the last step is; the watch carries on and can return.
@@ -240,25 +291,25 @@ Lengthen a watch during a risky week, end it early, or override a return, each w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Deployments, toggles, configuration and secrets on a single timeline, so what changed before it broke has an answer. It is the first place to look when a proof fails.
+Deployments, toggles, configuration and secrets on a single timeline, so what changed before it broke has an answer. It is the first place to look when a proof fails. It extends the timeline built and owned by 'A timeline of changes and symptoms' (Milestone 3), a reader of the one record, with the kinds that land in this milestone; there is one timeline component, not two.
 
-**Depends on:** The watch.
+**Depends on:** The watch; A timeline of changes and symptoms
+
+[Area page](zero-downtime.md)
+
+#### A break-glass return when Launchway is down {#a-break-glass-return-when-launchway-is-down}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Commander can return a target to an earlier release from its launch Station while Launchway is unreachable; the return is recorded and reviewed when the server is back. Each launch Station keeps the last desired sets the server recorded and signed for its targets. A break-glass key, issued per Station to named Commanders in advance, lets one re-apply an earlier signed set, and nothing else: no release the server never recorded can be launched this way. The Station writes a signed journal of who, why and what changed; when the server returns it records a Launch made while it was away, judges Standing orders after the fact (a violation is a finding), and opens a Clearance afterwards on a protected Airfield.
+
+**Depends on:** Launch from the Depot when the code host is down; Return to base that nothing can block
 
 [Area page](zero-downtime.md)
 
 ### Levers: toggles, configuration and secrets {#g-levers-toggles-configuration-and-secrets}
 
 Second phase. Everything that can change behavior without a new build is versioned, rolled out and returnable.
-
-#### A toggle service in the model {#a-toggle-service-in-the-model}
-
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
-
-Toggles are known to Launchway, shown beside deployments on an Airfield's timeline, and offered for reverting with a Return to base. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
-
-**Depends on:** Switches.
-
-[Area page](zero-downtime.md)
 
 #### Kill switches and automatic toggle-back {#kill-switches-and-automatic-toggle-back}
 
@@ -267,16 +318,6 @@ Toggles are known to Launchway, shown beside deployments on an Airfield's timeli
 A toggle marked as a Master switch has a safe value, and turning it to that value is never held for an approval. On the main branch. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
 
 **Depends on:** The watch; a toggle service in the model.
-
-[Area page](zero-downtime.md)
-
-#### Stale-toggle hygiene {#stale-toggle-hygiene}
-
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
-
-Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. A suggested pull request that removes the check and the toggle is still to come.
-
-**Depends on:** A toggle service in the model.
 
 [Area page](zero-downtime.md)
 
@@ -318,9 +359,9 @@ Later phases. The same journey for virtual machines, bootable hosts, functions a
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Pools of virtual machines or hosts launched in batches behind a load balancer, with draining first. The first load balancer supported is a popular open-source one, then one cloud balancer.
+Pools of virtual machines or hosts launched in batches behind a load balancer, with draining first. The first load balancer supported is a popular open-source one, then one cloud balancer. Each pool states a floor of hosts that must keep serving; a Launch that would cross it is refused before it starts, and a host that cannot be returned is kept out of rotation and reported, never silently put back.
 
-**Depends on:** Shifters.
+**Depends on:** Shifters; Fleet Launches scheduled by the server
 
 [Area page](zero-downtime.md)
 
@@ -338,19 +379,9 @@ Send test requests to a new host before any user reaches it, and read the result
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Roll a new host image across a fleet in batches with a watch and a return. It joins the image work in Milestone 3.
+Roll a new host image across a fleet in batches with a watch and a return. The image is staged on every host first, then hosts reboot in batches inside the fleet's reboot window, drained first, checked after boot, and admitted or booted back into the previous image. A fleet of one says it will drop requests while it reboots. It joins the image work in Milestone 3.
 
-**Depends on:** Hosts and pools.
-
-[Area page](zero-downtime.md)
-
-#### Serverless and managed container services {#serverless-and-managed-container-services}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-Shift traffic between function versions and managed services using aliases and revisions, with proofs per version. Provider interfaces are tested against emulators in the automated tests.
-
-**Depends on:** Delivery plans.
+**Depends on:** Hosts and pools; Image-based hosts
 
 [Area page](zero-downtime.md)
 
@@ -391,6 +422,66 @@ Roll out a job that must run exactly once with a hand-over rather than an overla
 Expand-then-contract steps for data, with a check that the old and new versions can both read what is written. It leans on the database work in Milestone 10.
 
 **Depends on:** Hosts and pools.
+
+[Area page](zero-downtime.md)
+
+#### A guard on each host that goes back by itself {#a-guard-on-each-host-that-goes-back-by-itself}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+After a reboot into a new image, a small check on the host decides within a set time whether the host is healthy, and boots the previous image if it is not, even when the host cannot reach Launchway. The host tool does not do this on its own. The guard runs the checks the fleet names, reports its verdict when it can, and its return is written to the record as a Return to base made by the host.
+
+**Depends on:** A host agent that pulls its work; Image-based hosts.
+
+[Area page](zero-downtime.md)
+
+#### Download and reboot windows {#download-and-reboot-windows}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A fleet states when its hosts may download a new image and when they may reboot, and a Launch stages early and reboots only inside the window. A Hold stops reboots as it stops any Launch. Return to base is never held by a window: going back is always allowed, and the page says the host will reboot now.
+
+**Depends on:** Fleets of bootable-image hosts.
+
+[Area page](zero-downtime.md)
+
+#### More load balancers for host pools {#more-load-balancers-for-host-pools}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Drain and weight hosts through more kinds of load balancer: the open-source one that works today, then a cloud load balancer, then a general adapter for any balancer with an admin interface. Each adapter has the same two verbs, take out and put back with a weight, and is tested against a real or emulated balancer. A fleet with no balancer must say so, and its page states that hosts drop requests while they change.
+
+**Depends on:** Hosts and pools.
+
+[Area page](zero-downtime.md)
+
+#### Proofs between host batches {#proofs-between-host-batches}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Any proof, from a health check to a metrics comparison, can run between batches of a fleet Launch and stop it before the next host is touched. Today a verification hook between steps exists only inside the library. This puts it in the pipeline, with the same verdicts as every proof: pass, fail or not enough data.
+
+**Depends on:** Proofs; Fleet Launches scheduled by the server.
+
+[Area page](zero-downtime.md)
+
+#### Hosts that were away catch up safely {#hosts-that-were-away-catch-up-safely}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A host that was offline during a Launch is listed as behind, and when it returns it takes the release its Airfield wants now, after the same checks, never a release that was since returned. A Launch to a fleet states how long it waits for absent hosts. After that it completes with the absent hosts named. A host that comes back after a Return to base takes the returned release.
+
+**Depends on:** A host agent that pulls its work.
+
+[Area page](zero-downtime.md)
+
+#### Cloud instance groups as fleets {#cloud-instance-groups-as-fleets}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A group of cloud machines that the cloud scales is a fleet whose hosts come from the cloud, launched step by step by Launchway with the cloud's own health gates left on underneath. Launchway drives each step, records it and returns it; the cloud's replacement of unhealthy machines keeps working. New machines started by scaling take the release the Airfield wants.
+
+**Depends on:** Hosts added from an inventory source; Hosts and pools.
 
 [Area page](zero-downtime.md)
 
@@ -442,9 +533,9 @@ Open any resource to see its events, manifest, desired against live, and logs in
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Sync with a preview, refresh, stop a stuck sync, run a resource action, and pause automatic sync during an incident with a banner and a reminder. A button appears only if it will work, and each press is recorded.
+Sync with a preview, refresh, stop a stuck sync, run a resource action, and pause automatic sync during an incident with a banner and a reminder. A button appears only if it will work, and each press is recorded. These work on every controller application, launched by Launchway or not, each with a sentence stating its consequence before it runs, and under Launchway's roles: Observer sees the tree, the operator role syncs, refreshes and runs actions (with a reason on a protected Airfield), a Commander changes the controller's configuration. The controller's own interface can be left off, so access is granted in one place and recorded in one Logbook.
 
-**Depends on:** See every application and its tree.
+**Depends on:** See every application and its tree
 
 [Area page](delivery.md)
 
@@ -488,6 +579,26 @@ The same panels over another GitOps engine or plain apply and Helm, through an a
 
 [Area page](delivery.md)
 
+#### Applications and ApplicationSets from the interface {#applications-and-applicationsets-from-the-interface}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Generate applications and sets, and compose app-of-apps, from a guided screen. The generated manifests are shown as a change you review and merge, so GitOps remains the record. It is the guided screen of Create and change through Git.
+
+**Depends on:** Argo CD in depth; Create and change through Git
+
+[Area page](delivery.md)
+
+#### Health checks set up from the interface {#health-checks-set-up-from-the-interface}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Write and test custom health checks for resources without editing configuration by hand. A check shows its result against live resources before you save it, and is proposed to the controller's configuration as a change in Git.
+
+**Depends on:** Argo CD in depth; See every application and its tree
+
+[Area page](delivery.md)
+
 ### Prove it: chaos, performance and temporary capacity {#g-prove-it-chaos-performance-and-temporary-capacity}
 
 First phase for the first Station, later for more tools. Each is a plan or a proof, so they add no new concepts.
@@ -516,9 +627,9 @@ Experiments are off until switched on, allowed only where declared, bounded in w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Scheduled game days, rehearsals with a fault, and a scorecard of what the system survived. Findings such as “never survived losing a replica” join the findings list.
+Scheduled game days, rehearsals with a fault, and a scorecard of what the system survived. Findings such as “never survived losing a replica” join the findings list. A survival claim's last proof is a fact Standing orders read, so a production Launch can require every claim proved within a set number of days; a Return to base is never held by it.
 
-**Depends on:** Drills as plans.
+**Depends on:** Drills as plans
 
 [Area page](zero-downtime.md)
 
@@ -559,6 +670,120 @@ Raise a namespace’s quota or a workload’s size for the length of a test, the
 Require a passing performance result before a promotion to production, advisory until a level makes it required. Tests run only against Airfields declared for performance or not production.
 
 **Depends on:** Baselines and regression detection.
+
+[Area page](zero-downtime.md)
+
+#### Outside chaos tools as Drill steps {#outside-chaos-tools-as-drill-steps}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Run a fault-injection engine a team already uses as a Drill step whose result feeds the same proofs and scorecard. The same authorization, limits and restore rules apply as for built-in faults.
+
+**Depends on:** Chaos authorization and safety.
+
+[Area page](zero-downtime.md)
+
+#### Performance results in the Debrief {#performance-results-in-the-debrief}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Percentiles, throughput, errors and saturation from a performance proof appear in the Debrief and the release report, beside the last release's. Not enough data is said plainly and never passes.
+
+**Depends on:** Performance tests as proofs
+
+[Area page](quality-and-reports.md)
+
+### Serverless, one kind of target {#g-serverless-one-kind-of-target}
+
+Later phase. Functions and managed container services, on your own cluster or on a public cloud, launched with one model: a version by digest, traffic moved by weights, Overwatch, and Return to base by moving the weights back. Milestone 3 keeps the cloud connection and the description that lands as a function; Milestone 11 keeps the scaling view.
+
+#### Serverless and managed container services {#serverless-and-managed-container-services}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Shift traffic between function versions and managed services using aliases and revisions, with proofs per version. Provider interfaces are tested against emulators in the automated tests. It is the shifter for every serverless platform; the other items of this group build on it.
+
+**Depends on:** Delivery plans.
+
+[Area page](zero-downtime.md)
+
+#### Serverless and managed instance groups {#serverless-and-managed-instance-groups}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Functions, container services and managed instance groups as deploy targets. Rollouts, health checks and Returns to base follow the same model as on Kubernetes. Functions and container services are launched by this group; managed instance groups are launched as fleets (see Cloud instance groups as fleets).
+
+**Depends on:** Cloud targets: AWS, Google Cloud and Azure.
+
+[Area page](delivery.md)
+
+#### Serverless on-premises and in the cloud {#serverless-on-premises-and-in-the-cloud}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Knative revisions as a shifter with per-revision proofs, and eventing shown on the map. Function frameworks come later. The scaling of these workloads stays in the scaling view of Milestone 11.
+
+**Depends on:** Shifters.
+
+[Area page](kubernetes-vms.md)
+
+#### Edge functions as a serverless family {#edge-functions-as-a-serverless-family}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Launch edge functions like other serverless targets: a bundle by digest, a new version per Launch, weights or one region at a time, a preview address, and a return to the previous version. The record keeps the bundle digest and the platform's version identifier. Overwatch starts judging only after the active version has been read back from a sample of regions. Bundle size and time limits are probed and checked at Preflight. Data kept at the edge is outside the version and the Launch says so.
+
+**Depends on:** A new version for every serverless Launch; Platform limits probed before a serverless Launch
+
+[Area page](zero-downtime.md)
+
+#### A new version for every serverless Launch {#a-new-version-for-every-serverless-launch}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each Launch creates an immutable version of the function or service from a digest, with no traffic, and records the version, the digest and the settings it carries. A tag is resolved to a digest before the version is made. Settings and secret references that change with the version are part of the release, so going back restores them too.
+
+**Depends on:** Serverless and managed container services.
+
+[Area page](zero-downtime.md)
+
+#### Return to base by weights {#return-to-base-by-weights}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Going back on a serverless target moves all traffic to the previous version in one change of weights: seconds, no build, no download. The previous version is kept until the stable state moves on. Return to base is never held by Clearance, a Hold or a window, and the record says who or what moved the weights.
+
+**Depends on:** A new version for every serverless Launch; The stable state.
+
+[Area page](zero-downtime.md)
+
+#### Warm before weight {#warm-before-weight}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Before a new version takes real traffic, Launchway warms it with test requests or ready capacity, so the first users do not pay the cold start and the proofs are not misled by it. Cold-start time is measured and shown on its own, not mixed into the version's latency. Ready capacity is offered only where the platform has it, with its cost shown.
+
+**Depends on:** A new version for every serverless Launch.
+
+[Area page](zero-downtime.md)
+
+#### Proofs that wait for enough requests {#proofs-that-wait-for-enough-requests}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+On a target that scales to zero, each step of a Launch is judged after a set number of requests as well as a set time, and says not enough data rather than pass. Test transactions can supply the requests a quiet function lacks. The step's request count is shown next to its verdict.
+
+**Depends on:** Proofs.
+
+[Area page](zero-downtime.md)
+
+#### Versions kept while they may be needed {#versions-kept-while-they-may-be-needed}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Launchway keeps the stable version and the one before it from being removed by the platform's own cleanup, and removes older versions by a rule you can see. A version that a Return to base would need is never removed. Cleanup is written to the record.
+
+**Depends on:** A new version for every serverless Launch.
 
 [Area page](zero-downtime.md)
 

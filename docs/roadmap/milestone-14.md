@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 14 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 6 planned · 6 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 10 planned · 10 capabilities</p>
 
 Developers use Launchway from the editor they already have, and companies connect their own systems through published extension points, so nothing in the product only its authors can use.
 
@@ -40,7 +40,8 @@ flowchart LR
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [The editor](#g-the-editor) | 3 | 0 | 0 | 3 |
-| [Extension points](#g-extension-points) | 3 | 0 | 0 | 3 |
+| [Extension points](#g-extension-points) | 6 | 0 | 0 | 6 |
+| [Your phone](#g-your-phone) | 1 | 0 | 0 | 1 |
 
 ### The editor {#g-the-editor}
 
@@ -78,7 +79,7 @@ Your systems connect; the product stays general.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Site-specific systems connect through documented, versioned extension points that run outside the product, so one company's special cases never live in it. A check in the build keeps company-specific names out of the product.
+Site-specific systems connect through documented, versioned extension points that run outside the product, so one company's special cases never live in it. A check in the build keeps company-specific names out of the product. There are five Hardpoints: events out, the API and agent endpoint in, workers that claim work, providers Launchway calls for a capability, and panels in pages. Each has its own scoped credential, a Logbook entry for every use, a rate limit and an off switch, and nothing third-party ever runs inside the server.
 
 [Area page](developer-experience.md)
 
@@ -97,6 +98,50 @@ Agents that Launchway does not control connect with a lower autonomy ceiling, th
 Identities, events and notifications are the first extension points; richer cards come later because they widen the attack surface. Order is deliberate.
 
 [Area page](developer-experience.md)
+
+#### Workers that claim work {#workers-that-claim-work}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An outside program takes typed work from Launchway the way a Station takes a step, with its own identity, a lease and a result it must report. Stations already work this way. The same lease, heartbeat and refusal rules let an agent, a Detachment or a team's own system do a job without any code inside the server, and every claim and result is on the record.
+
+**Depends on:** Published extension points.
+
+[Area page](developer-experience.md)
+
+#### Providers Launchway calls for a capability {#providers-launchway-calls-for-a-capability}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A capability can be served by an outside program that speaks a small published protocol, held to the same conformance tests as the built-in provider. The provider runs where its owner runs it, Launchway calls it with a narrow credential the capability's page shows, and a provider that stops answering is reported on that page. Today the outside providers are fixed kinds: Git hosts, secret stores, Depots and health sources.
+
+**Depends on:** Published extension points. One provider in charge for each capability.
+
+[Area page](developer-experience.md)
+
+#### Requests from outside systems arrive as proposals {#requests-from-outside-systems-arrive-as-proposals}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A help desk, a form or a monitoring tool posts a signed event, and it becomes a proposal a person accepts, edits or declines. Uses the events-in Hardpoint and the proposals already used by scans, so nothing files tickets by itself and duplicates are grouped.
+
+**Depends on:** Cards and events in, notifications out.
+
+[Area page](developer-experience.md)
+
+### Your phone {#g-your-phone}
+
+An installable phone app built from the same interface, for notices, Clearances and the way back.
+
+#### Launchway on your phone, with one-tap Clearances {#launchway-on-your-phone-with-one-tap-clearances}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An installable phone app built from the same interface: notices, the Tower, decision cards with Go and No-go, and Return to base and Abort. Same permissions and record as the web; a Clearance from the phone may ask for a fresh second factor where a level requires it.
+
+**Depends on:** Decision cards that read on a phone; Light, dark and phone widths.
+
+[Area page](guided-interface.md)
 
 ## What done means
 

@@ -72,9 +72,9 @@ One chart setting gives one primary and two copies, with the primary not reporti
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Continuous archiving, point-in-time restore and an automatic restore drill that includes stored files. A restore that has not been tested is not counted.
+Continuous archiving, point-in-time restore and an automatic restore drill that includes stored files. A restore that has not been tested is not counted. The drill restores the newest point daily and a random point in the window weekly into a throwaway installation, checks secrets, the record chain, stored files and Git refs, and reports time to restore and data at risk. A real restore is a wizard that picks the point on the record's timeline and lists by name the Sorties, pushes and setting changes that will be lost; it restores to a throwaway copy first. Builds on 'Scheduled backups with a restore drill, on any installation'.
 
-**Depends on:** A highly available database mode.
+**Depends on:** A highly available database mode
 
 [Area page](databases.md)
 
@@ -112,9 +112,9 @@ Keep large stored files in a separate database or store so replication stays fas
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A standby installation in another site with a deliberate, rehearsed promotion and the replication lag on the status page. Automatic cross-site promotion is avoided to prevent split-brain.
+A standby installation in another site with a deliberate, rehearsed promotion and the replication lag on the status page. Automatic cross-site promotion is avoided to prevent split-brain. The standby accepts no Station and sends nothing until promoted. Promotion raises the record's generation number so the old primary, Stations and Launch Stations refuse older work; Stations and Detachments reconnect by address with their own keys and deliver spooled results; the wizard lists by name what the gap loses. An isolated promotion rehearsal runs weekly on a Patrol, and a full switch-over and back runs in a window under a Clearance.
 
-**Depends on:** A highly available database mode.
+**Depends on:** A highly available database mode
 
 [Area page](databases.md)
 

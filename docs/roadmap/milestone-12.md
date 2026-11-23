@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 9 available · 1 in progress · 28 planned · 38 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 9 available · 1 in progress · 37 planned · 47 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -44,11 +44,12 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Encryption at rest](#g-encryption-at-rest) | 9 | 2 | 1 | 6 |
-| [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
-| [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
+| [Encryption at rest](#g-encryption-at-rest) | 10 | 2 | 1 | 7 |
+| [Launchway’s own vault](#g-launchway-s-own-vault) | 5 | 0 | 0 | 5 |
+| [The security program](#g-the-security-program) | 5 | 2 | 0 | 3 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 5 | 0 | 10 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 20 | 5 | 0 | 15 |
+| [Hardening every Station](#g-hardening-every-station) | 1 | 0 | 0 | 1 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -116,9 +117,9 @@ A plain report of what is encrypted, what is not, and the one step to fix each g
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-the Logbook forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping.
+the Logbook forms a chain so a deletion or an edit shows. The chain head can be exported for safekeeping. One chain per Base over the one record, shared with Tamper-evident audit and SIEM export in Milestone 7. Checkpoints are signed by the Base, can be timestamped by an authority the Base chooses, and a verify command works offline on an export.
 
-**Depends on:** Encrypt stored secrets and tokens.
+**Depends on:** Encrypt stored secrets and tokens
 
 [Area page](security-trust.md)
 
@@ -140,6 +141,16 @@ For the hosted service, keep logs and Cargo under a key you hold, and prove dele
 
 [Area page](security-trust.md)
 
+#### A data key for every Base {#a-data-key-for-every-base}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each Base's data is sealed under data keys of its own, so deleting a Base ends with destroying its keys. Today data keys are per purpose and per Wing, bound to the installation, Wing, table, column and row. Adding the Base to the key and to the bound data means a value copied into another Base never opens, and key destruction makes every copy of a deleted Base, backups included, unreadable.
+
+**Depends on:** An installation key and a key hierarchy.
+
+[Area page](security-trust.md)
+
 ### Launchway’s own vault {#g-launchway-s-own-vault}
 
 After encryption at rest. A minimum to install, and always optional.
@@ -158,9 +169,9 @@ Keep secrets in Launchway with policies and an audit trail, sealed by the same k
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for Stations; this widens it.
+Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix. Vault and OpenBao work today for Stations; this widens it. One store interface on the Station (resolve, list names, versions, health, lease and revoke); a script-backed store for anything else; every backend passes one conformance suite and the parity matrix is generated from its results at each release.
 
-**Depends on:** A built-in secret store.
+**Depends on:** A built-in secret store
 
 [Area page](security-trust.md)
 
@@ -168,7 +179,7 @@ Use a popular secret backend instead, with the same behavior through one interfa
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Short-lived credentials issued to a run for the time it needs them. A step never holds a long-lived secret.
+Short-lived credentials issued to a run for the time it needs them. A step never holds a long-lived secret. Uses the same issuer as Cloud sign-in per step in Milestone 1.
 
 **Depends on:** A built-in secret store.
 
@@ -179,6 +190,16 @@ Short-lived credentials issued to a run for the time it needs them. A step never
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Every dependency has a built-in default and a popular external option, with the trade-offs written down. The only things required remain a database and Git.
+
+[Area page](security-trust.md)
+
+#### Secret release rules by branch and kind of Sortie {#secret-release-rules-by-branch-and-kind-of-sortie}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A store releases a secret only to the branches, Airfields and kinds of Sortie its rule names, judged on the Station. A condition in the one expression language over branch, protection, kind of Sortie (restricted, re-run, draft, debug, Patrol), trigger and Airfield; facts arrive signed in the lease and the Station's accept section stays the hard limit; a refusal names the store, key and condition.
+
+**Depends on:** Secrets that stay with Stations
 
 [Area page](security-trust.md)
 
@@ -220,6 +241,14 @@ Independent testing, a response runbook and a public summary of what was found. 
 
 [Area page](security-trust.md)
 
+#### Access, blast radius and default stated before a capability ships {#access-blast-radius-and-default-stated-before-a-capability-ships}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every new capability says what it can reach, what breaks if it is abused, and what is on by default, before it merges. A check in the build refuses a capability without the statement.
+
+[Area page](security-trust.md)
+
 ### Certification, in an honest order {#g-certification-in-an-honest-order}
 
 Practices first, then certificates earned. Launchway never claims one it has not earned.
@@ -236,7 +265,7 @@ The open-source security best-practices badge and a public scorecard with a targ
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Signed provenance for every release, then a build platform that isolates runs and keeps signing keys from build steps. Anyone can verify it.
+Signed provenance for every release, then a build platform that isolates runs and keeps signing keys from build steps. Anyone can verify it. Level three: the build record is written from what the server observed and signed by a signer role no build Station can reach; level-three builds run on isolated Ramps whose Stations take one Sortie and are destroyed; the record is attached to the image in the Depot and the trust policy can require it at Launch and admission; optionally a second isolated Station rebuilds and compares digests.
 
 [Read the documentation](../security/supply-chain.md) · [Area page](security-trust.md)
 
@@ -244,9 +273,9 @@ Signed provenance for every release, then a build platform that isolates runs an
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A specialist firm audits the server, sign-in, Station protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault.
+A specialist firm audits the server, sign-in, Station protocol, encryption and chart defaults, and a summary is published. It follows encryption at rest and the vault, and includes the Standing orders judge, supply-chain verification and the Detachment.
 
-**Depends on:** An installation key and a key hierarchy.
+**Depends on:** An installation key and a key hierarchy
 
 [Area page](security-trust.md)
 
@@ -254,9 +283,9 @@ A specialist firm audits the server, sign-in, Station protocol, encryption and c
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A build variant that uses a validated cryptographic module, claimed only for that variant. The default build never claims it.
+A build variant that uses a validated cryptographic module, claimed only for that variant. The default build never claims it. The variant covers the server, the Stations and the Detachment, uses only a module validated under the published FIPS 140-3 standard, and states which variant it is wherever it reports its version.
 
-**Depends on:** Rotation without downtime.
+**Depends on:** Rotation without downtime
 
 [Area page](security-trust.md)
 
@@ -342,7 +371,7 @@ A new critical or high vulnerability with a fix, or a secret, blocks a merge to 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Waive a finding with a reason, an owner and an end date, and optionally say why it cannot be exploited, in a format you can publish. When an exception expires the finding counts again.
+Waive a finding with a reason, an owner and an end date, and optionally say why it cannot be exploited, in a format you can publish. When an exception expires the finding counts again. One exception model for findings and Standing order rules: a kind picked from a list, an owner, a work item, an end; when it ends the finding or rule counts again.
 
 [Area page](repository-standards.md)
 
@@ -386,7 +415,7 @@ The results of commercial Cargo repositories, code-analysis and security product
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself.
+See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself. Each level is scored against the published top-ten list of CI/CD security risks and each repository against a published repository-security benchmark, each control reading one recorded fact with its one fix. Includes verdicts across a level: denials, warnings, Clearances and waivers by rule and Flight, waivers ending soon, rules ready to enforce and gaps, exportable and readable by an auditor grant.
 
 [Area page](repository-standards.md)
 
@@ -394,7 +423,9 @@ See a score with what moves it, the top risks, repositories without a profile an
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A report for a period shows which checks were on, evidence that they ran, findings and fixes, and exceptions. Evidence support only; not a certification.
+A report for a period shows which checks were on, evidence that they ran, findings and fixes, and exceptions. Built from the same evidence packs and Logbook as everything else. Evidence support only; not a certification.
+
+**Depends on:** An evidence pack for every release
 
 [Area page](repository-standards.md)
 
@@ -405,6 +436,68 @@ A report for a period shows which checks were on, evidence that they ran, findin
 On the hosted service checks run on your Stations, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
 
 [Area page](repository-standards.md)
+
+#### Images inspected like code {#images-inspected-like-code}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The Inspection scans built images and reports into the same findings list and gates. Today the image step scans; the Inspection's own image check is not available yet.
+
+**Depends on:** Findings in one list
+
+[Area page](repository-standards.md)
+
+#### Steps a level adds to every Sortie {#steps-a-level-adds-to-every-sortie}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A level adds its own pinned steps to every Sortie below it, as the Inspection's steps are added today. A Standing order names a pinned Maneuver and its place (start, after image steps, before deploy steps, end); the steps are marked on the graph, cannot be removed or reordered below, run in the sandbox and see no secret unless declared and released.
+
+**Depends on:** Standing orders for every repository
+
+[Area page](repository-standards.md)
+
+#### AI evaluation results as a gate {#ai-evaluation-results-as-a-gate}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Evaluation reports of AI features are read like test results, shown in the Debrief against the last release, and can gate a Launch with a floor per metric and per Airfield. The team's evaluation tool runs as a step; Launchway reads one documented report format; too few cases is not enough data, never a pass; waivers as for every Standing order.
+
+**Depends on:** Quality gates as Standing orders
+
+[Area page](repository-standards.md)
+
+#### Quality gates as Standing orders {#quality-gates-as-standing-orders}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+No new failures, coverage of changed lines, no new severe findings of any kind, no expired quarantine, and a performance baseline, as catalog rules set by level with locks and waivers. Judged at the merge point and before each Launch; offered in report mode first; never judged on a Return to base. A step's own fail_under keeps working.
+
+**Depends on:** Policy gates; Exceptions with an owner and an expiry
+
+[Area page](quality-and-reports.md)
+
+#### Production changes traced to a work item {#production-changes-traced-to-a-work-item}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A typed Standing order that reports, or where a level requires it blocks, a Launch to production whose changes name no reviewed work item. Advisory by default. Judged before a Launch with every other rule; never judged on a Return to base.
+
+**Depends on:** Issues and work items.
+
+[Area page](repository-standards.md)
+
+### Hardening every Station {#g-hardening-every-station}
+
+Every executor enforces the same sandbox, every Station proves who it is, and builds reach only what they need, with every refusal shown.
+
+#### Every Station proves who it is {#every-station-proves-who-it-is}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+No shared token: every Ramp requires each Station's own key by default. Stations on the shared token are listed with the one step to enroll them; the token is retired after a stated notice.
+
+[Area page](pipelines.md)
 
 ## What done means
 

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 4 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 7 available · 1 in progress · 9 planned · 17 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 5 available · 3 in progress · 16 planned · 24 capabilities</p>
 
 Images, Helm charts and other OCI Cargo stored beside the code, under the same permissions and policies.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [The registry](#g-the-registry) | 17 | 7 | 1 | 9 |
+| [The registry](#g-the-registry) | 24 | 5 | 3 | 16 |
 
 ### The registry {#g-the-registry}
 
@@ -54,13 +54,13 @@ Images, charts and other Cargo stored beside the code, under the same permission
 
 #### A built-in OCI registry {#a-built-in-oci-registry}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
+Store container images, Helm charts and other OCI Cargo in Launchway, passing the OCI conformance suite, with nothing else to run. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy. Tested with the common command-line clients for images and charts, a client library, and every endpoint class, on SQLite and PostgreSQL. The official OCI conformance suite has not been run yet; running it is the next step before conformance is claimed.
 
 **Depends on:** Built-in Cargo storage.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### Helm charts and other artifacts as first-class {#helm-charts-and-other-artifacts-as-first-class}
 
@@ -136,9 +136,9 @@ Keep unchecked images away from sandboxed builds, and fetch every image through 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Copy images to and from other registries on a rule. Useful for a disaster-recovery copy or a customer-facing mirror.
+Copy images to and from other registries on a rule. Useful for a disaster-recovery copy or a customer-facing mirror. A copy carries the item's signatures, contents lists, provenance and scan results with it, and the signature is checked at the far end before the copy is called done. A rule names the repositories and tag patterns, the direction and the schedule or 'on arrival'. The Depot page shows each rule's lag, last copy and last error, and a rule that falls behind raises an alert.
 
-**Depends on:** A built-in OCI registry.
+**Depends on:** A built-in OCI registry; Signing and verification
 
 [Area page](registry.md)
 
@@ -156,9 +156,9 @@ A packages tab in each Flight that is a filtered view of the Depot, with per-pac
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Sign images on build and verify signatures on pull and deploy. On the main branch. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.
+Sign images on build and verify signatures on pull and deploy. On the main branch: signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built: verifying them against the Base's trust policy at every Launch, on every kind of target, and in the cluster's admission policy.
 
-**Depends on:** A built-in OCI registry.
+**Depends on:** A built-in OCI registry
 
 [Area page](registry.md)
 
@@ -166,9 +166,9 @@ Sign images on build and verify signatures on pull and deploy. On the main branc
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Language and system packages, such as for common programming languages, with cleanup rules and quotas. Added in order of demand, with a shared storage model.
+Language and system packages under one model, with cleanup rules and quotas: generic files and release assets, Go modules, npm, Python, Maven and Gradle, NuGet, Rust crates, RubyGems, Helm charts with a classic index, the two common Linux system package formats, and Terraform modules and providers. Added in order of demand, with a shared storage model: retention, immutability, promotion between stages, provenance and signatures, scanning, quotas and per-Squadron permissions are one model across all kinds, with proxy and cache of each upstream. Proposed order: Go and npm, then Maven and Gradle, Python, NuGet, Rust crates and RubyGems, then the Linux system packages and Terraform. Each format has three kinds of repository: your own (you publish), cached (a copy of one outside source) and one address that reads your own first and then the cached ones in a fixed order. A name published in your own repository is never resolved from a cached one, so nobody can slip in a public package with your name. A published version can never be overwritten; it can be withdrawn, which keeps it for exact pins and lock files but stops it being chosen for a range. Retention, quotas, permissions, Inspection and provenance are the same model as for images.
 
-**Depends on:** A built-in OCI registry.
+**Depends on:** A built-in OCI registry; Native endpoints for package clients
 
 [Area page](registry.md)
 
@@ -206,9 +206,79 @@ A library page shows which Flights fetched which version and which are behind. C
 
 #### The Depot: one area for everything stored {#the-depot-one-area-for-everything-stored}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. The old Images tab becomes one section of it.
+Container images, charts, packages, operating-system and machine images, build caches, state and files are browsed in one searchable place with folders, vulnerabilities, signatures, a proxy cache, replication and policies. The old Images tab becomes one section of it. Built: the Depot area with Images, Components and the built-in store; the old Images address leads here. Charts, files, packages, machine images, build caches, state, the proxy cache and replication join as their own items land; each keeps its own status. The area says plainly when the built-in store is off.
+
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
+
+#### Provenance and contents verified before every Launch {#provenance-and-contents-verified-before-every-launch}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Only what your Sorties built and your people cleared can run, on Kubernetes, machines, image-based hosts and functions. The build record and the list of contents are checked against the Base's trust policy at the before-Launch point and again where the target runs.
+
+**Depends on:** Signing and verification
+
+[Area page](registry.md)
+
+#### Keyless signing for images {#keyless-signing-for-images}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Sign with the Sortie's short-lived identity instead of a stored signing key. The Base's own key stays the default so air-gapped installations work.
+
+**Depends on:** Workload identity and dynamic credentials
+
+[Area page](registry.md)
+
+#### Per-package permissions for every format {#per-package-permissions-for-every-format}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Who may read, publish, withdraw and delete is set per package or per repository as role bindings at each level, the same for every format, and protected packages refuse overwrite and delete. A binding names a person, group or Squadron, a role (viewer, operator, admin) and a scope (a level, a repository, or a package name pattern). The nearer binding can narrow, never widen, what a level locked. Protected packages and tag patterns are set at a level and cannot be removed nearer. A Sortie's credential carries only the publish right for the packages its Flight owns. Every check answers the same way for a container image, a Go module and a Debian package.
+
+**Depends on:** Per-project packages and permissions; More package formats.
+
+[Area page](registry.md)
+
+#### Retention keeps every version a Return to base may need {#retention-keeps-every-version-a-return-to-base-may-need}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Retention never deletes the digest an Airfield runs, the digests in each Airfield's recent stable states, any digest a published release references, nor what a running host or function reports, so a Return to base always finds what it returns to. How many stable states are kept is a setting per Airfield with a floor a level can lock. The retention preview names each digest kept for this reason and the Airfield that needs it. The protected set is worked out from the record and the software graph just before each sweep, and the retention preview names each digest kept and the reason (runs in, stable state of, referenced by release, reported by host). A published release keeps its digests for as long as the release is kept.
+
+**Depends on:** Retention that protects what runs; The stable state; One graph from code to hardware
+
+[Area page](registry.md)
+
+#### Search across everything the Depot holds {#search-across-everything-the-depot-holds}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Find anything in the Depot by name, version, tag, digest, a file inside a package or image layer, a component at a version, an advisory, a license or who uses it, filtered by what you may read. One search from the Depot page, the do bar, the HTTP API and the command line, with the same answers. It reads records the Depot already keeps (names, digests, contents lists, licenses, findings, fetch records) and the file list Inspection writes when it unpacks an item; there is no separate search service. Rights are checked at query time and an item you may not pull is neither listed nor counted. Infrastructure state is found by stack and resource address only, never by value. Filters are picked: kind, level, format, runs in an Airfield, severity of findings, signed or not.
+
+**Depends on:** The Depot: one area for everything stored; More package formats.
+
+[Area page](registry.md)
+
+#### Infrastructure state as a kind the Depot holds {#infrastructure-state-as-a-kind-the-depot-holds}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Infrastructure state versions appear in the Depot beside everything else stored, with quotas, retention, search by stack and resource address, and reads that are permissioned and recorded. The state store itself is built (State and locking built in): locks, sealed versions with who and which Sortie, encryption, and Return to base of a version. This item adds a separate right to read raw state, given per stack, with every raw read in the Logbook; retention that never removes a version a cleared plan was made from; restore of an earlier version as a new version under the lock, cleared in protected Airfields; and served by when a stack keeps its state in its own backend.
+
+**Depends on:** State and locking built in; State you can read safely.
+
+[Area page](platform-services.md)
+
+#### An event when something arrives in the Depot {#an-event-when-something-arrives-in-the-depot}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every push, promotion and deletion in the Depot is an event that can start a Sortie, call a webhook or notify a person. A pipeline declares it beside its other triggers (a new tag of a base image, a chart version, a package version), filtered in the same expression language. Each event carries the digest, the repository, the Flight and who or what pushed it. Webhooks for Depot events are not wired today; pushes and deletes are only in the Logbook.
+
+**Depends on:** A built-in OCI registry; A triggers page.
 
 [Area page](registry.md)
 

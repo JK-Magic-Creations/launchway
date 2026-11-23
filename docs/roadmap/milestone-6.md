@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 6 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 2 in progress · 15 planned · 20 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 3 available · 2 in progress · 24 planned · 29 capabilities</p>
 
 AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.
 
@@ -45,8 +45,8 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Today](#g-today) | 2 | 2 | 0 | 0 |
-| [A gateway of your own](#g-a-gateway-of-your-own) | 13 | 0 | 0 | 13 |
-| [Agents that deliver](#g-agents-that-deliver) | 5 | 1 | 2 | 2 |
+| [A gateway of your own](#g-a-gateway-of-your-own) | 17 | 0 | 0 | 17 |
+| [Agents that deliver](#g-agents-that-deliver) | 10 | 1 | 2 | 7 |
 
 ### Today {#g-today}
 
@@ -200,6 +200,46 @@ Ready-made instructions so agents know how to use Launchway, and a list of agent
 
 [Area page](ai.md)
 
+#### The Wingman drafts a Standing order, tried on the record first {#the-wingman-drafts-a-standing-order-tried-on-the-record-first}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Describe a rule in a sentence; the Wingman fills the wizard, replays it on last month and explains it, and a Commander saves it. Catalog rules first; a custom condition only if custom rules are chosen; every draft starts in report mode; an agent can never save a Standing order; the record keeps the sentence, the draft and who saved it. Every rule gains a plain-words explanation.
+
+**Depends on:** Try a rule against the record
+
+[Area page](ai.md)
+
+#### Instructions for the AI, set by level {#instructions-for-the-ai-set-by-level}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Plain-language instructions every Wingman purpose and agent at a level reads, edited only by a role and lockable from above. Kept at the Base, Wing, Squadron or Flight; add up downward; each change is a recorded difference; each AI answer records the instruction versions it was given; instructions never grant a right and a conflict with a Standing order is shown.
+
+**Depends on:** One inheritance rule for every setting
+
+[Area page](ai.md)
+
+#### The Wingman in every screen {#the-wingman-in-every-screen}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The helper column on every page explains the page without AI and, where its purpose is on, answers questions from the record and the software graph with your permissions and its sources. It says what it could not see, never invents a number, and acts only through the API with the person's rights, recorded as by that person with the Wingman.
+
+**Depends on:** AI off until a purpose is turned on; Code knowledge for AI, with fewer tokens.
+
+[Area page](ai.md)
+
+#### The Wingman fills a form, a person submits it {#the-wingman-fills-a-form-a-person-submits-it}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Run forms, wizards and new items can be filled by the Wingman, each value marked as proposed, and only a person presses the final button. Uses the same typed fields and server checks as any form.
+
+**Depends on:** The Wingman in every screen.
+
+[Area page](ai.md)
+
 ### Agents that deliver {#g-agents-that-deliver}
 
 Documents become stories, stories become changes, and changes reach production when the gates pass, with a person in control.
@@ -216,7 +256,7 @@ An agent runs on a sandboxed machine of your own, works from a story, and opens 
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Levels 1 and 2 are enforced by the server. Levels 3 and 4, which launch, can be written down but are not acted on: they are held to level 2.
+Choose how much an agent may do, per Airfield, from suggesting to delivering; production stays at a low level until a person raises it with a written reason. Levels 1 and 2 are enforced by the server. Levels 3 and 4, which launch, can be written down but are not acted on: they are held to level 2. When they act, they pass the same Preflight, Standing orders and Overwatch as any Launch, and a production Launch always needs a person's Clearance.
 
 [Area page](ai.md)
 
@@ -241,6 +281,56 @@ Route each task to the right model for its difficulty, use plain tools before an
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Assign, review and watch agent work, spend and results in one place, with the same permissions and audit trail as everything else. Bring your own agent: other agents connect through the same published points at a lower autonomy ceiling.
+
+[Area page](ai.md)
+
+#### Ticket to code agent {#ticket-to-code-agent}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An agent that takes a work item to a proposed change. A person always reviews. Moves from Beyond, because assigning a story to an agent is already in progress.
+
+**Depends on:** Agents as users.
+
+[Area page](ai.md)
+
+#### Outside agent tools through the gateway {#outside-agent-tools-through-the-gateway}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Launchway's own AI can call tools that other systems offer over the open agent protocol, each registered as a connection with allow, ask or refuse per tool, level and purpose. Calls are made from a Station marked for AI with the credential from its own store; the server never sees it. Tool descriptions are pinned and a changed tool is refused until re-approved. Arguments follow the purpose's data rules and a call carrying a known secret is refused; results are untrusted text; every call is in the Logbook and counts against the purpose's budget.
+
+**Depends on:** A built-in model gateway; Per-tool rules for the agent endpoint.
+
+[Area page](ai.md)
+
+#### A custom step written with its tests {#a-custom-step-written-with-its-tests}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Describe a step and the Wingman writes it as a real program with its manifest and unit tests, runs them, and proposes it in Git. Keeps logic out of YAML, within the inline-code limits, and never publishes to a library without review.
+
+**Depends on:** A built-in model gateway.
+
+[Area page](ai.md)
+
+#### Checks for AI-written changes {#checks-for-ai-written-changes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Typed Standing orders for pull requests by agents or marked AI-assisted: tests with code, no new dependency or permission without a person, within scope, evidence per criterion. Each reports by default; a level can make it block. Judged at the same point as every other rule.
+
+**Depends on:** Autonomy levels set by policy.
+
+[Area page](ai.md)
+
+#### Per-tool rules for the agent endpoint {#per-tool-rules-for-the-agent-endpoint}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+For each tool of the agent endpoint a level chooses allow, ask a person, or refuse, on top of what the token allows. Asking a person sends a decision card; every answer is on the record.
+
+**Depends on:** Agents as users.
 
 [Area page](ai.md)
 

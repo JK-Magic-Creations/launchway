@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 9 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 31 planned · 31 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 32 planned · 32 capabilities</p>
 
 For every application, Launchway answers one question: can it receive and serve requests right now, from where its users are, and if not, at which step does the route break?
 
@@ -47,7 +47,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Can my application be reached?](#g-can-my-application-be-reached) | 7 | 0 | 0 | 7 |
+| [Can my application be reached?](#g-can-my-application-be-reached) | 8 | 0 | 0 | 8 |
 | [Sources: bring what you already have](#g-sources-bring-what-you-already-have) | 6 | 0 | 0 | 6 |
 | [Sites, failover and protection](#g-sites-failover-and-protection) | 4 | 0 | 0 | 4 |
 | [DNS as part of deployment](#g-dns-as-part-of-deployment) | 6 | 0 | 0 | 6 |
@@ -118,6 +118,16 @@ An assistant discovers what it can see, and each permission you grant, from none
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Addresses, names, ports, protocols, counts and timings only, kept for a time you choose. Payloads are never captured.
+
+[Area page](network.md)
+
+#### Traffic per version during a Launch {#traffic-per-version-during-a-launch}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Radar shows requests, errors and latency from the edge to the workload for the stable and the new version separately, during a Launch and after it. Built from sources the team already has (metrics store, gateway, mesh, load balancer, edge provider), read through the guarded query layer. Where requests are not labeled by version, the view says so and proposes the label as a change. A step with no source is drawn dotted and given no number.
+
+**Depends on:** The request path; Signal sources
 
 [Area page](network.md)
 
@@ -341,9 +351,9 @@ An assistant helps send only certain clients, headers or a mirror of traffic to 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Request metrics for each subset become proofs, so a Pathfinder for one group of clients is judged on that group. It uses the same proof verdicts as everywhere else.
+Request metrics for each subset become proofs, so a Pathfinder for one group of clients is judged on that group. It uses the same proof verdicts as everywhere else. Subsets are sticky by default, each is compared with the same kind of clients on the stable version over the same minutes, and where requests cannot be told apart the proof says so and falls back to the whole-service comparison, never to a pass. A fail in any subset returns the whole Launch with the subset named, and the page shows exposure in one number.
 
-**Depends on:** Route a subset of clients or requests.
+**Depends on:** Route a subset of clients or requests
 
 [Area page](network.md)
 
