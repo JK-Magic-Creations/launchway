@@ -137,6 +137,7 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/roadmap.html', target: '_self' },
           { text: 'Platform plan', link: '/plan/index.html', target: '_self' },
+          { text: 'Open questions', link: '/plan/index.html#open', target: '_self' },
           { text: 'Milestone 1: Host and run', link: '/roadmap/milestone-1' },
           { text: 'Milestone 2: Pipeline power', link: '/roadmap/milestone-2' },
           { text: 'Milestone 3: Delivery depth', link: '/roadmap/milestone-3' },
@@ -361,6 +362,7 @@ export default defineConfig({
         items: [
           { text: 'Overview (big picture)', link: '/roadmap.html', target: '_self' },
           { text: 'Platform plan', link: '/plan/index.html', target: '_self' },
+          { text: 'Open questions', link: '/plan/index.html#open', target: '_self' },
           { text: 'Milestone 1: Host and run', link: '/roadmap/milestone-1' },
           { text: 'Milestone 2: Pipeline power', link: '/roadmap/milestone-2' },
           { text: 'Milestone 3: Delivery depth', link: '/roadmap/milestone-3' },
