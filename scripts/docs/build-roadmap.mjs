@@ -129,6 +129,13 @@ const AREAS = [
   ['config-as-code', 'Configuration as code', 'Plans, inventories, per-host results and drift for Terraform, OpenTofu and Ansible.'],
   ['developer-experience', 'Developer experience and the golden path', 'A small workload description, landings per environment, change records and editor and assistant tools.'],
   ['installing', 'Installing Launchway', 'One guided installer for a laptop, a server or Kubernetes, and a first sign-in that walks you through the rest.'],
+  ['inputs-and-forms', 'Inputs and forms', 'Run forms, pickers and lookups, so values are picked and checked, not typed.'],
+  ['triggers', 'Triggers', 'Everything that starts a Sortie, declared beside the pipeline and explained on the record.'],
+  ['importing', 'Bringing work in', 'Pipelines and more brought in from other systems, with nothing dropped silently.'],
+  ['policy-and-governance', 'Standing orders, Clearance and evidence', 'The fixed points where rules are judged, Clearances and Holds, and the evidence an auditor asks for.'],
+  ['speed', 'Speed and continuous deployment', 'Where the time goes, building only what a change affects, speed budgets, and continuous deployment where the rules allow.'],
+  ['branching', 'Branching patterns', 'Recognizing the branching pattern a repository uses, branch roles pipelines read, and moving between patterns.'],
+  ['quality-and-reports', 'Quality and reports', 'The Debrief, coverage of changed lines, quality gates and one report for every Sortie and release.'],
 ]
 
 // The big picture: one change travelling from idea to running software, with what surrounds it.
