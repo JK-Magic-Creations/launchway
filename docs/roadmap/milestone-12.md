@@ -283,9 +283,9 @@ A specialist firm audits the server, sign-in, Station protocol, encryption and c
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A build variant that uses a validated cryptographic module, claimed only for that variant. The default build never claims it. The variant covers the server, the Stations and the Detachment, uses only a module validated under the published FIPS 140-3 standard, and states which variant it is wherever it reports its version.
+A build variant that uses a validated cryptographic module, claimed only for that variant. The default build never claims it.
 
-**Depends on:** Rotation without downtime
+**Depends on:** Rotation without downtime.
 
 [Area page](security-trust.md)
 

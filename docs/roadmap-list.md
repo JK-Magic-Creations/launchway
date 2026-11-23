@@ -64,7 +64,7 @@ After what is already in flight, in this order.
 - New pages that explain an area in depth: Inputs and forms, Triggers, Speed and continuous deployment, Quality and reports, Bringing work in, Standing orders, Clearance and evidence and Branching patterns.
 - 13 items moved to sit with related work, such as the items about Switches, now gathered in one group; none was dropped or narrowed.
 - New principles under How we build: “One expression language, written one way”, “Logic is tested code; YAML holds only glue”, “Pick, do not type” and “Original answers, no other product named”.
-- 100 items describe more exactly what is built and what is still to come.
+- 99 items describe more exactly what is built and what is still to come.
 
 
 Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
@@ -316,7 +316,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Audit lines for every sensitive action](roadmap/milestone-1.md#audit-lines-for-every-sensitive-action) | Available | Audit entries also go to standard output as JSON lines with a request id, for any log collector. |
 | [Servers grow on request load](roadmap/milestone-1.md#servers-grow-on-request-load) | Planned | Servers are added and removed on requests in flight and time to answer, inside a floor and a ceiling, with at least two always running on Kubernetes. |
 | [Launchway's own footprint, measured](roadmap/milestone-1.md#launchway-s-own-footprint-measured) | Planned | Real numbers for what Launchway itself uses: each server, the database and each Station, typical and peak, reserved against used, with trends and a forecast for a given load. |
-| [A published description of the HTTP API](roadmap/milestone-1.md#a-published-description-of-the-http-api) | Planned | Every release publishes a description of the HTTP API in the OpenAPI format, generated from the server's route table, so tools can read it, generate clients and check calls. ([docs](reference/http-api.md)) |
+| [A published description of the HTTP API](roadmap/milestone-1.md#a-published-description-of-the-http-api) | Planned | Every release publishes a description of the HTTP API in the open standard format for describing HTTP APIs, generated from the server's route table, so tools can read it, generate clients and check calls. ([docs](reference/http-api.md)) |
 | [The web interface in the parity test](roadmap/milestone-1.md#the-web-interface-in-the-parity-test) | Planned | The parity table gains a web column naming the screen and action, or wizard, for each operation, checked in a browser both ways. ([docs](reference/interface-parity.md)) |
 | [A recorded accessibility check for every release](roadmap/milestone-1.md#a-recorded-accessibility-check-for-every-release) | Planned | A release is published only when its accessibility record is complete: the automated runs and a person's screen-reader and keyboard check, written down. ([docs](guide/accessibility.md)) |
 

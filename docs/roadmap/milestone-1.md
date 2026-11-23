@@ -1140,7 +1140,7 @@ Real numbers for what Launchway itself uses: each server, the database and each 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Every release publishes a description of the HTTP API in the OpenAPI format, generated from the server's route table, so tools can read it, generate clients and check calls. Each route carries its access class, its Logbook action and its other ways in. The parity test fails when a route is missing from the description or an entry has no route, and the API tests are checked against it so it matches what the server really does. Every server serves the description for its version, and a list of what changed since the last release is published beside it.
+Every release publishes a description of the HTTP API in the open standard format for describing HTTP APIs, generated from the server's route table, so tools can read it, generate clients and check calls. Each route carries its access class, its Logbook action and its other ways in. The parity test fails when a route is missing from the description or an entry has no route, and the API tests are checked against it so it matches what the server really does. Every server serves the description for its version, and a list of what changed since the last release is published beside it.
 
 **Depends on:** One capability, every interface.
 

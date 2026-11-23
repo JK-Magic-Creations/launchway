@@ -1409,7 +1409,7 @@
             {
               "status": "planned",
               "title": "A published description of the HTTP API",
-              "value": "Every release publishes a description of the HTTP API in the OpenAPI format, generated from the server's route table, so tools can read it, generate clients and check calls.",
+              "value": "Every release publishes a description of the HTTP API in the open standard format for describing HTTP APIs, generated from the server's route table, so tools can read it, generate clients and check calls.",
               "detail": "Each route carries its access class, its Logbook action and its other ways in. The parity test fails when a route is missing from the description or an entry has no route, and the API tests are checked against it so it matches what the server really does. Every server serves the description for its version, and a list of what changed since the last release is published beside it.",
               "needs": "One capability, every interface.",
               "area": "developer-experience",
@@ -7274,8 +7274,8 @@
               "status": "planned",
               "title": "A validated cryptographic build",
               "value": "A build variant that uses a validated cryptographic module, claimed only for that variant.",
-              "detail": "The default build never claims it. The variant covers the server, the Stations and the Detachment, uses only a module validated under the published FIPS 140-3 standard, and states which variant it is wherever it reports its version.",
-              "needs": "Rotation without downtime",
+              "detail": "The default build never claims it.",
+              "needs": "Rotation without downtime.",
               "area": "security-trust"
             },
             {
@@ -8002,7 +8002,7 @@
       "New pages that explain an area in depth: Inputs and forms, Triggers, Speed and continuous deployment, Quality and reports, Bringing work in, Standing orders, Clearance and evidence and Branching patterns.",
       "13 items moved to sit with related work, such as the items about Switches, now gathered in one group; none was dropped or narrowed.",
       "New principles under How we build: “One expression language, written one way”, “Logic is tested code; YAML holds only glue”, “Pick, do not type” and “Original answers, no other product named”.",
-      "100 items describe more exactly what is built and what is still to come."
+      "99 items describe more exactly what is built and what is still to come."
     ]
   },
   "standsToday": {
