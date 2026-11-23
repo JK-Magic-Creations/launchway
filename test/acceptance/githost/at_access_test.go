@@ -374,5 +374,5 @@ func TestAT_HG_17_SignInRedirect(t *testing.T) {
 	}
 	u, _ := http.NewRequest("GET", loc, nil)
 	r.Saw(t, "%s redirects (%d) to the identity provider at %s%s", c.OIDCPath, resp.StatusCode, u.URL.Host, u.URL.Path)
-	r.NotAutomated(t, "login as jkhunter with account linking, MFA, callback on both replicas, a new user not auto-granted write (interactive)")
+	r.NotAutomated(t, "login as the owner with account linking, MFA, callback on both replicas, a new user not auto-granted write (interactive)")
 }

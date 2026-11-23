@@ -93,8 +93,8 @@ func TestRepositoriesLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	moved, err := h.Provider.Rename(ctx, "acme/demo", "", "renamed")
-	if err != nil || moved.ID != r.ID || moved.Path != "jkhunter/renamed" || moved.DefaultBranch != "trunk" || moved.Visibility != forge.Public ||
-		!strings.HasSuffix(moved.Clone.HTTPS, "/git/jkhunter/renamed.git") {
+	if err != nil || moved.ID != r.ID || moved.Path != "acme/renamed" || moved.DefaultBranch != "trunk" || moved.Visibility != forge.Public ||
+		!strings.HasSuffix(moved.Clone.HTTPS, "/git/acme/renamed.git") {
 		t.Fatalf("%+v %v", moved, err)
 	}
 	if _, err := repos.Get(ctx, "acme/demo"); !errors.Is(err, store.ErrNotFound) {
@@ -103,18 +103,18 @@ func TestRepositoriesLifecycle(t *testing.T) {
 	if _, err := repos.Create(ctx, forge.NewRepository{Home: "acme", Name: "other"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.Provider.Rename(ctx, "jkhunter/other", "", "renamed"); !errors.Is(err, store.ErrExists) {
+	if _, err := h.Provider.Rename(ctx, "acme/other", "", "renamed"); !errors.Is(err, store.ErrExists) {
 		t.Errorf("rename onto a name in use: %v", err)
 	}
 	// Delete goes to the trash: gone from lists and lookups, restorable, name free for reuse.
-	if err := repos.Delete(ctx, "jkhunter/renamed"); err != nil {
+	if err := repos.Delete(ctx, "acme/renamed"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repos.Get(ctx, "jkhunter/renamed"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := repos.Get(ctx, "acme/renamed"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("a deleted repository is served: %v", err)
 	}
 	page, _ := repos.List(ctx, "")
-	if len(page.Items) != 1 || page.Items[0].Path != "jkhunter/other" {
+	if len(page.Items) != 1 || page.Items[0].Path != "acme/other" {
 		t.Errorf("list: %+v", page.Items)
 	}
 	trash, _ := h.Provider.Trash(ctx)
@@ -127,7 +127,7 @@ func TestRepositoriesLifecycle(t *testing.T) {
 	if err := h.Provider.Restore(ctx, r.ID); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := repos.Get(ctx, "jkhunter/renamed"); err != nil || got.ID != r.ID {
+	if got, err := repos.Get(ctx, "acme/renamed"); err != nil || got.ID != r.ID {
 		t.Errorf("restore: %+v %v", got, err)
 	}
 	if _, err := h.Store.Refs(ctx, r.ID); err != nil {

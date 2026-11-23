@@ -27,7 +27,7 @@ func TestHostileNamesAreRefused(t *testing.T) {
 			t.Errorf("path %q was accepted", p)
 		}
 	}
-	if o, n, err := SplitPath("jkhunter/demo"); err != nil || o != "jkhunter" || n != "demo" {
+	if o, n, err := SplitPath("acme/demo"); err != nil || o != "acme" || n != "demo" {
 		t.Errorf("%s %s %v", o, n, err)
 	}
 }
