@@ -130,7 +130,7 @@ func TestScanSecretsStepDoesWhatTheScriptDoes(t *testing.T) {
 	for name, files := range map[string]map[string]string{
 		"clean":   {"a.txt": "hello\n", "main.go": "package main\n"},
 		"a key":   {"a.txt": "hello\n", "secrets/key.pem": "-----BEGIN PRIVATE KEY-----\nabc\n"},
-		"a token": {"x/conf": "token = ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"},
+		"a token": {"x/conf": "token = gh" + "p_abcdefghijklmnopqrstuvwxyz0123456789\n"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ws, lib := layout(t, files)

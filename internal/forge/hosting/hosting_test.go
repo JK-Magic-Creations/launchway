@@ -71,36 +71,36 @@ func TestRepositoriesLifecycle(t *testing.T) {
 	h, _ := open(t, launchway.Options{})
 	ctx := context.Background()
 	repos := h.Provider.Repositories()
-	r, err := repos.Create(ctx, forge.NewRepository{Home: "jkhunter", Name: "demo"})
-	if err != nil || r.Path != "jkhunter/demo" || r.Visibility != forge.Private || r.DefaultBranch != "main" ||
-		r.Clone.HTTPS != "https://lw.example/git/jkhunter/demo.git" || !strings.HasPrefix(r.ID, "rep_") {
+	r, err := repos.Create(ctx, forge.NewRepository{Home: "acme", Name: "demo"})
+	if err != nil || r.Path != "acme/demo" || r.Visibility != forge.Private || r.DefaultBranch != "main" ||
+		r.Clone.HTTPS != "https://lw.example/git/acme/demo.git" || !strings.HasPrefix(r.ID, "rep_") {
 		t.Fatalf("%+v %v", r, err)
 	}
-	if _, err := repos.Create(ctx, forge.NewRepository{Home: "jkhunter", Name: "demo"}); !errors.Is(err, store.ErrExists) {
+	if _, err := repos.Create(ctx, forge.NewRepository{Home: "acme", Name: "demo"}); !errors.Is(err, store.ErrExists) {
 		t.Errorf("duplicate: %v", err)
 	}
 	refs, err := h.Provider.Refs(ctx, r)
 	if err != nil || len(refs) != 0 {
 		t.Errorf("a new repository has refs %v %v", refs, err)
 	}
-	if err := repos.SetDefaultBranch(ctx, "jkhunter/demo", "trunk"); err != nil {
+	if err := repos.SetDefaultBranch(ctx, "acme/demo", "trunk"); err != nil {
 		t.Fatal(err)
 	}
-	if err := repos.SetDefaultBranch(ctx, "jkhunter/demo", "bad..name"); !errors.Is(err, forge.ErrInvalid) {
+	if err := repos.SetDefaultBranch(ctx, "acme/demo", "bad..name"); !errors.Is(err, forge.ErrInvalid) {
 		t.Errorf("bad branch: %v", err)
 	}
-	if err := h.Provider.SetVisibility(ctx, "jkhunter/demo", forge.Public); err != nil {
+	if err := h.Provider.SetVisibility(ctx, "acme/demo", forge.Public); err != nil {
 		t.Fatal(err)
 	}
-	moved, err := h.Provider.Rename(ctx, "jkhunter/demo", "", "renamed")
+	moved, err := h.Provider.Rename(ctx, "acme/demo", "", "renamed")
 	if err != nil || moved.ID != r.ID || moved.Path != "jkhunter/renamed" || moved.DefaultBranch != "trunk" || moved.Visibility != forge.Public ||
 		!strings.HasSuffix(moved.Clone.HTTPS, "/git/jkhunter/renamed.git") {
 		t.Fatalf("%+v %v", moved, err)
 	}
-	if _, err := repos.Get(ctx, "jkhunter/demo"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := repos.Get(ctx, "acme/demo"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("the old name still answers: %v", err)
 	}
-	if _, err := repos.Create(ctx, forge.NewRepository{Home: "jkhunter", Name: "other"}); err != nil {
+	if _, err := repos.Create(ctx, forge.NewRepository{Home: "acme", Name: "other"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.Provider.Rename(ctx, "jkhunter/other", "", "renamed"); !errors.Is(err, store.ErrExists) {
@@ -233,7 +233,7 @@ func TestRefusesToHostWithoutAStore(t *testing.T) {
 func TestPurgeEndsOnlyAStorageInTheTrash(t *testing.T) {
 	h, _ := open(t, launchway.Options{})
 	ctx := context.Background()
-	r, err := h.Provider.Repositories().Create(ctx, forge.NewRepository{Home: "jkhunter", Name: "demo"})
+	r, err := h.Provider.Repositories().Create(ctx, forge.NewRepository{Home: "acme", Name: "demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
