@@ -15,6 +15,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/ids"
+	istore "github.com/jk-magic-creations/launchway/internal/store"
 )
 
 // DB is what the store needs of a database: the engine's Database satisfies
@@ -365,8 +366,7 @@ func (s *Store) SeeDelivery(ctx context.Context, connection, delivery string) (b
 		win = DefaultReplayWindow
 	}
 	key := clip(delivery, 200)
-	if _, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE connection_id = ? AND delivery_id = ? AND at < ?`,
-		connection, key, ms(s.now().Add(-win))); err != nil {
+	if err := istore.ForgetDelivery(ctx, s.db, connection, key, ms(s.now().Add(-win))); err != nil {
 		return false, err
 	}
 	res, err := s.db.Exec(ctx, `INSERT INTO forge_deliveries(connection_id, delivery_id, at) VALUES(?, ?, ?) ON CONFLICT DO NOTHING`,
@@ -390,17 +390,11 @@ func (s *Store) evictDeliveries(ctx context.Context, connection string) error {
 	if limit <= 0 {
 		limit = DefaultMaxDeliveries
 	}
-	var n int
-	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM forge_deliveries WHERE connection_id = ?`, connection).Scan(&n); err != nil {
+	n, err := istore.CountDeliveries(ctx, s.db, connection)
+	if err != nil || n <= limit {
 		return err
 	}
-	if n <= limit {
-		return nil
-	}
-	keep := limit - limit/10
-	_, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE connection_id = ? AND at <= (
-		SELECT at FROM forge_deliveries WHERE connection_id = ? ORDER BY at DESC LIMIT 1 OFFSET ?)`, connection, connection, keep)
-	return err
+	return istore.EvictDeliveries(ctx, s.db, connection, limit-limit/10)
 }
 
 // PruneDeliveries forgets deliveries older than maxAge.
