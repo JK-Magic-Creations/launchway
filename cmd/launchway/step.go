@@ -274,21 +274,34 @@ func stepValidate(args []string) error {
 	return nil
 }
 
+// gitTop is the top of the work tree that holds dir: the nearest directory above it with a .git entry. Git itself is
+// run (through gitexec, which does not search upward) in that directory.
+func gitTop(dir string) (string, error) {
+	for d := dir; ; d = filepath.Dir(d) {
+		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
+			return d, nil
+		}
+		if filepath.Dir(d) == d {
+			return "", fmt.Errorf("%s is not in a Git repository", dir)
+		}
+	}
+}
+
 // manifestAt reads a step's manifest as of a Git version of the repository.
 func manifestAt(dir, ref string) (*stepkit.Manifest, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
-	top, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: abs, Args: []string{"rev-parse", "--show-toplevel"}})
+	top, err := gitTop(abs)
 	if err != nil {
 		return nil, err
 	}
-	rel, err := filepath.Rel(strings.TrimSpace(top), abs)
+	rel, err := filepath.Rel(top, abs)
 	if err != nil {
 		return nil, err
 	}
-	out, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: abs, Args: []string{"show", ref + ":" + filepath.ToSlash(rel) + "/step.yaml"}})
+	out, err := gitexec.Output(context.Background(), gitexec.Spec{Dir: top, Args: []string{"show", ref + ":" + filepath.ToSlash(rel) + "/step.yaml"}})
 	if err != nil {
 		return nil, err
 	}
