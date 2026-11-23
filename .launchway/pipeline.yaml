@@ -71,7 +71,7 @@ steps:
       export GOMODCACHE="${GOMODCACHE:-$PWD/.cache/go-mod}" GOCACHE="$PWD/.cache/go-build" GOFLAGS="${GOFLAGS:-} -modcacherw"
       mkdir -p reports
       status=0
-      go test -count=1 -timeout 18m -json ./... > reports/go-test.json || status=$?
+      go test -count=1 -timeout 28m -json ./... > reports/go-test.json || status=$?
       # One line per package in the log, and for each failure its name and the last lines of
       # its output (scripts/ci/go-test-summary.sh); every test, with its whole output, is in
       # the Tests tab.
@@ -85,11 +85,12 @@ steps:
         key: { files: ["**/go.sum"], text: go-1.27 }
         fallback: latest
         max_age: 7d
-    # The api package alone runs about 12 minutes on the step's 2 CPUs, so go test gets 18m, not its 10m default (the step has 20m).
+    # The api package alone runs about 18 minutes on 2 CPUs (it reached the old 18m limit as the suite grew), so go
+    # test gets 28m per package and the step 35m. Splitting that package is the lasting answer.
     # Killed for memory twice as the suite grew (last at 6Gi); 8Gi is what the local pipeline-like run uses.
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 8Gi }
-    timeout: 20m
+    timeout: 35m
 
   # Security gates that need only the toolchain (docs/security/how-launchway-is-scanned.md). The ones
   # that need a container runtime (secret scan of the history, Trivy and hadolint on the manifests, the

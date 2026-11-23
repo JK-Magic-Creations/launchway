@@ -51,7 +51,7 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-  # The whole suite exactly as the pipeline runs it: no race detector, -timeout 18m per package.
+  # The whole suite exactly as the pipeline runs it: no race detector, -timeout 28m per package.
   tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -75,7 +75,7 @@ jobs:
       - name: Build the documentation into the binary (the Learn area)
         run: make learn
       - name: Test (no race detector, as the pipeline runs it)
-        run: go test -count=1 -timeout 18m ./...
+        run: go test -count=1 -timeout 28m ./...
 
   release:
     needs: [checks, tests]
