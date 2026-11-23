@@ -285,6 +285,7 @@ const body = `<main id="content">
 ${src.vision.map((v) => `    <li>${esc(v)}</li>`).join('\n')}
   </ol>
   <p class="asof">As of ${src.updated}. Items are ordered by value, in milestones marked Now, Next and Later. There are no dates: plans change, and an item moves to Available only when it is merged, tested and documented. Read it at three levels: this page, a detail page for each milestone, and a page for each large area.</p>
+  <p class="asof">How it is designed, chapter by chapter, with diagrams and screen designs: <a href="./plan/index.html">the platform plan</a>. Planned work there is labelled as planned.</p>
 
 ${whatChangedHtml}
 

@@ -108,7 +108,9 @@ Launchway is early software, released under the AGPL-3.0 license. What these doc
 as available works and is tested, including with several servers and with real Kubernetes,
 PostgreSQL, OpenBao, BuildKit and Argo CD. Much more is designed but not built yet. The
 [roadmap](../roadmap-list.md) shows each item as **available**, **in progress** or **planned**;
-nothing in these documents claims a feature that is not available. The larger areas have their own
+nothing in these documents claims a feature that is not available. How it is designed, chapter by chapter, with
+diagrams and screen designs, is in the [platform plan](../public/plan/index.html); planned work there is
+labelled as planned. The larger areas have their own
 pages, for example [inputs and forms](../roadmap/inputs-and-forms.md),
 [triggers](../roadmap/triggers.md), [bringing work in](../roadmap/importing.md),
 [Standing orders and evidence](../roadmap/policy-and-governance.md),
