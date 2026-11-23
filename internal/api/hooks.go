@@ -108,7 +108,7 @@ func (s *Server) gitHook(w http.ResponseWriter, r *http.Request) {
 	} else {
 		secret = []byte("no hook: compare anyway, so the answer takes as long")
 	}
-	ok, delivery, event, err := verifyGitHook(kind, secret, r)
+	ok, delivery, event, key, err := verifyGitHook(kind, secret, r)
 	if errors.As(err, new(*http.MaxBytesError)) {
 		writeErr(w, http.StatusRequestEntityTooLarge, "the body is larger than this server accepts")
 		return
@@ -119,8 +119,10 @@ func (s *Server) gitHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	who := "git:" + kind
-	if delivery != "" {
-		fresh, err := s.Engine.SeeDelivery(name, kind, clip(delivery, maxIdempotencyKey))
+	{
+		// A replay is told by what the verification covers (the body and the event), not by the host's delivery id,
+		// which is not signed: a captured delivery under a fresh id is the same delivery. The id stays in the audit line.
+		fresh, err := s.Engine.SeeDelivery(name, kind, key)
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -152,8 +154,19 @@ func gitEventPolls(event string) bool {
 
 // verifyGitHook checks a call the way the given host signs it, reading the
 // body as it goes, and returns the delivery's ID and event.
-func verifyGitHook(kind string, secret []byte, r *http.Request) (ok bool, delivery, event string, err error) {
+func verifyGitHook(kind string, secret []byte, r *http.Request) (ok bool, delivery, event, key string, err error) {
 	h := r.Header
+	sum := sha256.New()
+	body := http.MaxBytesReader(nil, r.Body, maxGitHookBody)
+	r.Body = io.NopCloser(io.TeeReader(body, sum))
+	defer func() {
+		if err == nil {
+			_, err = io.Copy(io.Discard, r.Body) // what the check did not read (a token check reads none) is hashed too
+		}
+		sum.Write([]byte{0})
+		sum.Write([]byte(strings.ToLower(event)))
+		key = "body-" + hex.EncodeToString(sum.Sum(nil))
+	}()
 	switch kind {
 	case "gitlab":
 		// GitLab sends the secret token itself, not a signature.
@@ -163,7 +176,7 @@ func verifyGitHook(kind string, secret []byte, r *http.Request) (ok bool, delive
 		if delivery == "" {
 			delivery = h.Get("X-Gitlab-Webhook-UUID")
 		}
-		return ok, delivery, h.Get("X-Gitlab-Event"), nil
+		return ok, delivery, h.Get("X-Gitlab-Event"), "", nil
 	case "gitea", "forgejo":
 		sig := h.Get("X-Forgejo-Signature")
 		if sig == "" {
@@ -178,10 +191,10 @@ func verifyGitHook(kind string, secret []byte, r *http.Request) (ok bool, delive
 			event = h.Get("X-Gitea-Event")
 		}
 		ok, err = bodyMACMatches(secret, r, "", sig)
-		return ok, delivery, event, err
+		return ok, delivery, event, "", err
 	default: // github
 		ok, err = bodyMACMatches(secret, r, "sha256=", h.Get("X-Hub-Signature-256"))
-		return ok, h.Get("X-GitHub-Delivery"), h.Get("X-GitHub-Event"), err
+		return ok, h.Get("X-GitHub-Delivery"), h.Get("X-GitHub-Event"), "", err
 	}
 }
 
@@ -189,7 +202,7 @@ func verifyGitHook(kind string, secret []byte, r *http.Request) (ok bool, delive
 // the request's body. The body is hashed as it is read, never held whole.
 func bodyMACMatches(secret []byte, r *http.Request, prefix, sig string) (bool, error) {
 	mac := hmac.New(sha256.New, secret)
-	if _, err := io.Copy(mac, http.MaxBytesReader(nil, r.Body, maxGitHookBody)); err != nil {
+	if _, err := io.Copy(mac, r.Body); err != nil {
 		return false, err
 	}
 	return macEqual(mac, prefix, sig), nil

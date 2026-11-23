@@ -25,6 +25,9 @@ func Capabilities() forge.Capabilities {
 	c[forge.CapRepoCreate] = forge.Declaration{Support: forge.None,
 		Reason:     "a connection is narrow on purpose: it reads and writes projects that exist and cannot create or delete them",
 		Workaround: "Create the project on the Git host, then choose it in Launchway"}
+	c[forge.CapEvents] = forge.Declaration{Support: forge.Emulated,
+		Reason:     "the host authenticates a webhook with a shared secret token sent in a header, not with a signature of the body, so Launchway knows the sender holds the token but not that the payload is the host's; identical replays are dropped by a digest of the body, but a party holding the token could send new payloads (the host's design)",
+		Workaround: "Use an HTTPS address for the webhook and keep the token secret; nothing in a payload is trusted without asking the host again, and polling stays on as the fallback"}
 	c[forge.CapDrafts] = forge.Declaration{Support: forge.None,
 		Reason:     "the host's API documentation for creating and updating a merge request has no draft parameter, so Launchway reads a draft but does not make or change one",
 		Workaround: "Mark the merge request as draft or ready on the Git host"}

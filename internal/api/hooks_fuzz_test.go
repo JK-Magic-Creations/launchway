@@ -39,7 +39,7 @@ func FuzzVerifyGitHook(f *testing.F) {
 			r.Header.Set("X-Hub-Signature-256", header)
 			good = strings.HasPrefix(header, "sha256=") && strings.EqualFold(header[7:], sum)
 		}
-		ok, _, _, err := verifyGitHook(kind, []byte(secret), r)
+		ok, _, _, _, err := verifyGitHook(kind, []byte(secret), r)
 		if err == nil && ok && !good {
 			t.Fatalf("%s: accepted a call with header %q", kind, header)
 		}

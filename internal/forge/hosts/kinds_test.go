@@ -324,6 +324,16 @@ func TestEveryKindPassesTheServiceJourney(t *testing.T) {
 			if d, err = s.Webhook(ctx, "h", c.delivery(t, hook)); err != nil || d.Fresh {
 				t.Fatalf("a replay is dropped: %+v %v", d, err)
 			}
+			// The same signed delivery under a fresh delivery id (an unsigned header) is the same delivery.
+			again := c.delivery(t, hook)
+			for name := range again.Header {
+				if l := strings.ToLower(name); strings.Contains(l, "delivery") || strings.Contains(l, "request-id") || strings.Contains(l, "request-uuid") || l == "webhook-id" || strings.Contains(l, "uuid") {
+					again.Header.Set(name, "a-fresh-id-"+name)
+				}
+			}
+			if d, err = s.Webhook(ctx, "h", again); err != nil || d.Fresh {
+				t.Fatalf("a replay under a fresh delivery id is processed again: %+v %v", d, err)
+			}
 			_, noRefs := fv.Unsupported[forge.CapProposalRef]
 			if l, ok := s.ProposalRefs(ctx, "shop"); !ok || l.IsZero() != noRefs {
 				t.Errorf("layout %v %v (a host that declares no head refs gives none, and only then)", l, ok)

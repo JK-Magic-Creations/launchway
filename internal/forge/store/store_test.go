@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -313,5 +314,30 @@ func TestCleanAddress(t *testing.T) {
 		if h != want[0] || s != want[1] {
 			t.Errorf("%q: %q %q, want %q", in, h, s, want)
 		}
+	}
+}
+
+// The replay memory of a connection is bounded: past the cap the oldest keys go, and what is kept still answers "seen".
+func TestReplayMemoryIsBounded(t *testing.T) {
+	ctx := context.Background()
+	st, eng, _ := open(t)
+	st.MaxDeliveries = 20
+	now := time.Now()
+	for i := 0; i < 60; i++ {
+		now = now.Add(time.Millisecond)
+		st.SetClock(func() time.Time { return now })
+		if fresh, err := st.SeeDelivery(ctx, "con_cap", fmt.Sprintf("k-%d", i)); err != nil || !fresh {
+			t.Fatalf("%d: %v %v", i, fresh, err)
+		}
+	}
+	var n int
+	if err := eng.Database().QueryRow(ctx, `SELECT count(*) FROM forge_deliveries WHERE connection_id = 'con_cap'`).Scan(&n); err != nil || n > 21 || n < 10 {
+		t.Fatalf("%d keys kept (cap 20): %v", n, err)
+	}
+	if fresh, _ := st.SeeDelivery(ctx, "con_cap", "k-59"); fresh {
+		t.Error("the newest key was evicted")
+	}
+	if fresh, _ := st.SeeDelivery(ctx, "con_cap", "k-0"); !fresh {
+		t.Error("the oldest key was kept past the cap")
 	}
 }

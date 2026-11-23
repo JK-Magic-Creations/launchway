@@ -46,14 +46,15 @@ type Service struct {
 	// PublicURL is the address people open Launchway at; links in reports use it.
 	PublicURL string
 	// HookCap is the webhook calls a connection accepts a minute; 0 is DefaultHookCap.
-	HookCap int
-	hookMu  sync.Mutex
-	hookWin *time.Time
-	hookN   map[string]int
-	st      *store.Store
-	fl      FlightStore
-	guard   *egress.Guard
-	now     func() time.Time
+	HookCap   int
+	hookMu    sync.Mutex
+	hookWin   *time.Time
+	hookN     map[string]int
+	lastPrune time.Time
+	st        *store.Store
+	fl        FlightStore
+	guard     *egress.Guard
+	now       func() time.Time
 	// denied remembers repositories whose host refused a commit status (see fallback.go).
 	denied sync.Map
 }

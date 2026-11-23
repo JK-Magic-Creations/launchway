@@ -41,7 +41,7 @@ type Entry struct {
 	// GraphQL, ...): each is egress-checked before the connection is saved.
 	Endpoints func(c forge.Connection) ([]string, error)
 	// DeliveryHeader names the webhook header that carries a delivery's unique
-	// ID, used to drop a replay; "" when the host sends none.
+	// ID, kept as an unsigned hint for logs; a replay is dropped by ReplayKey, not by this id.
 	DeliveryHeader string
 	// Probe says in plain words what the connection test reads.
 	Probe string

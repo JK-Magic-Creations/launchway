@@ -28,14 +28,14 @@ const (
 func TestGitHubSignatureVector(t *testing.T) {
 	r, _ := http.NewRequest("POST", "/", strings.NewReader(ghPayload))
 	r.Header.Set("X-Hub-Signature-256", ghSig)
-	if ok, _, _, err := verifyGitHook("github", []byte(ghSecret), r); !ok || err != nil {
+	if ok, _, _, _, err := verifyGitHook("github", []byte(ghSecret), r); !ok || err != nil {
 		t.Fatalf("GitHub's own example does not verify: %v", err)
 	}
 	// Gitea and Forgejo sign the same way, without the prefix.
 	for _, h := range []string{"X-Gitea-Signature", "X-Forgejo-Signature"} {
 		r, _ := http.NewRequest("POST", "/", strings.NewReader(ghPayload))
 		r.Header.Set(h, strings.TrimPrefix(ghSig, "sha256="))
-		if ok, _, _, _ := verifyGitHook("gitea", []byte(ghSecret), r); !ok {
+		if ok, _, _, _, _ := verifyGitHook("gitea", []byte(ghSecret), r); !ok {
 			t.Fatalf("%s does not verify", h)
 		}
 	}
@@ -49,18 +49,18 @@ func TestGitHubSignatureVector(t *testing.T) {
 		r, _ := http.NewRequest("POST", "/", strings.NewReader(ghPayload))
 		r.Header.Set("X-Hub-Signature-256", ghSig)
 		mutate(r)
-		if ok, _, _, _ := verifyGitHook("github", []byte(ghSecret), r); ok {
+		if ok, _, _, _, _ := verifyGitHook("github", []byte(ghSecret), r); ok {
 			t.Errorf("%s verified", name)
 		}
 	}
 	// GitLab sends its secret token as it is.
 	r, _ = http.NewRequest("POST", "/", strings.NewReader("{}"))
 	r.Header.Set("X-Gitlab-Token", ghSecret)
-	if ok, _, _, _ := verifyGitHook("gitlab", []byte(ghSecret), r); !ok {
+	if ok, _, _, _, _ := verifyGitHook("gitlab", []byte(ghSecret), r); !ok {
 		t.Fatal("GitLab's token")
 	}
 	r.Header.Set("X-Gitlab-Token", ghSecret+"x")
-	if ok, _, _, _ := verifyGitHook("gitlab", []byte(ghSecret), r); ok {
+	if ok, _, _, _, _ := verifyGitHook("gitlab", []byte(ghSecret), r); ok {
 		t.Fatal("a wrong GitLab token")
 	}
 }
@@ -114,6 +114,17 @@ func TestGitHostWebhooks(t *testing.T) {
 	if r := send(ghSig, "d-1", "push"); r.status != http.StatusAccepted || !strings.Contains(string(r.body), "already received") {
 		t.Fatalf("a replay: %d %s", r.status, r.body)
 	}
+	// The delivery id is not signed: the same signed body under a fresh id is the same delivery.
+	if r := send(ghSig, "d-fresh", "push"); r.status != http.StatusAccepted || !strings.Contains(string(r.body), "already received") {
+		t.Fatalf("a replay under a fresh id: %d %s", r.status, r.body)
+	}
+	// A different signed body under a used id is a new delivery.
+	other2 := ghPayload + " "
+	mac := hmac.New(sha256.New, []byte(ghSecret))
+	mac.Write([]byte(other2))
+	if r := b.do("POST", url, other2, "X-Hub-Signature-256", "sha256="+hex.EncodeToString(mac.Sum(nil)), "X-GitHub-Delivery", "d-1", "X-GitHub-Event", "push"); r.status != http.StatusAccepted || !strings.Contains(string(r.body), "polling") {
+		t.Fatalf("a different body under a used id: %d %s", r.status, r.body)
+	}
 	if r := send(ghSig, "d-2", "issues"); !strings.Contains(string(r.body), "ignored") {
 		t.Fatalf("an event that moves no ref: %s", r.body)
 	}
@@ -144,7 +155,7 @@ func TestGitHostWebhooks(t *testing.T) {
 			t.Fatalf("a denial without who it claimed to be: %+v", a)
 		}
 	}
-	if n != 2 {
+	if n != 3 {
 		t.Fatalf("%d successful Git webhook calls audited", n)
 	}
 }

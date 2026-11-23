@@ -1,9 +1,13 @@
 package hosts
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/store"
 )
 
 // CloneAuth is what a Station needs to check out the Flight's repository: the
@@ -229,7 +234,9 @@ func protectedBranch(rs []forge.RefRule, branch string) bool {
 // Delivery is what a webhook turned out to be.
 type Delivery struct {
 	// Fresh is false for a delivery seen before; it changes nothing.
-	Fresh   bool
+	Fresh bool
+	// HostID is the delivery id the host sent: an unsigned hint, for logs and audit only.
+	HostID  string
 	Events  []forge.Event
 	Flights []Flight
 }
@@ -255,26 +262,29 @@ func (s *Service) Webhook(ctx context.Context, name string, r *http.Request) (De
 	if err != nil {
 		return Delivery{}, err
 	}
+	// The body is read once, so that what is remembered of a delivery is what the signature covers: a digest of the
+	// verified body and the event kind. The host's own delivery id is not signed by most hosts, so it is only a hint
+	// (for logs and audit), never the key: a captured delivery replayed under a fresh id is the same delivery.
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxHookBody+1))
+	if err != nil || len(body) > maxHookBody {
+		return Delivery{}, errors.New("the webhook body cannot be read or is too large")
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
 	evs, err := p.Events().Verify(r, []byte(secret))
 	if err != nil {
 		return Delivery{}, err
 	}
 	d := Delivery{Fresh: true, Events: evs}
-	id := ""
 	if e, ok := entryOf(c.Kind); ok && e.DeliveryHeader != "" {
-		id = r.Header.Get(e.DeliveryHeader)
+		d.HostID = r.Header.Get(e.DeliveryHeader)
 	}
-	if id == "" && len(evs) > 0 {
-		id = evs[0].DeliveryID // a host with no delivery header names a delivery by what the provider made of it
+	fresh, err := s.st.SeeDelivery(ctx, c.ID, ReplayKey(r.Header, body))
+	if err != nil {
+		return Delivery{}, err
 	}
-	if id != "" {
-		fresh, err := s.st.SeeDelivery(ctx, c.ID, id)
-		if err != nil {
-			return Delivery{}, err
-		}
-		if !fresh {
-			return Delivery{Fresh: false}, nil
-		}
+	s.pruneReplays(ctx)
+	if !fresh {
+		return Delivery{Fresh: false, HostID: d.HostID}, nil
 	}
 	seen := map[string]bool{}
 	for i := range d.Events {
@@ -446,4 +456,44 @@ func (s *Service) ProposalRefs(ctx context.Context, project string) (forge.RefLa
 		return forge.RefLayout{}, false
 	}
 	return p.ProposalRefs(), true
+}
+
+// maxHookBody is the largest webhook body read.
+const maxHookBody = 25 << 20
+
+// eventHeaders name the event kind of a delivery on each host.
+var eventHeaders = []string{"X-GitHub-Event", "X-Gitlab-Event", "X-Gitea-Event", "X-Forgejo-Event", "X-Gogs-Event", "X-Event-Key"}
+
+// ReplayKey names a delivery by what a signature covers: the body and the event kind. The same verified body and
+// event within the replay window is the same delivery, whatever id or other header it arrives with.
+func ReplayKey(h http.Header, body []byte) string {
+	event := ""
+	for _, n := range eventHeaders {
+		if v := h.Get(n); v != "" {
+			event = n + "=" + v
+			break
+		}
+	}
+	sum := sha256.New()
+	sum.Write([]byte(event))
+	sum.Write([]byte{0})
+	sum.Write(body)
+	return "body-" + hex.EncodeToString(sum.Sum(nil))
+}
+
+// pruneReplays forgets what is past the replay window, at most once an hour.
+func (s *Service) pruneReplays(ctx context.Context) {
+	s.hookMu.Lock()
+	due := s.lastPrune.IsZero() || s.now().Sub(s.lastPrune) >= time.Hour
+	if due {
+		s.lastPrune = s.now()
+	}
+	s.hookMu.Unlock()
+	if due {
+		win := s.st.ReplayWindow
+		if win <= 0 {
+			win = store.DefaultReplayWindow
+		}
+		_, _ = s.st.PruneDeliveries(ctx, win)
+	}
 }

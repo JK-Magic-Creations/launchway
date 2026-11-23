@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosts"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/github/githubfake"
+	"github.com/jk-magic-creations/launchway/internal/forge/store"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -214,4 +216,45 @@ func connectionID(t *testing.T, s *hosts.Service) string {
 		t.Fatalf("%v %v", cs, err)
 	}
 	return cs[0].ID
+}
+
+// What is remembered of a delivery is what the signature covers: a different body under the same delivery id is a
+// new delivery, the same body under another id is a replay, and after the replay window the same body is new again.
+func TestReplayIsKeyedOnTheSignedBodyNotTheDeliveryID(t *testing.T) {
+	s, h := setup(t)
+	ctx := t.Context()
+	add(t, s, h)
+	if _, err := s.Attach(ctx, "shop", "gh", "acme/app"); err != nil {
+		t.Fatal(err)
+	}
+	body := func(after string) []byte {
+		return []byte(`{"ref":"refs/heads/main","before":"` + strings.Repeat("0", 40) + `","after":"` + strings.Repeat(after, 40) + `","repository":{"full_name":"Acme/App"},"sender":{"login":"bob"}}`)
+	}
+	send := func(b []byte, id string) hosts.Delivery {
+		t.Helper()
+		r, _ := http.NewRequestWithContext(ctx, http.MethodPost, "http://x/hook", bytes.NewReader(b))
+		r.Header.Set("X-GitHub-Event", "push")
+		r.Header.Set("X-GitHub-Delivery", id)
+		r.Header.Set("X-Hub-Signature-256", githubfake.Sign([]byte("hooksecret"), b))
+		d, err := s.Webhook(ctx, "gh", r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
+	now := time.Now()
+	s.Store().SetClock(func() time.Time { return now })
+	if d := send(body("a"), "id-1"); !d.Fresh || d.HostID != "id-1" {
+		t.Fatalf("first: %+v", d)
+	}
+	if d := send(body("a"), "id-2"); d.Fresh {
+		t.Fatal("the same signed body under a fresh id was processed twice")
+	}
+	if d := send(body("b"), "id-1"); !d.Fresh {
+		t.Fatal("a different body under a used id was dropped")
+	}
+	now = now.Add(store.DefaultReplayWindow + time.Minute)
+	if d := send(body("a"), "id-3"); !d.Fresh {
+		t.Fatal("after the replay window the same body is a new delivery")
+	}
 }

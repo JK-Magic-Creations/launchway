@@ -35,7 +35,17 @@ var (
 type Store struct {
 	db  DB
 	now func() time.Time
+	// ReplayWindow is how long a delivery is remembered (DefaultReplayWindow when 0), and MaxDeliveries how many a
+	// connection keeps (DefaultMaxDeliveries when 0): the oldest go first.
+	ReplayWindow  time.Duration
+	MaxDeliveries int
 }
+
+// Replay memory: kept in the database, so every server replica shares it, and bounded in time and in size.
+const (
+	DefaultReplayWindow  = 7 * 24 * time.Hour
+	DefaultMaxDeliveries = 50000
+)
 
 // New makes a store over a database.
 func New(db DB) *Store { return &Store{db: db, now: time.Now} }
@@ -341,20 +351,56 @@ func (s *Store) PruneEvents(ctx context.Context, connection string, keep int, ma
 	return removed, nil
 }
 
-// SeeDelivery remembers a webhook delivery of a connection by its ID and
-// reports whether it is new, so a replay is ignored. Two servers seeing the
-// same delivery at once: exactly one gets true.
+// SeeDelivery remembers a webhook delivery of a connection by its key and
+// reports whether it is new, so a replay is ignored. A key remembered for
+// longer than the replay window is new again. Two servers seeing the same
+// delivery at once: exactly one gets true. The memory is bounded: a
+// connection keeps at most MaxDeliveries keys, the oldest evicted first.
 func (s *Store) SeeDelivery(ctx context.Context, connection, delivery string) (bool, error) {
 	if connection == "" || delivery == "" {
 		return false, fmt.Errorf("%w: a delivery needs a connection and an ID", forge.ErrInvalid)
 	}
+	win := s.ReplayWindow
+	if win <= 0 {
+		win = DefaultReplayWindow
+	}
+	key := clip(delivery, 200)
+	if _, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE connection_id = ? AND delivery_id = ? AND at < ?`,
+		connection, key, ms(s.now().Add(-win))); err != nil {
+		return false, err
+	}
 	res, err := s.db.Exec(ctx, `INSERT INTO forge_deliveries(connection_id, delivery_id, at) VALUES(?, ?, ?) ON CONFLICT DO NOTHING`,
-		connection, clip(delivery, 200), ms(s.now()))
+		connection, key, ms(s.now()))
 	if err != nil {
 		return false, err
 	}
 	n, _ := res.RowsAffected()
+	if n > 0 {
+		if err := s.evictDeliveries(ctx, connection); err != nil {
+			return true, err
+		}
+	}
 	return n > 0, nil
+}
+
+// evictDeliveries drops the oldest keys of a connection beyond the cap. It looks only when a new key is
+// written, and removes at once what is beyond the cap plus a tenth, so it runs rarely.
+func (s *Store) evictDeliveries(ctx context.Context, connection string) error {
+	max := s.MaxDeliveries
+	if max <= 0 {
+		max = DefaultMaxDeliveries
+	}
+	var n int
+	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM forge_deliveries WHERE connection_id = ?`, connection).Scan(&n); err != nil {
+		return err
+	}
+	if n <= max {
+		return nil
+	}
+	keep := max - max/10
+	_, err := s.db.Exec(ctx, `DELETE FROM forge_deliveries WHERE connection_id = ? AND at <= (
+		SELECT at FROM forge_deliveries WHERE connection_id = ? ORDER BY at DESC LIMIT 1 OFFSET ?)`, connection, connection, keep)
+	return err
 }
 
 // PruneDeliveries forgets deliveries older than maxAge.
