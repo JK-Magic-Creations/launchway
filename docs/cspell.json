@@ -17,6 +17,7 @@
     "/\\b[a-z]{3}_[0-9a-z]{16,}\\b/g"
   ],
   "words": [
+    "Hardpoint", "Hardpoints", "autoscalers", "Autoscalers", "permissioned", "hotspots",
     "subkey",
     "subkeys",
     "Unfiled", "overcommitted", "kubelet", "goroutines", "heartbeating", "preemptible", "Burstable", "rollups",
