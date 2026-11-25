@@ -184,11 +184,12 @@ function isBritish(w) {
   return /(organis|colour|behaviour|favour|licence|licenc|initialis|authoris|customis|summaris|recognis|normalis|synchronis|catalogue|centre|defence|artefact|^grey$|^analyse|cancelled|labelled|modelling|travelling)/.test(l)
 }
 
-/** Documentation introduces a themed word with its plain word beside it: "Station (runner)". That is the one place the plain word belongs. */
+/** Documentation introduces a themed word with its plain word beside it: "Station (runner)". That is the one place the plain word belongs.
+ *  A plain word of several words counts too: in "Switch (feature toggle)" the guard that watches "toggle" alone sees "feature" first. */
 function introduced(text, at, t) {
   const before = text.slice(Math.max(0, at - 60), at)
   const forms = [t.one, t.many, t.do, t.did, t.doing, t.does].filter(Boolean).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  return new RegExp('(?:' + forms.join('|') + ')[^.\\n]{0,4}\\(\\s*(?:also |plain: |plain word: |a |an |the |called |formerly |the plain word )?$', 'i').test(before)
+  return new RegExp('(?:' + forms.join('|') + ')[^.\\n]{0,4}\\(\\s*(?:also |plain: |plain word: |a |an |the |called |formerly |the plain word )?(?:[\\w-]+ ){0,2}$', 'i').test(before)
 }
 
 export function fileFindings(path, kind, text, checks, labels = new Set()) {

@@ -22,3 +22,4 @@ server.pid
 
 # Package caches the pipeline's steps keep in the workspace (see .launchway/pipeline.yaml)
 /.cache/
+docs/public/plan/mermaid.min.js

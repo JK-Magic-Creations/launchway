@@ -296,6 +296,7 @@ docs/node_modules: docs/package-lock.json
 	touch docs/node_modules
 
 docs: docs/node_modules
+	cp docs/node_modules/mermaid/dist/mermaid.min.js docs/public/plan/mermaid.min.js # the plan page's diagram library, from the pinned package (not tracked: over the 5 MB limit)
 	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress build .
 	node scripts/docs/check-links.mjs docs/.vitepress/dist '$(DOCS_BASE)'
 	node scripts/docs/build-roadmap.mjs --check .

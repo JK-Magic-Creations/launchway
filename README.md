@@ -18,11 +18,12 @@
   inputs; start a new repository from a ready-made starter. ([Libraries](docs/guide/libraries.md), [starters](docs/guide/starters.md))
 - **Fast repeat runs.** Build caches shared by every Station, scoped so a pull request cannot poison the
   main branch. ([Build caches](docs/guide/build-caches.md))
-- **Test reports and Debriefs.** Test results, coverage and flaky tests per Sortie and over time.
-  ([Test reports](docs/guide/test-reports.md), [Debrief](docs/guide/debrief.md))
+- **Debriefs.** Every Sortie gets a Debrief (run summary): test results, coverage and flaky tests, for
+  that Sortie and over time. ([Debrief](docs/guide/debrief.md), [test results](docs/guide/test-reports.md))
 - **Security on by default.** Scans for vulnerabilities and leaked secrets, Standing orders (policies) that
-  can block a merge or a Launch, and automatic dependency updates. ([Security findings](docs/guide/security-findings.md),
-  [Standing orders](docs/guide/standing-orders.md), [dependency updates](docs/guide/dependency-updates.md))
+  can block a merge or a Launch, and Maintenance (dependency updates) that opens the update pull requests for you.
+  ([Security findings](docs/guide/security-findings.md), [Standing orders](docs/guide/standing-orders.md),
+  [Maintenance](docs/guide/dependency-updates.md))
 - **Bring your pipelines.** The importer turns an existing pipeline file into a Launchway one.
   ([Move your pipelines](docs/guide/move-your-pipelines.md))
 
@@ -31,8 +32,8 @@
 - **Delivery you can check.** Launches are verified against your metrics and logs, wait for Clearances
   when you ask them to, and can return to base (roll back) on their own when something is wrong.
   ([Deployments](docs/guide/deployments.md), [verification](docs/guide/verification.md))
-- **Switches (feature toggles).** Rules, segments, percentage rollouts, schedules, approvals and history,
-  with Go and JavaScript SDKs and OpenFeature providers. ([Switches](docs/guide/feature-toggles.md))
+- **Switches.** A Switch (feature toggle) turns a feature on or off without a new Launch: rules, segments,
+  percentage rollouts, schedules, approvals and history, with Go and JavaScript SDKs and OpenFeature providers. ([Switches](docs/guide/feature-toggles.md))
 - **Releases.** Cut, sign and promote releases, with checklists and downloads.
   ([Releases](docs/guide/releases.md), [verified commits](docs/guide/verified-commits.md))
 - **Insights.** Deployment frequency, lead time, change failure rate and time to restore, from what
