@@ -21,7 +21,7 @@ import (
 
 // neverNamed are products with no integration in Launchway: they may not appear anywhere
 // except in test data and in this file.
-var neverNamed = regexp.MustCompile(`(?i)\b(jenkins(file)?|circle ?ci|travis[- ]?ci|buildkite|teamcity|spinnaker|tekton|octopus deploy|codefresh|gocd|concourse ci|azure pipelines|harness\.io|harness (ci|cd|platform)|drone ci|woodpecker ci|gitlab[- ]ci|spacelift|heroku|netlify|vercel|bitbucket pipelines|appveyor|cloudbees|bamboo ci|semaphore ?ci|codebuild|codepipeline|humanitec|backstage)\b`)
+var neverNamed = regexp.MustCompile(`(?i)\b(jenkins(file)?|circle ?ci|travis[- ]?ci|buildkite|teamcity|spinnaker|tekton|octopus deploy|codefresh|gocd|concourse ci|azure pipelines|harness\.io|harness (ci|cd|platform)|drone ci|woodpecker ci|gitlab[- ]ci|spacelift|heroku|netlify|vercel|bitbucket pipelines|appveyor|cloudbees|bamboo ci|semaphore ?ci|codebuild|codepipeline|humanitec|backstage|mirrord|telepresence|launchdarkly|flagsmith|statsig|split\.io|optimizely|configcat|devcycle|harness (feature flags|chaos|ccm)|octopus (cloud|server)|argo ?kargo|kargo|akuity)\b`)
 
 // namedForIntegration are Git hosts and CI services Launchway connects to or runs on; they may
 // appear only in the files of allowedForIntegration.
