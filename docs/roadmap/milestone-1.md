@@ -1060,7 +1060,7 @@ Launchway is built, tested, signed and rolled out by Launchway, in a group of se
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-No pile of connectors, services and Airfields to define before anything works. Six words cover everyday use: Flight, pipeline, step, run, Airfield and Station.
+No pile of objects to define before anything works. Six words cover everyday use: Flight, pipeline, step, run, Airfield and Station.
 
 
 #### Signed releases and installers {#signed-releases-and-installers}

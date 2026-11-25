@@ -1340,7 +1340,7 @@
             {
               "status": "planned",
               "title": "Fewer concepts to learn",
-              "value": "No pile of connectors, services and Airfields to define before anything works.",
+              "value": "No pile of objects to define before anything works.",
               "detail": "Six words cover everyday use: Flight, pipeline, step, run, Airfield and Station."
             },
             {
@@ -3623,7 +3623,7 @@
             },
             {
               "status": "planned",
-              "title": "Test intelligence and flow insights",
+              "title": "Test selection and flow insights",
               "value": "Find slow and flaky tests, bottlenecks in review and idle time in delivery.",
               "detail": "Suggestions are shown with the evidence. Test selection from the record and the graph, and speed suggestions, are the first slice (Milestone 2).",
               "needs": "Delivery metrics and executive dashboards",

@@ -837,7 +837,7 @@ Deployment frequency, lead time, change failure rate and time to restore, with d
 
 [Area page](delivery.md)
 
-#### Test intelligence and flow insights {#test-intelligence-and-flow-insights}
+#### Test selection and flow insights {#test-selection-and-flow-insights}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
