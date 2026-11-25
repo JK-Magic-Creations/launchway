@@ -10,15 +10,48 @@
 
 ## What works today
 
+**Build and test**
+
 - **Pipelines as a graph.** Steps that can run together are drawn side by side. A failed Sortie (run) says
-  which step failed and why, in plain words, and you can re-run from any step.
-- **Delivery you can check.** Deployments are verified, wait for approvals when you ask them to, and
-  roll back.
-- **Git hosting.** Repositories with pull requests, reviews and merge rules, over HTTPS and SSH.
+  which step failed and why, in plain words, and you can re-run from any step. ([Pipelines](docs/guide/pipelines.md))
 - **Shared pipelines.** Keep templates in a library in Git, pin a version, and give each one typed
-  inputs.
+  inputs; start a new repository from a ready-made starter. ([Libraries](docs/guide/libraries.md), [starters](docs/guide/starters.md))
+- **Fast repeat runs.** Build caches shared by every Station, scoped so a pull request cannot poison the
+  main branch. ([Build caches](docs/guide/build-caches.md))
+- **Test reports and Debriefs.** Test results, coverage and flaky tests per Sortie and over time.
+  ([Test reports](docs/guide/test-reports.md), [Debrief](docs/guide/debrief.md))
+- **Security on by default.** Scans for vulnerabilities and leaked secrets, Standing orders (policies) that
+  can block a merge or a Launch, and automatic dependency updates. ([Security findings](docs/guide/security-findings.md),
+  [Standing orders](docs/guide/standing-orders.md), [dependency updates](docs/guide/dependency-updates.md))
+- **Bring your pipelines.** The importer turns an existing pipeline file into a Launchway one.
+  ([Move your pipelines](docs/guide/move-your-pipelines.md))
+
+**Deliver**
+
+- **Delivery you can check.** Launches are verified against your metrics and logs, wait for Clearances
+  when you ask them to, and can return to base (roll back) on their own when something is wrong.
+  ([Deployments](docs/guide/deployments.md), [verification](docs/guide/verification.md))
+- **Switches (feature toggles).** Rules, segments, percentage rollouts, schedules, approvals and history,
+  with Go and JavaScript SDKs and OpenFeature providers. ([Switches](docs/guide/feature-toggles.md))
+- **Releases.** Cut, sign and promote releases, with checklists and downloads.
+  ([Releases](docs/guide/releases.md), [verified commits](docs/guide/verified-commits.md))
+- **Insights.** Deployment frequency, lead time, change failure rate and time to restore, from what
+  Launchway already records. ([Measuring delivery](docs/guide/measuring-delivery.md))
+
+**Code and work**
+
+- **Git hosting.** Repositories with pull requests, reviews and merge rules, over HTTPS and SSH; browse,
+  search and edit code in the browser. ([Pull requests](docs/guide/pull-requests.md), [Git over SSH](docs/guide/git-over-ssh.md))
+- **Your Git host, or ours.** Connect repositories that live on another Git host and keep the same
+  features. ([Outside hosts](docs/guide/outside-host.md))
+- **Work tracking.** Items, boards, sprints and their links to code. ([Tracking work](docs/guide/tracking-work.md))
+
+**Everywhere**
+
 - **One capability, every way in.** The web interface, the HTTP API, the command line and the MCP
-  server do the same things.
+  server do the same things, so an AI assistant can work with Launchway too. ([Agents](docs/guide/agents.md))
+- **Runs where you run.** One program and a database, on a laptop, a single server or Kubernetes, with
+  Stations that only ever connect out. ([Install](docs/howto/install-in-ten-minutes.md))
 - **Accessible.** The web interface is built and tested for WCAG 2.2 level AA.
 
 | Home | A pull request | A failed Sortie |
@@ -50,6 +83,8 @@ server. Launchway is early software.
 - Learn: the same documentation is inside the product, under **Learn** in the top bar.
 - [Roadmap](https://jk-magic-creations.github.io/launchway/roadmap.html) ([as a list](docs/roadmap-list.md)):
   what is built and what is next.
+- [Platform plan](https://jk-magic-creations.github.io/launchway/plan/): the whole plan chapter by chapter,
+  with its diagrams and the screen designs for what comes next (under **Screens**).
 - [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md) and [versions and support](SUPPORT.md).
 
 ## License

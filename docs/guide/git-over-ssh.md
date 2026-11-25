@@ -37,7 +37,7 @@ memory, and is capped by `forge.max_push_mib` like an HTTPS push.
 
 ## Add your key
 
-In the web UI, open **Settings, SSH keys**, paste the public key (the line in your `.pub` file), give it a
+In the web UI, open **Settings → People and access → SSH keys** (`/settings/access/ssh-keys`), paste the public key (the line in your `.pub` file), give it a
 name and, if you like, an expiry. From the command line:
 
 ```sh
@@ -66,7 +66,7 @@ The user name is always `git`; who you are comes from your key.
 ## Check the server's host key
 
 The first time you connect, `ssh` shows the server's fingerprint and asks you to accept it. Compare it
-with the **host key fingerprints** page (Settings, SSH keys, "Verify this server") or `launchway keys host`.
+with the **host key fingerprints** page (Settings → People and access → SSH keys, "Verify this server") or `launchway keys host`.
 The server presents an ed25519 key, an ECDSA key and an RSA key, so older clients can connect too.
 
 ## Deploy keys

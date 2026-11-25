@@ -109,7 +109,7 @@ members by role, the repositories behind its Flights and its Flights, to those w
 ## API tokens
 
 Scripts and the [command line](commands.md) use API tokens: `Authorization: Bearer lw_...`. Make one
-on the **API tokens** page with a name and an expiry. Every token expires: by default after 90
+on the **API tokens** page (**Settings → People and access → Keys for scripts**, `/settings/access/keys`) with a name and an expiry. Every token expires: by default after 90
 days, at most after `auth.tokens.max_days` (default 365, up to 3650). It is shown once; only its
 SHA-256 is stored. A token acts as you, with your rights as of your latest sign-in, and can be
 revoked at any time. It may be limited further:

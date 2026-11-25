@@ -17,7 +17,7 @@ git config --global commit.gpgsign true
 git config --global tag.gpgsign true
 ```
 
-Then register the **public** key: Settings, **Signing keys**, `launchway signing keys add --file ~/.ssh/id_ed25519.pub`, or the MCP tool `add_signing_key`. A signing key is not the same as an [SSH key](git-over-ssh.md) you push with (though the same key may serve both). A key belongs to one person. It may have an expiry date.
+Then register the **public** key: **Settings → People and access → Signing keys** (`/settings/access/signing-keys`), `launchway signing keys add --file ~/.ssh/id_ed25519.pub`, or the MCP tool `add_signing_key`. A signing key is not the same as an [SSH key](git-over-ssh.md) you push with (though the same key may serve both). A key belongs to one person. It may have an expiry date.
 
 OpenPGP signatures (the ones `git commit -S` makes with gpg) are checked too: paste the public key block (`gpg --armor --export <id>`) under Signing keys. RSA (3072 bits or more), ECDSA and Ed25519 keys are accepted, with their signing subkeys; a signature made by a subkey counts for the key it belongs to. A key that has expired or is revoked in its own data shows as *Key expired* or *Key revoked* for what was signed after, and is refused when pasted. Private keys are refused. X.509 (S/MIME) signatures are *Not checked* and never count as verified.
 
