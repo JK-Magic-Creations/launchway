@@ -49,9 +49,9 @@
 .guided-tile { display: flex; gap: 14px; align-items: center; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); }
 .guided-tile:hover { border-color: var(--accent); text-decoration: none; }
 .guided-tile-n { font-size: 30px; font-weight: 750; line-height: 1; min-width: 36px; }
-.guided-tile-block { flex-direction: column; align-items: flex-start; gap: 4px; height: 100%; }
 .guided-tiles-wide { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .guided-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
 
 /* The five answers every detail page gives first */
 .glance { border-left: 4px solid var(--accent); }

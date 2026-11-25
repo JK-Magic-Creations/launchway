@@ -79,7 +79,7 @@ a { color: var(--signal-ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
 /* A link inside a sentence is underlined: color alone must not be what marks it (WCAG 1.4.1). Buttons, cards and
    navigation, whose shape says they are links, stay plain. */
-.entity-link, :where(p, li, dd, td, blockquote, .sub, .sentence, .small, .faint, .hint, .notice, .callout) a:not([class*="btn"]):not(.lg-h):not(.brand) { text-decoration: underline; text-underline-offset: 2px; }
+.entity-link, :where(p, li, dd, td, blockquote, .sub, .sentence, .small, .faint, .hint, .notice, .callout) a:not([class*="btn"]):not(.lg-h):not(.brand):not(.access-tile):not(.guided-tile) { text-decoration: underline; text-underline-offset: 2px; }
 /* Check boxes and radio buttons are at least 24 by 24 CSS px (WCAG 2.5.8) and take the accent. */
 input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; margin: 0; accent-color: var(--signal); vertical-align: middle; }
 button { font: inherit; color: inherit; }

@@ -1,0 +1,14 @@
+/* People and access (pages/Settings.tsx): loaded with the page. The tiles reuse .guided-tile; these add the
+   icon, the readable description and the arrow. */
+.access-who { margin-bottom: 28px; }
+.access-groups { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.access-group { margin-bottom: 28px; }
+.access-group > h2 { margin: 0 0 12px; }
+.access-tile { align-items: flex-start; height: 100%; }
+.access-tile:hover { background: var(--surface-2); }
+.access-tile-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r1); background: var(--accent-soft); color: var(--accent-ink); }
+.access-tile-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.access-tile-name { font-size: var(--fs-lead); font-weight: 650; }
+.access-tile-desc { line-height: 1.5; color: var(--text-2); }
+.access-tile-go { align-self: center; color: var(--text-3); }
+.access-groups .pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }

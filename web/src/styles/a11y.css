@@ -6,8 +6,9 @@
 /* The skip link is the first stop; it shows itself with the same ring as everything else. */
 .skip-link:focus-visible { outline: 2px solid var(--on-signal); outline-offset: -4px; }
 
-/* A list item that is only a link is a target of its own: at least 24 px tall (2.5.8). */
-main li > a:only-child { display: inline-block; min-height: 24px; padding-block: 3px; }
+/* A list item that is only a link is a target of its own: at least 24 px tall (2.5.8). Card links are already
+   large targets with their own layout, so the rule leaves them alone (it once flattened the People and access cards). */
+main li > a:only-child:not(.access-tile):not(.guided-tile) { display: inline-block; min-height: 24px; padding-block: 3px; }
 
 /* Touch: controls are comfortable to hit (the floor of 24 px is checked by the scan). */
 @media (pointer: coarse) {
