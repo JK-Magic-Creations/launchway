@@ -25,6 +25,10 @@ paths = [
   '''internal/verify/source/check_test\.go''',
   '''internal/deploy/inspect/''',
   '''deploy/helm/launchway-runner/examples/deploy-runner-inspect\.yaml''',
+  # The plan page's diagram library: the published mermaid package byte for byte (minified, third-party).
+  # It was tracked from d2b08c58 until make docs began copying it from docs/node_modules; its long
+  # minified lines trip generic-api-key. Nothing in it is a secret.
+  '''docs/public/plan/mermaid\.min\.js''',
 ]
 # Test canaries are fake by construction: the tests plant a value that starts with CANARY- to prove
 # it appears nowhere in output. A real secret never starts that way.
